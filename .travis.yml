@@ -1,0 +1,5 @@
+language: scala
+scala:
+   - 2.11.2
+before_install:
+  - git clone git://github.com/uzh/signal-collect.git ../signal-collect
