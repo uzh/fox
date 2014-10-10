@@ -22,6 +22,8 @@ test in assembly := {}
 
 parallelExecution in Test := false
 
+resolvers += "PSL third party dependencies" at "https://scm.umiacs.umd.edu/maven/lccd/content/repositories/psl-thirdparty/"
+
 libraryDependencies ++= Seq(
   "org.scala-lang" % "scala-library" % "2.11.2"  % "compile",
   "commons-lang" %  "commons-lang" % "2.6" % "compile",
