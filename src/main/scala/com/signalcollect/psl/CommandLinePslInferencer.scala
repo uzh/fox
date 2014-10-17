@@ -2,13 +2,16 @@ package com.signalcollect.psl
 
 import java.io.File
 import com.signalcollect.psl.model.GroundedPredicate
-import com.signalcollect.psl.Inferencer
 
 object CommandLinePslInferencer extends App {
 
   assert(args.size > 0, "The path to a PSL file has to be passed as an argument.")
   val pslFile = new File(args(0))
-  val inferenceResults = Inferencer.runInferenceFromFile(pslFile)
+  val inferenceResults = Inferencer.runInferenceFromFile(
+    pslFile = pslFile,
+    config = InferencerConfig(
+      absoluteEpsilon = 1e-5,
+      relativeEpsilon = 1e-3))
   val inferences = inferenceResults.solution.results
   val gps = inferenceResults.idToGpMap
   inferences.foreach {
