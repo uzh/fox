@@ -10,6 +10,14 @@ organization := "com.signalcollect"
 
 scalaVersion := "2.11.2"
 
+/** See https://github.com/rwl/ParallelColt/issues/6 */
+mergeStrategy in assembly <<= (mergeStrategy in assembly) { (old) =>
+  {
+    case PathList("edu", "emory", "mathcs", "utils", xs @ _*) => MergeStrategy.first
+    case other => old(other)
+  }
+}
+
 scalacOptions ++= Seq("-optimize", "-Ydelambdafy:inline", "-Yclosure-elim", "-Yinline-warnings", "-Ywarn-adapted-args", "-Ywarn-inaccessible", "-feature", "-deprecation", "-Xelide-below", "INFO")
 
 parallelExecution in Test := false
