@@ -6,6 +6,7 @@ class Woman:	anna
 class Course: db, ai
 // Predicates with arguments of any class:
 predicate: retired(_)
+predicate: young(_)
 // Predicates with arguments of different classes (which should be explicitly defined):
 predicate: professor(Person)
 predicate: teaches(Person, Course, Person)
@@ -16,18 +17,15 @@ predicate [Symmetric]:  friends(Person, Person)
 // Rules with weights and distance measures, possible values are linear, squared,   
 // experimentalSquared (for an experimental solver).
 // && = AND, || = OR, => = IMPLICATION
+rule[weight=3, distanceMeasure = linear]: young(P) => !retired(P)
 rule [weight=5, distanceMeasure = squared]: votes(A,P) && friends(A,B) => votes(B,P)
 rule[1]: teaches(A, C, B) && votes(A, P) => votes(B, P)
 // Rules without any weight are considered hard rules (infinite weight).
 // EXISTS is an existential quantifier that quantifies the variables in the brackets.
 rule : professor(P) => EXISTS [C, S]	teaches(P,C,S) || retired(P)
-// This rule is a workaround to keep the solutions more similar to what the user would
-// expect. Without this rule, the truth value of a professor being retired is higher than
-// the ones of him teaching, which is mathematically correct, but not expected from the 
-// user. With this redundant rule, the truth values are the same.
-rule[1]: retired(P) && votes(P, A) => votes(P, A)
 // Soft truth facts.
 fact :                 professor(bob)
+fact [0.8]:            young(bob)
 fact [truthValue=0.8]: friends(bob, carl)
 fact [truthValue=0.7]: friends(anna, carl)
 fact [0.9]:            !votes(bob, repub)
