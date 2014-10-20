@@ -78,6 +78,7 @@ case class InferenceResult(
 }
 
 case class InferencerConfig(
+  asynchronous: Boolean = false,
   globalConvergenceDetection: Option[Int] = Some(2), // Run convergence detection every 2 S/C steps.
   absoluteEpsilon: Double = 1e-5,
   relativeEpsilon: Double = 1e-3,
@@ -93,6 +94,7 @@ case class InferencerConfig(
 
   def getWolfConfig() = {
     new WolfConfig(
+      asynchronous = asynchronous,
       globalConvergenceDetection = globalConvergenceDetection,
       objectiveLoggingEnabled = objectiveLoggingEnabled,
       absoluteEpsilon = absoluteEpsilon,
@@ -163,8 +165,9 @@ object Inferencer {
 
     if (config.objectiveLoggingEnabled) {
       // TODO: How is this different from the value computed by the ObjectiveValueAggregator and stored inside the solution? 
-      val objectiveFunctionVal = functionsAndConstraints.foldLeft(0.0) { 
-        case (sum, nextFunction) => sum + nextFunction.evaluateAt(solution.results) }
+      val objectiveFunctionVal = functionsAndConstraints.foldLeft(0.0) {
+        case (sum, nextFunction) => sum + nextFunction.evaluateAt(solution.results)
+      }
       println("Computed the objective function.")
       InferenceResult(solution, idToGpMap, Some(objectiveFunctionVal), Some(groundingTime))
     } else {

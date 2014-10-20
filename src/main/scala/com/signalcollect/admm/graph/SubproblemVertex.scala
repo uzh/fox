@@ -40,10 +40,12 @@ class SubproblemVertex(
   subproblemId: Int, // The id of the subproblem.
   val optimizableFunction: OptimizableFunction, // The function that is contained in the subproblem.
   initialVariableAssignments: Array[Double])
-  extends MemoryEfficientDataGraphVertex[Array[Double], Double](subproblemId, initialVariableAssignments) 
+  extends MemoryEfficientDataGraphVertex[Array[Double], Double](subproblemId, initialVariableAssignments)
   with Subproblem {
 
   type OutgoingSignalType = Double
+
+  var signalsReceivedSinceCollect = 0
 
   def multipliers = optimizableFunction.getYEfficient
 
@@ -62,10 +64,7 @@ class SubproblemVertex(
       val targetId = idToIndexMapping(i)
       if (!alreadySentId.contains(targetId)) {
         val targetIdValue = state(i)
-        if (targetIdValue != 0.0) {
-          // sendSignal(signal, targetId, sourceId).
-          graphEditor.sendSignal(targetIdValue, targetId, Some(id))
-        }
+        graphEditor.sendSignal(targetIdValue, targetId, id)
         alreadySentId += targetId
       }
       i += 1
@@ -92,6 +91,7 @@ class SubproblemVertex(
   }
 
   def collect: Array[Double] = {
+    signalsReceivedSinceCollect = 0
     val consensus = consensusAssignments
     // Update the lagrangian multipliers (y) : y-step
     optimizableFunction.updateLagrangeEfficient(consensus)
@@ -101,7 +101,23 @@ class SubproblemVertex(
     newOptimizedAssignments
   }
 
-  override def scoreCollect = 1
+  /**
+   * Overriding the internal S/C signal implementation.
+   */
+  override def deliverSignalWithSourceId(signal: Any, sourceId: Int, graphEditor: GraphEditor[Int, Any]): Boolean = {
+    signalsReceivedSinceCollect += 1
+    mostRecentSignalMap.put(sourceId, signal.asInstanceOf[Double])
+    false
+  }
+
+  override def scoreCollect = {
+    if (signalsReceivedSinceCollect == _targetIds.size) {
+      1
+    } else {
+      0
+    }
+  }
+
   // Always signal, even in the first iteration, when the consensus variable doesn't.
   override def scoreSignal = 1
 

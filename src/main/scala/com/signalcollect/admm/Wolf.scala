@@ -48,6 +48,7 @@ case class ProblemSolution(
   graphLoadingTime: Long) // in case we have local convergence this is None.
 
 case class WolfConfig(
+  asynchronous: Boolean = false,
   globalConvergenceDetection: Option[Int] = Some(2), // Detect global convergence every 2 S/C steps by default. Note: should be a multiple of 2 for making sure convergence works.
   absoluteEpsilon: Double = 1e-8,
   relativeEpsilon: Double = 1e-3,
@@ -109,7 +110,7 @@ object Wolf {
         }
         println("Global convergence detection initialized.")
         val stats = graph.execute(ExecutionConfiguration[Int, Any]().
-          withExecutionMode(ExecutionMode.Synchronous).
+          withExecutionMode(if (config.asynchronous) ExecutionMode.PureAsynchronous else ExecutionMode.Synchronous).
           withGlobalTerminationDetection(globalConvergence).
           withStepsLimit(config.maxIterations))
         val convergenceMessage = stats.executionStatistics.terminationReason match {

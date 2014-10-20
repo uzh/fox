@@ -41,7 +41,7 @@ trait Consensus {
 class ConsensusVertex(
   variableId: Int, // the id of the variable, which identifies it also in the subproblem nodes.
   initialState: Double = 0.0, // the initial value for the consensus variable.
-  isBounded: Boolean = true ) // shall we use bounding (cutoff below 0 and above 1)? 
+  isBounded: Boolean = true) // shall we use bounding (cutoff below 0 and above 1)? 
   extends MemoryEfficientDataGraphVertex[Double, Double](variableId, initialState) with Consensus {
 
   final def upperBound: Double = 1.0 // each consensus variable can only assume values in the range [lowerBound, upperBound].
@@ -49,11 +49,17 @@ class ConsensusVertex(
 
   type OutgoingSignalType = Double
 
+  var hasCollected = false
+
+  var signalsReceivedSinceCollect = 0
+
   def variableCount = _targetIds.size
   def consensus = state
   def oldConsensus = lastSignalState
-  
+
   def collect = {
+    hasCollected = true
+    signalsReceivedSinceCollect = 0
     // New consensus is average vote.
     val newConsensus = averageConsensusVote
     if (isBounded) {
@@ -70,10 +76,19 @@ class ConsensusVertex(
    */
   override def executeSignalOperation(graphEditor: GraphEditor[Int, Any]) {
     val signal = state
-    targetIds.foreach { targetId =>
-      graphEditor.sendSignal(signal, targetId, Some(id))
+    _targetIds.foreach { targetId =>
+      graphEditor.sendSignal(signal, targetId, id)
     }
     lastSignalState = state
+  }
+
+  /**
+   * Overriding the internal S/C signal implementation.
+   */
+  override def deliverSignalWithSourceId(signal: Any, sourceId: Int, graphEditor: GraphEditor[Int, Any]): Boolean = {
+    signalsReceivedSinceCollect += 1
+    mostRecentSignalMap.put(sourceId, signal.asInstanceOf[Double])
+    false
   }
 
   /**
@@ -86,20 +101,20 @@ class ConsensusVertex(
   }
 
   def consensusVotes: Array[Double] = {
-    val votes = new Array[Double](targetIds.size)
+    val votes = new Array[Double](_targetIds.size)
     var i = 0
-    targetIds.foreach { targetId =>
+    _targetIds.foreach { targetId =>
       votes(i) = mostRecentSignalMap(targetId)
       i += 1
     }
     votes
   }
 
-  @inline def averageConsensusVote: Double = {
-    consensusVoteSum / targetIds.size
+  def averageConsensusVote: Double = {
+    consensusVoteSum / _targetIds.size
   }
 
-  @inline def consensusVoteSum: Double = {
+  def consensusVoteSum: Double = {
     // We don't trust the performance of doing it functionally. :P
     var sum = 0.0
     var i = 0
@@ -112,7 +127,13 @@ class ConsensusVertex(
     sum
   }
 
-  override def scoreCollect = 1
+  override def scoreCollect = {
+    if (signalsReceivedSinceCollect == _targetIds.size) {
+      1
+    } else {
+      0
+    }
+  }
 
   /**
    * Compute whether we should send signals to the subproblem vertices.
@@ -121,12 +142,14 @@ class ConsensusVertex(
    *  On the other side, this doesn't allow to initialize the consensus vars
    *  to anything except zero.
    *  This is perfectly fine with PSL inference, but may have drawbacks in other cases.
+   *
+   *  Only try to signal if the vertex has collected before.
    */
   override def scoreSignal = {
-    if (state != 0.0) {
-      1.0
+    if (hasCollected) {
+      1
     } else {
-      0.0
+      0
     }
   }
 
