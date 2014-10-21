@@ -45,17 +45,17 @@ class ConsensusVertex(
   isBounded: Boolean = true ) // shall we use bounding (cutoff below 0 and above 1)? 
   extends MemoryEfficientDataGraphVertex[Double, Double](variableId, initialState) with Consensus {
 
-  final def upperBound: Double = 1.0 // each consensus variable can only assume values in the range [lowerBound, upperBound].
-  final def lowerBound: Double = 0.0
+  @inline final def upperBound: Double = 1.0 // each consensus variable can only assume values in the range [lowerBound, upperBound].
+  @inline final def lowerBound: Double = 0.0
 
   type OutgoingSignalType = Double
 
-  def variableId = id
-  def variableCount = _targetIds.size
-  def consensus = state
-  def oldConsensus = lastSignalState
+  @inline def variableId = id
+  @inline def variableCount = _targetIds.size
+  @inline def consensus = state
+  @inline def oldConsensus = lastSignalState
   
-  def collect = {
+  @inline def collect = {
     // New consensus is average vote.
     val newConsensus = averageConsensusVote
     if (isBounded) {
@@ -83,11 +83,11 @@ class ConsensusVertex(
    * is efficiently done in 'executeSignalOperation'.
    * This function should therefore never be called.
    */
-  def computeSignal(targetId: Int): Double = {
+  @inline def computeSignal(targetId: Int): Double = {
     throw new UnsupportedOperationException
   }
 
-  def consensusVotes: Array[Double] = {
+  @inline def consensusVotes: Array[Double] = {
     val votes = new Array[Double](_targetIds.size)
     var i = 0
     _targetIds.foreach { targetId =>
@@ -132,7 +132,7 @@ class ConsensusVertex(
     }
   }
 
-  def bounded(i: Double): Double = {
+  @inline def bounded(i: Double): Double = {
     math.max(math.min(i, upperBound), lowerBound)
   }
 

@@ -20,30 +20,34 @@
 
 package com.signalcollect.admm
 
-import scala.collection.mutable.UnrolledBuffer
+import scala.reflect.runtime.universe
+
+import com.signalcollect.Edge
 import com.signalcollect.ExecutionConfiguration
 import com.signalcollect.ExecutionInformation
 import com.signalcollect.Graph
 import com.signalcollect.GraphBuilder
 import com.signalcollect.Vertex
+import com.signalcollect.admm.graph.AsyncConsensusVertex
+import com.signalcollect.admm.graph.AsyncSubproblemVertex
+import com.signalcollect.admm.graph.Consensus
 import com.signalcollect.admm.graph.ConsensusVertex
-import com.signalcollect.admm.graph.SubproblemVertex
-import com.signalcollect.admm.graph.Subproblem
-import com.signalcollect.admm.optimizers.OptimizableFunction
-import com.signalcollect.configuration.ExecutionMode
-import com.signalcollect.interfaces.ModularAggregationOperation
-import akka.actor.ActorRef
-import com.signalcollect.configuration.TerminationReason
-import com.signalcollect.factory.messagebus._
 import com.signalcollect.admm.graph.DummyEdge
-import com.signalcollect.Edge
+import com.signalcollect.admm.graph.PslSchedulerFactory
+import com.signalcollect.admm.graph.Subproblem
+import com.signalcollect.admm.graph.SubproblemVertex
+import com.signalcollect.admm.optimizers.OptimizableFunction
+import com.signalcollect.admm.utils.Timer
+import com.signalcollect.configuration.ExecutionMode
+import com.signalcollect.configuration.TerminationReason
+import com.signalcollect.factory.messagebus.BulkAkkaMessageBusFactory
+import com.signalcollect.factory.scheduler.Throughput
 import com.signalcollect.interfaces.EdgeAddedToNonExistentVertexHandler
 import com.signalcollect.interfaces.EdgeAddedToNonExistentVertexHandlerFactory
-import com.signalcollect.admm.utils.Timer
+import com.signalcollect.interfaces.ModularAggregationOperation
 import com.signalcollect.util.IntDoubleHashMap
-import com.signalcollect.admm.graph.AsyncSubproblemVertex
-import com.signalcollect.admm.graph.AsyncConsensusVertex
-import com.signalcollect.admm.graph.Consensus
+
+import akka.actor.ActorRef
 
 case class ProblemSolution(
   stats: ExecutionInformation[Int, Any],
@@ -185,6 +189,7 @@ object Wolf {
         withMessageBusFactory(new BulkAkkaMessageBusFactory[Int, Any](10000, true)).
         withStatsReportingInterval(config.heartbeatIntervalInMs).
         withMessageSerialization(serializeMessages).
+        //withSchedulerFactory(if (config.asynchronous) new PslSchedulerFactory[Int, Any]() else new Throughput[Int, Any]).
         withEdgeAddedToNonExistentVertexHandlerFactory(consensusHandlerFactory).
         withKryoRegistrations(List(
           "com.signalcollect.admm.ObjectiveValueAggregator$",
