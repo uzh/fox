@@ -71,7 +71,7 @@ class ConsensusVertex(
   override def executeSignalOperation(graphEditor: GraphEditor[Int, Any]) {
     val signal = state
     targetIds.foreach { targetId =>
-      graphEditor.sendSignal(signal, targetId, Some(id))
+      graphEditor.sendSignal(signal, targetId, id)
     }
     lastSignalState = state
   }

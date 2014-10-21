@@ -64,7 +64,7 @@ class SubproblemVertex(
         val targetIdValue = state(i)
         if (targetIdValue != 0.0) {
           // sendSignal(signal, targetId, sourceId).
-          graphEditor.sendSignal(targetIdValue, targetId, Some(id))
+          graphEditor.sendSignal(targetIdValue, targetId, id)
         }
         alreadySentId += targetId
       }
