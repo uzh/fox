@@ -24,12 +24,6 @@ import com.signalcollect.GraphEditor
 import com.signalcollect.MemoryEfficientDataGraphVertex
 import com.signalcollect.admm.optimizers.OptimizableFunction
 
-trait Subproblem {
-  def multipliers: Array[Double]
-  def optimizableFunction: OptimizableFunction
-  def consensusAssignments: Array[Double]
-}
-
 /**
  *  In the ADMM algorithm there are two types of nodes: consensus variable nodes and subproblem nodes.
  *  Each subproblem node represents a piece of the big problem that can be solved independently, which is an optimizable function.
@@ -38,7 +32,7 @@ trait Subproblem {
  *  For example, in PSL the subproblem "friend(bob, anna) AND votes(anna, DP) => votes (bob, DP)" is connected to
  *  the consensus variables "votes(anna, DP)", "votes(bob, DP)" and "friend(bob, anna)".
  */
-class SubproblemVertex(
+class AsyncSubproblemVertex(
   subproblemId: Int, // The id of the subproblem.
   val optimizableFunction: OptimizableFunction, // The function that is contained in the subproblem.
   initialVariableAssignments: Array[Double])
@@ -46,6 +40,8 @@ class SubproblemVertex(
   with Subproblem {
 
   type OutgoingSignalType = Double
+
+  var signalsReceivedSinceCollect = 0
 
   def multipliers = optimizableFunction.getYEfficient
 
@@ -64,10 +60,7 @@ class SubproblemVertex(
       val targetId = idToIndexMapping(i)
       if (!alreadySentId.contains(targetId)) {
         val targetIdValue = state(i)
-        if (targetIdValue != 0.0) {
-          // sendSignal(signal, targetId, sourceId).
-          graphEditor.sendSignal(targetIdValue, targetId, id)
-        }
+        graphEditor.sendSignal(targetIdValue, targetId, id)
         alreadySentId += targetId
       }
       i += 1
@@ -94,6 +87,7 @@ class SubproblemVertex(
   }
 
   def collect: Array[Double] = {
+    signalsReceivedSinceCollect = 0
     val consensus = consensusAssignments
     // Update the lagrangian multipliers (y) : y-step
     optimizableFunction.updateLagrangeEfficient(consensus)
@@ -103,7 +97,23 @@ class SubproblemVertex(
     newOptimizedAssignments
   }
 
-  override def scoreCollect = 1
+  /**
+   * Overriding the internal S/C signal implementation.
+   */
+  override def deliverSignalWithSourceId(signal: Any, sourceId: Int, graphEditor: GraphEditor[Int, Any]): Boolean = {
+    signalsReceivedSinceCollect += 1
+    mostRecentSignalMap.put(sourceId, signal.asInstanceOf[Double])
+    false
+  }
+
+  override def scoreCollect = {
+    if (signalsReceivedSinceCollect == _targetIds.size) {
+      1
+    } else {
+      0
+    }
+  }
+
   // Always signal, even in the first iteration, when the consensus variable doesn't.
   override def scoreSignal = 1
 

@@ -28,6 +28,7 @@ import com.signalcollect.GraphBuilder
 import com.signalcollect.Vertex
 import com.signalcollect.admm.graph.ConsensusVertex
 import com.signalcollect.admm.graph.SubproblemVertex
+import com.signalcollect.admm.graph.Subproblem
 import com.signalcollect.admm.optimizers.OptimizableFunction
 import com.signalcollect.configuration.ExecutionMode
 import com.signalcollect.interfaces.ModularAggregationOperation
@@ -40,6 +41,9 @@ import com.signalcollect.interfaces.EdgeAddedToNonExistentVertexHandler
 import com.signalcollect.interfaces.EdgeAddedToNonExistentVertexHandlerFactory
 import com.signalcollect.admm.utils.Timer
 import com.signalcollect.util.IntDoubleHashMap
+import com.signalcollect.admm.graph.AsyncSubproblemVertex
+import com.signalcollect.admm.graph.AsyncConsensusVertex
+import com.signalcollect.admm.graph.Consensus
 
 case class ProblemSolution(
   stats: ExecutionInformation[Int, Any],
@@ -61,24 +65,34 @@ case class WolfConfig(
   heartbeatIntervalInMs: Int = 50)
 
 case class NonExistentConsensusVertexHandlerFactory(
+  asynchronous: Boolean, // If the execution is asynchronous
   initialState: Double, // the initial value for the consensus variable.
   isBounded: Boolean // shall we use bounding (cutoff below 0 and above 1)? 
   ) extends EdgeAddedToNonExistentVertexHandlerFactory[Int, Any] {
   def createInstance: EdgeAddedToNonExistentVertexHandler[Int, Any] =
-    new NonExistentConsensusVertexHandler(initialState, isBounded)
+    new NonExistentConsensusVertexHandler(asynchronous, initialState, isBounded)
   override def toString = "NoneExistentConsensusVertexFactory"
 }
 
 case class NonExistentConsensusVertexHandler(
+  asynchronous: Boolean, // If the execution is asynchronous
   initialState: Double, // the initial value for the consensus variable.
   isBounded: Boolean // shall we use bounding (cutoff below 0 and above 1)? 
   ) extends EdgeAddedToNonExistentVertexHandler[Int, Any] {
   def handleImpossibleEdgeAddition(edge: Edge[Int], vertexId: Int): Option[Vertex[Int, _, Int, Any]] = {
-    Some(
-      new ConsensusVertex(
-        variableId = vertexId,
-        initialState = initialState,
-        isBounded = isBounded))
+    if (asynchronous) {
+      Some(
+        new AsyncConsensusVertex(
+          variableId = vertexId,
+          initialState = initialState,
+          isBounded = isBounded))
+    } else {
+      Some(
+        new ConsensusVertex(
+          variableId = vertexId,
+          initialState = initialState,
+          isBounded = isBounded))
+    }
   }
 }
 
@@ -159,6 +173,7 @@ object Wolf {
     }
     // Use node actors with graph builder, if they have been passed.
     val consensusHandlerFactory = new NonExistentConsensusVertexHandlerFactory(
+      asynchronous = config.asynchronous,
       initialState = 0.0, // the initial value for the consensus variable.
       isBounded = config.isBounded // shall we use bounding (cutoff below 0 and above 1)? 
       )
@@ -188,7 +203,9 @@ object Wolf {
           "com.signalcollect.admm.graph.DummyEdge",
           "com.signalcollect.admm.graph.SubproblemToConsensusSignal",
           "com.signalcollect.admm.graph.ConsensusVertex",
+          "com.signalcollect.admm.graph.AsyncConsensusVertex",
           "com.signalcollect.admm.graph.SubproblemVertex",
+          "com.signalcollect.admm.graph.AsyncSubproblemVertex",
           "com.signalcollect.MultiAggregator",
           "com.signalcollect.admm.PrimalAggregator$",
           "com.signalcollect.admm.DualAggregator$",
@@ -226,10 +243,17 @@ object Wolf {
       case None => id
     }
     assert(f.getStepSize == config.stepSize)
-    val subproblem = new SubproblemVertex(
-      subproblemId = subId,
-      optimizableFunction = f,
-      initialVariableAssignments = Array())
+    val subproblem = if (config.asynchronous) {
+      new AsyncSubproblemVertex(
+        subproblemId = subId,
+        optimizableFunction = f,
+        initialVariableAssignments = Array())
+    } else {
+      new SubproblemVertex(
+        subproblemId = subId,
+        optimizableFunction = f,
+        initialVariableAssignments = Array())
+    }
     for (consensusId <- f.idToIndexMappings) {
       subproblem.addEdge(new DummyEdge(consensusId), graph)
       graph.addEdge(consensusId, new DummyEdge(subId))
@@ -242,9 +266,9 @@ case object ConsensusAggregator extends ModularAggregationOperation[Option[IntDo
   val neutralElement = None
   def extract(v: Vertex[_, _, _, _]): Option[IntDoubleHashMap] = {
     v match {
-      case c: ConsensusVertex =>
+      case c: Consensus =>
         val m = new IntDoubleHashMap(initialSize = 4, rehashFraction = 0.5f)
-        m.put(c.id, c.state)
+        m.put(c.variableId, c.consensus)
         Some(m)
       case other =>
         None
@@ -275,7 +299,7 @@ case object ObjectiveValueAggregator extends ModularAggregationOperation[Double]
   val neutralElement = 0.0
   def extract(v: Vertex[_, _, _, _]): Double = {
     v match {
-      case c: SubproblemVertex => c.optimizableFunction.evaluateAtEfficient(c.consensusAssignments)
+      case s: Subproblem => s.optimizableFunction.evaluateAtEfficient(s.consensusAssignments)
       case other => neutralElement
     }
   }
