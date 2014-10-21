@@ -37,7 +37,7 @@ class Woman:  anna
 individuals:  ufo
 ```
 
-In this example, our domain consists of two individuals of class `Person = { anna, bob }`, two of class `Party = { demo, repub }`, one of class `Woman = { anna } and one individual without any class `ufo`.
+In this example, our domain consists of two individuals of class `Person = { anna, bob }`, two of class `Party = { demo, repub }`, one of class `Woman = { anna }` and one individual without any class `ufo`.
 Classes are not mutually exclusive and the same individual can have multiple classes (`anna`).
 Besides explicitly mentioned individuals, Wolf can automatically infer other individuals and their class from facts and rules.
 
@@ -77,12 +77,9 @@ where H<sub>i</sub> for `i=1, ..., m` are literals, B<sub>j</sub> for `j=1, ...,
 
 In the following example, the upper-case names represent the variables in the rules:
 ```
-rule [weight=5]:                    votes(A,P) && friends(A,B)  =>
-                                    votes(B,P)
-rule [3, distanceMeasure = linear]: young(P) => 
-                                    !retired(P)
-rule:                               professor(P) => EXISTS [C,S]
-                                    teaches(P,C,S) || retired(P)
+rule [weight=5]:                    votes(A,P) && friends(A,B)  => votes(B,P)
+rule [3, distanceMeasure = linear]: young(P) => !retired(P)
+rule:                               professor(P) => EXISTS [C,S] teaches(P,C,S) || retired(P)
 ```
 
 Each rule can have an associated weight that represents how strict it is and an associated distance measure (e.g. linear, squared) that describes the shape of the penalty function for breaking this rule.
