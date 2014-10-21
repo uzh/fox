@@ -72,8 +72,8 @@ After the predicates definition, you can state some facts about your domain and 
 In our domain, `bob` is a professor with truth value 1 and `bob` is a friend of `carl` with truth value 0.8. Although `carl` was not mentioned as a member of `Person` before, it will be inferred because he is the second argument in a `friends` fact.  Moreover, `anna` does not (negation `!`) vote for `demo` with truth value 0.9 (you can omit `truthValue`), which means `votes(anna,demo)=0.1`.
 
 The most important part of modeling a domain are the rules, which are Horn rules with disjunctive heads, i.e. rules of the form 
-`B<sub>1</sub>  &&  ...  &&  B<sub>n</sub> => H<sub>1</sub> || ... || H<sub>m</sub>
-where H<sub>i</sub> for `i=1, ..., m` are literals, B<sub>j</sub> for `j=1, ..., n` are atoms and the symbols `&&`, `||` and `=>` represent conjunction, disjunction and implication.
+B<sub>1</sub>  &&  ...  &&  B<sub>n</sub> => H<sub>1</sub> || ... || H<sub>m</sub>
+where H<sub>i</sub> for `i=1, ..., m` are literals, B<sub>j</sub> for `j=1, ..., n` are atoms and the symbols &&, || and => represent conjunction, disjunction and implication.
 
 In the following example, the upper-case names represent the variables in the rules.
 ```
