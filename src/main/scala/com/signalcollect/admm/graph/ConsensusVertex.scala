@@ -72,7 +72,7 @@ class ConsensusVertex(
    */
   override def executeSignalOperation(graphEditor: GraphEditor[Int, Any]) {
     val signal = state
-    targetIds.foreach { targetId =>
+    _targetIds.foreach { targetId =>
       graphEditor.sendSignal(signal, targetId, id)
     }
     lastSignalState = state
@@ -88,9 +88,9 @@ class ConsensusVertex(
   }
 
   def consensusVotes: Array[Double] = {
-    val votes = new Array[Double](targetIds.size)
+    val votes = new Array[Double](_targetIds.size)
     var i = 0
-    targetIds.foreach { targetId =>
+    _targetIds.foreach { targetId =>
       votes(i) = mostRecentSignalMap(targetId)
       i += 1
     }
@@ -98,7 +98,7 @@ class ConsensusVertex(
   }
 
   @inline def averageConsensusVote: Double = {
-    consensusVoteSum / targetIds.size
+    consensusVoteSum / _targetIds.size
   }
 
   @inline def consensusVoteSum: Double = {
