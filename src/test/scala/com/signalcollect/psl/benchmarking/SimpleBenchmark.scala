@@ -183,6 +183,7 @@ fact [truthValue = 1.0]: likes(fred, star-wars)
   val startTime = System.currentTimeMillis
   val config = InferencerConfig(
     asynchronous = false,
+    breezeOptimizer = true,
     globalConvergenceDetection = Some(100),
     //globalConvergenceDetection = None,
     maxIterations = 10000,

@@ -22,12 +22,11 @@ package com.signalcollect.psl.model
 
 object DistanceMeasure {
   val defaultMeasure: DistanceMeasure = Squared
-  val validMeasures = Set(Linear, Squared, ExperimentalSquared)
+  val validMeasures = Set(Linear, Squared)
   def parse(s: String): DistanceMeasure = {
     s match {
       case Linear(_) => Linear
       case Squared(_) => Squared
-      case ExperimentalSquared(_) => ExperimentalSquared
       case other => throw new Exception(
         s"Could not parse distance measure $other, valid measures are:\n" +
           validMeasures.mkString(", "))
@@ -47,6 +46,3 @@ case object Squared extends DistanceMeasure {
   override val toString = "squared"
 }
 
-case object ExperimentalSquared extends DistanceMeasure {
-  override val toString = "experimentalSquared"
-}

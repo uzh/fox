@@ -79,6 +79,7 @@ case class InferenceResult(
 
 case class InferencerConfig(
   asynchronous: Boolean = false,
+  breezeOptimizer: Boolean = true,
   globalConvergenceDetection: Option[Int] = Some(2), // Run convergence detection every 2 S/C steps.
   absoluteEpsilon: Double = 1e-5,
   relativeEpsilon: Double = 1e-3,
@@ -152,7 +153,7 @@ object Inferencer {
   }
 
   def solveInferenceProblem(groundedRules: Iterable[GroundedRule], groundedConstraints: Iterable[GroundedConstraint], idToGpMap: Map[Int, GroundedPredicate], groundingTime: Long, nodeActors: Option[Array[ActorRef]] = None, config: InferencerConfig = InferencerConfig()) = {
-    val functions = groundedRules.flatMap(_.createOptimizableFunction(config.stepSize, config.tolerance))
+    val functions = groundedRules.flatMap(_.createOptimizableFunction(config.stepSize, config.tolerance, config.breezeOptimizer))
     val constraints = groundedConstraints.flatMap(_.createOptimizableFunction(config.stepSize, config.tolerance))
     val functionsAndConstraints = functions ++ constraints
     println(s"Problem converted to consensus optimization with ${functions.size} functions and ${constraints.size} constraints that are not trivially true.")
