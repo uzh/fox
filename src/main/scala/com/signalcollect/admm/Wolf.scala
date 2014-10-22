@@ -187,6 +187,7 @@ object Wolf {
         // TODO: Make bulk message bus and bulk size configurable.
         withEagerIdleDetection(config.eagerSignalCollectConvergenceDetection).
         withMessageBusFactory(new BulkAkkaMessageBusFactory[Int, Double](10000, true)).
+        withBlockingGraphModificationsSupport(false).
         withStatsReportingInterval(config.heartbeatIntervalInMs).
         withMessageSerialization(serializeMessages).
         //withSchedulerFactory(if (config.asynchronous) new PslSchedulerFactory[Int, Double]() else new Throughput[Int, Double]).

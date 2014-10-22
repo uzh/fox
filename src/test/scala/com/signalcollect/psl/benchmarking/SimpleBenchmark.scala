@@ -24,7 +24,7 @@ import com.signalcollect.psl.Inferencer
 import com.signalcollect.psl.InferencerConfig
 
 object SimpleBenchmark extends App {
-
+  
   val movieExample1 = """
       	predicate: likes(_, _)
       	predicate: playsIn(_, _)
@@ -190,7 +190,7 @@ fact [truthValue = 1.0]: likes(fred, star-wars)
     absoluteEpsilon = 1e-5,
     relativeEpsilon = 1e-3,
     isBounded = true,
-    objectiveLoggingEnabled = true,
+    objectiveLoggingEnabled = false,
     eagerSignalCollectConvergenceDetection = true,
     stepSize = 1.0)
   val inferenceResults = Inferencer.runInferenceFromString(
