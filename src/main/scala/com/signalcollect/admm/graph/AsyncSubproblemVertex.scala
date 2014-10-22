@@ -34,9 +34,8 @@ import com.signalcollect.admm.optimizers.OptimizableFunction
  */
 class AsyncSubproblemVertex(
   subproblemId: Int, // The id of the subproblem.
-  val optimizableFunction: OptimizableFunction, // The function that is contained in the subproblem.
-  initialVariableAssignments: Array[Double])
-  extends MemoryEfficientDataGraphVertex[Array[Double], Double, Double](subproblemId, initialVariableAssignments)
+  val optimizableFunction: OptimizableFunction) // The function that is contained in the subproblem.
+  extends MemoryEfficientDataGraphVertex[Array[Double], Double, Double](subproblemId, null.asInstanceOf[Array[Double]])
   with Subproblem {
 
   type OutgoingSignalType = Double
