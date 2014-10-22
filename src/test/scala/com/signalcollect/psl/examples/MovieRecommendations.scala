@@ -115,7 +115,7 @@ class MovieRecommendations extends FlatSpec with Matchers with TestAnnouncements
     val config = InferencerConfig(
       globalConvergenceDetection = Some(2),
       //maxIterations = 136,
-      objectiveLoggingEnabled = true,
+      computeObjectiveValueOfSolution = true,
       absoluteEpsilon = 10e-07,
       relativeEpsilon = 10e-04,
       isBounded = true,

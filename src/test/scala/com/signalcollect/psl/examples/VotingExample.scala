@@ -64,7 +64,7 @@ class VotingExample extends FlatSpec with Matchers with TestAnnouncements {
     val pslData = PslParser.parse(votingExample)
 
     val config = InferencerConfig(
-      objectiveLoggingEnabled = true,
+      computeObjectiveValueOfSolution = true,
       absoluteEpsilon = 10e-09,
       relativeEpsilon = 10e-04,
       isBounded = false,
@@ -194,7 +194,7 @@ class VotingExample extends FlatSpec with Matchers with TestAnnouncements {
   //TODO(sara): This test sometimes fails because it ends up violating a constraint.
 //  "VotingExample" should "provide a solution consistent with Matlab also with more constraints" in {
 //    val pslData = PslParser.parse(votingExample2)
-//    val config = InferencerConfig(objectiveLoggingEnabled = true, absoluteEpsilon = 10e-10, relativeEpsilon = 10e-5, isBounded = true,
+//    val config = InferencerConfig(computeObjectiveValueOfSolution = true, absoluteEpsilon = 10e-10, relativeEpsilon = 10e-5, isBounded = true,
 //      removeSymmetricConstraints = false)
 //    val inferenceResults = Inferencer.runInference(pslData, config = config)
 //

@@ -152,7 +152,7 @@ fact  [truthValue = 0.9] : TextSim(docx, pdf)
 	"""
 
   "AbductionExample" should "provide a solution consistent with Matlab" in {
-    val config = InferencerConfig(objectiveLoggingEnabled = true, absoluteEpsilon = 1e-08, relativeEpsilon = 1e-03, isBounded = true)
+    val config = InferencerConfig(computeObjectiveValueOfSolution = true, absoluteEpsilon = 1e-08, relativeEpsilon = 1e-03, isBounded = true)
 	val inferenceResults = Inferencer.runInferenceFromString(abdExample, config = config)
     
 	println(inferenceResults)
@@ -230,7 +230,7 @@ fact  [truthValue = 0.9] : TextSim(docx, pdf)
 		*/
   
   "AbductionExample" should "provide a solution consistent with Matlab with tighter epsilons" in {
-    val config = InferencerConfig(objectiveLoggingEnabled = true, absoluteEpsilon = 1e-08, relativeEpsilon = 1e-08, isBounded = true)
+    val config = InferencerConfig(computeObjectiveValueOfSolution = true, absoluteEpsilon = 1e-08, relativeEpsilon = 1e-08, isBounded = true)
 	val inferenceResults = Inferencer.runInferenceFromString(abdExample, config = config)
     println(inferenceResults)
     val objectiveFunctionVal = inferenceResults.objectiveFun.get
@@ -243,7 +243,7 @@ fact  [truthValue = 0.9] : TextSim(docx, pdf)
   }
   
     "AbductionExample" should "provide a solution consistent with Matlab with more lax epsilons" in {
-    val config = InferencerConfig(objectiveLoggingEnabled = true, absoluteEpsilon = 1e-05, relativeEpsilon = 1e-03, isBounded = true)
+    val config = InferencerConfig(computeObjectiveValueOfSolution = true, absoluteEpsilon = 1e-05, relativeEpsilon = 1e-03, isBounded = true)
 	val inferenceResults = Inferencer.runInferenceFromString(abdExample, config = config)
     println(inferenceResults)
     val objectiveFunctionVal = inferenceResults.objectiveFun.get
@@ -256,7 +256,7 @@ fact  [truthValue = 0.9] : TextSim(docx, pdf)
     //println("\n"+ ConvergencePlotter.createPlotScript(solution.convergence) + "\n")
   }
     "AbductionExample" should "provide a solution consistent with Matlab with extremely lax epsilons" in {
-    val config = InferencerConfig(objectiveLoggingEnabled = true, absoluteEpsilon = 1e-02, relativeEpsilon = 1e-02, isBounded = true)
+    val config = InferencerConfig(computeObjectiveValueOfSolution = true, absoluteEpsilon = 1e-02, relativeEpsilon = 1e-02, isBounded = true)
 	val inferenceResults = Inferencer.runInferenceFromString(abdExample, config = config)
     println(inferenceResults)
     val objectiveFunctionVal = inferenceResults.objectiveFun.get

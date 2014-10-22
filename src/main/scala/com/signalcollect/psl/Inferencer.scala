@@ -83,6 +83,7 @@ case class InferencerConfig(
   globalConvergenceDetection: Option[Int] = Some(2), // Run convergence detection every 2 S/C steps.
   absoluteEpsilon: Double = 1e-5,
   relativeEpsilon: Double = 1e-3,
+  computeObjectiveValueOfSolution: Boolean = true,
   objectiveLoggingEnabled: Boolean = false,
   maxIterations: Int = 2000, // maximum number of iterations.
   stepSize: Double = 1.0,
@@ -164,8 +165,7 @@ object Inferencer {
       config.getWolfConfig)
     println(s"Problem solved, getting back results.")
 
-    if (config.objectiveLoggingEnabled) {
-      // TODO: How is this different from the value computed by the ObjectiveValueAggregator and stored inside the solution? 
+    if (config.computeObjectiveValueOfSolution) {
       val objectiveFunctionVal = functionsAndConstraints.foldLeft(0.0) {
         case (sum, nextFunction) => sum + nextFunction.evaluateAt(solution.results)
       }

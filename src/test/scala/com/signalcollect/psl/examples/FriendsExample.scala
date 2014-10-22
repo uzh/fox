@@ -59,7 +59,7 @@ class FriendsExample extends FlatSpec with Matchers with TestAnnouncements {
   "FriendsExample" should "provide a solution consistent for friends, with a default value of 0.2" in {
     val pslData = PslParser.parse(friends)
 
-    val config = InferencerConfig(objectiveLoggingEnabled = true, absoluteEpsilon = 1e-08, relativeEpsilon = 1e-03, isBounded = true)
+    val config = InferencerConfig(computeObjectiveValueOfSolution = true, absoluteEpsilon = 1e-08, relativeEpsilon = 1e-03, isBounded = true)
     val inferenceResults = Inferencer.runInference(pslData, config = config)
 
     println(inferenceResults)
@@ -125,7 +125,7 @@ class FriendsExample extends FlatSpec with Matchers with TestAnnouncements {
   "FriendsExample" should "provide a solution consistent for freenemies, an example with negative weights" in {
     val pslData = PslParser.parse(freenemies)
 
-    val config = InferencerConfig(objectiveLoggingEnabled = true, absoluteEpsilon = 10e-08, relativeEpsilon = 10e-03, isBounded = true)
+    val config = InferencerConfig(computeObjectiveValueOfSolution = true, absoluteEpsilon = 10e-08, relativeEpsilon = 10e-03, isBounded = true)
     val inferenceResults = Inferencer.runInference(pslData, config = config)
 
     println(inferenceResults)
@@ -148,7 +148,7 @@ class FriendsExample extends FlatSpec with Matchers with TestAnnouncements {
   "FriendsExample" should "provide a solution consistent for enemies, an example with negative prior" in {
     val pslData = PslParser.parse(enemies)
 
-    val config = InferencerConfig(objectiveLoggingEnabled = true, absoluteEpsilon = 10e-08, relativeEpsilon = 10e-03, isBounded = true)
+    val config = InferencerConfig(computeObjectiveValueOfSolution = true, absoluteEpsilon = 10e-08, relativeEpsilon = 10e-03, isBounded = true)
     val inferenceResults = Inferencer.runInference(pslData, config = config)
 
     println(inferenceResults)
@@ -176,7 +176,7 @@ class FriendsExample extends FlatSpec with Matchers with TestAnnouncements {
 //  "FriendsExample" should "provide a solution consistent for hardenemies, an example with negative prior and a hard rule" in {
 //    val pslData = PslParser.parse(hardenemies)
 //
-//    val config = InferencerConfig(objectiveLoggingEnabled = true, absoluteEpsilon = 10e-09, relativeEpsilon = 10e-04, isBounded = true)
+//    val config = InferencerConfig(computeObjectiveValueOfSolution = true, absoluteEpsilon = 10e-09, relativeEpsilon = 10e-04, isBounded = true)
 //    val inferenceResults = Inferencer.runInference(pslData, config = config)
 //
 //    println(inferenceResults)

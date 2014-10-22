@@ -88,7 +88,7 @@ class ClassesExample extends FlatSpec with Matchers with TestAnnouncements {
     val pslData = PslParser.parse(basicExample)
 
     println(basicExample)
-    val config = InferencerConfig(objectiveLoggingEnabled = true, absoluteEpsilon = 10e-08, relativeEpsilon = 10e-03, isBounded = true,
+    val config = InferencerConfig(computeObjectiveValueOfSolution = true, absoluteEpsilon = 10e-08, relativeEpsilon = 10e-03, isBounded = true,
       removeSymmetricConstraints = false)
     val inferenceResults = Inferencer.runInference(pslData, config = config)
 

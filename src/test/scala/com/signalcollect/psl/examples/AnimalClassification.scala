@@ -73,7 +73,7 @@ class AnimalClassification extends FlatSpec with Matchers with TestAnnouncements
 
   //println(PSLToCvxConverter.toCvx(animalExample))
 
-  val config = InferencerConfig(absoluteEpsilon = 10e-08, relativeEpsilon = 10e-03, objectiveLoggingEnabled = true)  
+  val config = InferencerConfig(absoluteEpsilon = 10e-08, relativeEpsilon = 10e-03, computeObjectiveValueOfSolution = true)  
   val inferenceResults = Inferencer.runInferenceFromString(animalClassExample, config = config)
   println(inferenceResults)
   val objectiveFunctionVal = inferenceResults.objectiveFun.get

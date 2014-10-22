@@ -168,7 +168,7 @@ object ExperimentHelper {
     for { i <- minExponent until maxExponent } {
       for { j <- minExponent until maxExponent } {
         val config = new InferencerConfig(
-          objectiveLoggingEnabled = true,
+          computeObjectiveValueOfSolution = true,
           absoluteEpsilon = Math.pow(10, -i),
           relativeEpsilon = Math.pow(10, -j),
           isBounded = false,
@@ -180,7 +180,7 @@ object ExperimentHelper {
     for { i <- minExponent until maxExponent } {
       for { j <- minExponent until maxExponent } {
         val config = new InferencerConfig(
-          objectiveLoggingEnabled = true,
+          computeObjectiveValueOfSolution = true,
           absoluteEpsilon = Math.pow(10, -i),
           relativeEpsilon = Math.pow(10, -j),
           isBounded = true,
@@ -192,7 +192,7 @@ object ExperimentHelper {
     for { i <- minExponent until maxExponent } {
       for { j <- minExponent until maxExponent } {
         val config = new InferencerConfig(
-          objectiveLoggingEnabled = true,
+          computeObjectiveValueOfSolution = true,
           absoluteEpsilon = Math.pow(10, -i),
           relativeEpsilon = Math.pow(10, -j),
           isBounded = false,
@@ -204,7 +204,7 @@ object ExperimentHelper {
     for { i <- minExponent until maxExponent } {
       for { j <- minExponent until maxExponent } {
         val config = new InferencerConfig(
-          objectiveLoggingEnabled = true,
+          computeObjectiveValueOfSolution = true,
           absoluteEpsilon = Math.pow(10, -i),
           relativeEpsilon = Math.pow(10, -j),
           isBounded = true,
