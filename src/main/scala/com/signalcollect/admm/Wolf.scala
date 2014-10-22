@@ -251,8 +251,7 @@ object Wolf {
     val subproblem = if (config.asynchronous) {
       new AsyncSubproblemVertex(
         subproblemId = subId,
-        optimizableFunction = f,
-        initialVariableAssignments = Array())
+        optimizableFunction = f)
     } else {
       new SubproblemVertex(
         subproblemId = subId,
