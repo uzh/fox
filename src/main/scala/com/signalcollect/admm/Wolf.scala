@@ -109,7 +109,7 @@ object Wolf {
     val (graph, graphLoadingTime) = Timer.time {
       createGraph(functions, nodeActors, config, config.serializeMessages)
     }
-    println(s"\nADMM graph creation completed in $graphLoadingTime ms.")
+    println(s"ADMM graph creation completed in $graphLoadingTime ms.")
     try {
       println("Starting inference ...")
       val (stats, convergence) = if (config.globalConvergenceDetection.isDefined) {
@@ -126,7 +126,7 @@ object Wolf {
             relativeEpsilon = config.relativeEpsilon,
             checkingInterval = config.globalConvergenceDetection.get)
         }
-        println("Global convergence detection initialized.")
+        //println("Global convergence detection initialized.")
         val stats = graph.execute(ExecutionConfiguration[Int, Double]().
           withExecutionMode(if (config.asynchronous) ExecutionMode.PureAsynchronous else ExecutionMode.Synchronous).
           withGlobalTerminationDetection(globalConvergence).
@@ -135,7 +135,7 @@ object Wolf {
           case TerminationReason.TimeLimitReached =>
             "Computation finished because the time limit was reached."
           case TerminationReason.Converged =>
-            "Computation finished because the local errors were small enough."
+            "Computation finished because setting all the variables to 0 is a solution."
           case TerminationReason.GlobalConstraintMet =>
             "Computation finished because the global error was small enough."
           case TerminationReason.ComputationStepLimitReached =>
@@ -152,14 +152,12 @@ object Wolf {
         println("Reached max iterations, retrieving the results.")
         (stats, None)
       }
-      println("Retrieving the results ...")
       val resultMap = graph.aggregate(ConsensusAggregator)
       val solution = ProblemSolution(
         stats = stats,
         results = resultMap.getOrElse(new IntDoubleHashMap(initialSize = 1, rehashFraction = 0.5f)),
         convergence = convergence,
         graphLoadingTime = graphLoadingTime)
-      println(solution.stats)
       solution
     } finally {
       graph.shutdown
@@ -171,10 +169,7 @@ object Wolf {
     nodeActors: Option[Array[ActorRef]] = None,
     config: WolfConfig = new WolfConfig(),
     serializeMessages: Boolean = false): Graph[Int, Double] = {
-    println(s"Creating the ADMM graph ...")
-    if (nodeActors == None) {
-      println("[Info] The parameter nodeActors is None: Running in single node mode.")
-    }
+    //println(s"Creating the ADMM graph ...")
     // Use node actors with graph builder, if they have been passed.
     val consensusHandlerFactory = new NonExistentConsensusVertexHandlerFactory(
       asynchronous = config.asynchronous,

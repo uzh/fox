@@ -113,7 +113,6 @@ class MovieRecommendations extends FlatSpec with Matchers with TestAnnouncements
 
   "MovieRecommendations" should "correctly minimize the simplified movie example" in {
     val config = InferencerConfig(
-      globalConvergenceDetection = Some(2),
       //maxIterations = 136,
       computeObjectiveValueOfSolution = true,
       absoluteEpsilon = 10e-07,
@@ -125,8 +124,8 @@ class MovieRecommendations extends FlatSpec with Matchers with TestAnnouncements
     val solution = inferenceResults.solution
     val gps = inferenceResults.idToGpMap
     val objectiveFunctionVal = inferenceResults.objectiveFun.get
-    println(inferenceResults)
-    println("Objective function value: " + objectiveFunctionVal)
+    //println(inferenceResults)
+    //println("Objective function value: " + objectiveFunctionVal)
 
     objectiveFunctionVal should be(0.02 +- 0.02)
 

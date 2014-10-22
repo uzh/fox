@@ -85,8 +85,8 @@ class MovieRecommendationsWithClasses extends FlatSpec with Matchers with TestAn
     val gps = inferenceResults.idToGpMap
     val objectiveFunctionVal = inferenceResults.objectiveFun.get
 
-    println(inferenceResults)
-    println("Objective function value: " + objectiveFunctionVal)
+    //println(inferenceResults)
+    //println("Objective function value: " + objectiveFunctionVal)
 
     //println(PSLToCvxConverter.toCvx(simplifiedMovieExample)) 
     //println("\n"+ ConvergencePlotter.createPlotScript(solution.convergence) + "\n")

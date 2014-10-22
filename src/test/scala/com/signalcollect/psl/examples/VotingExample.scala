@@ -73,8 +73,8 @@ class VotingExample extends FlatSpec with Matchers with TestAnnouncements {
     val gps = inferenceResults.idToGpMap
     val objectiveFunctionVal = inferenceResults.objectiveFun.get
 
-    println(inferenceResults)
-    println("Objective function value: " + objectiveFunctionVal)
+    //println(inferenceResults)
+    //println("Objective function value: " + objectiveFunctionVal)
 
     objectiveFunctionVal should be(0.0 +- 5e-5)
 
@@ -200,7 +200,7 @@ class VotingExample extends FlatSpec with Matchers with TestAnnouncements {
 //    val gps = inferenceResults.idToGpMap
 //    val objectiveFunctionVal = inferenceResults.objectiveFun.get
 //
-//    println(inferenceResults)
+//    //println(inferenceResults)
 //
 //    objectiveFunctionVal should be(0.0 +- 5e-5)
 //  }

@@ -125,7 +125,7 @@ class VotingExperiments extends App {
   var results = "["
   results += ExperimentHelper.run(votingExample, 3, 5)
   results += "]"
-  println(results.toString)
+  //println(results.toString)
 
   /**
    *

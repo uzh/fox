@@ -62,7 +62,7 @@ class FriendsExample extends FlatSpec with Matchers with TestAnnouncements {
     val config = InferencerConfig(computeObjectiveValueOfSolution = true, absoluteEpsilon = 1e-08, relativeEpsilon = 1e-03, isBounded = true)
     val inferenceResults = Inferencer.runInference(pslData, config = config)
 
-    println(inferenceResults)
+    //println(inferenceResults)
     val objectiveFunctionVal = inferenceResults.objectiveFun.get
 
     objectiveFunctionVal should be(3.2 +- 6e-2)
@@ -128,7 +128,7 @@ class FriendsExample extends FlatSpec with Matchers with TestAnnouncements {
     val config = InferencerConfig(computeObjectiveValueOfSolution = true, absoluteEpsilon = 10e-08, relativeEpsilon = 10e-03, isBounded = true)
     val inferenceResults = Inferencer.runInference(pslData, config = config)
 
-    println(inferenceResults)
+    //println(inferenceResults)
     val objectiveFunctionVal = inferenceResults.objectiveFun.get
 
     objectiveFunctionVal should be(0.0 +- 6e-2)
@@ -151,7 +151,7 @@ class FriendsExample extends FlatSpec with Matchers with TestAnnouncements {
     val config = InferencerConfig(computeObjectiveValueOfSolution = true, absoluteEpsilon = 10e-08, relativeEpsilon = 10e-03, isBounded = true)
     val inferenceResults = Inferencer.runInference(pslData, config = config)
 
-    println(inferenceResults)
+    //println(inferenceResults)
     val objectiveFunctionVal = inferenceResults.objectiveFun.get
 
     objectiveFunctionVal should be(0.0 +- 6e-2)
@@ -179,7 +179,7 @@ class FriendsExample extends FlatSpec with Matchers with TestAnnouncements {
 //    val config = InferencerConfig(computeObjectiveValueOfSolution = true, absoluteEpsilon = 10e-09, relativeEpsilon = 10e-04, isBounded = true)
 //    val inferenceResults = Inferencer.runInference(pslData, config = config)
 //
-//    println(inferenceResults)
+//    //println(inferenceResults)
 //    val objectiveFunctionVal = inferenceResults.objectiveFun.get
 //
 //    objectiveFunctionVal should be(3.0 +- 6e-2)

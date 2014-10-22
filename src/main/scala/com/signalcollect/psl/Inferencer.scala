@@ -163,13 +163,13 @@ object Inferencer {
       functionsAndConstraints,
       nodeActors,
       config.getWolfConfig)
-    println(s"Problem solved, getting back results.")
+    //println(s"Problem solved, getting back results.")
 
     if (config.computeObjectiveValueOfSolution) {
       val objectiveFunctionVal = functionsAndConstraints.foldLeft(0.0) {
         case (sum, nextFunction) => sum + nextFunction.evaluateAt(solution.results)
       }
-      println("Computed the objective function.")
+      //println("Computed the objective function.")
       InferenceResult(solution, idToGpMap, Some(objectiveFunctionVal), Some(groundingTime))
     } else {
       InferenceResult(solution, idToGpMap)

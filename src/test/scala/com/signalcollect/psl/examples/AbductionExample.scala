@@ -23,7 +23,7 @@ package com.signalcollect.psl.examples
 import org.scalatest.FlatSpec
 import org.scalatest.Matchers
 import com.signalcollect.TestAnnouncements
- 
+
 import com.signalcollect.admm.Wolf
 import com.signalcollect.psl.Inferencer
 import com.signalcollect.psl.InferencerConfig
@@ -153,115 +153,115 @@ fact  [truthValue = 0.9] : TextSim(docx, pdf)
 
   "AbductionExample" should "provide a solution consistent with Matlab" in {
     val config = InferencerConfig(computeObjectiveValueOfSolution = true, absoluteEpsilon = 1e-08, relativeEpsilon = 1e-03, isBounded = true)
-	val inferenceResults = Inferencer.runInferenceFromString(abdExample, config = config)
-    
-	println(inferenceResults)
+    val inferenceResults = Inferencer.runInferenceFromString(abdExample, config = config)
+
+    //println(inferenceResults)
     val objectiveFunctionVal = inferenceResults.objectiveFun.get
 
     objectiveFunctionVal should be(0.0 +- 0.05)
     //println(PSLToCvxConverter.toCvx(abdExample)) 
     //println("\n"+ ConvergencePlotter.createPlotScript(solution.convergence) + "\n")
   }
-	/**
-	* 
-	* 02/04/2014 @ 11:17
-	* --------------
-	- Execution Statistics -
-	--------------
-	# signal steps		68
-	# collect steps		68
-	Computation time		12419 milliseconds
-	Master JVM CPU time	7391 milliseconds
-	Termination reason	GlobalConstraintMet
-	# collect operations	20230
-	# signal operations	20230
-	# vertices (add/remove)	595 (595/0)
-	# edges (add/remove)	3752 (3752/0)
-	
-	Problem solved, getting back results.
-	GroundedPredicate(174,relation: Review(_, _),List(pdff, pdf),None) has truth value 0.6854405856725959
-	GroundedPredicate(175,relation: Review(_, _),List(docx, docxx),None) has truth value 0.1507482285780839
-	GroundedPredicate(143,relation: Text2PDF(_, _),List(docx, pdf),None) has truth value 0.9
-	GroundedPredicate(203,relation: Copy(_, _),List(docx, docxx),None) has truth value 0.6854405856725956
-	GroundedPredicate(186,relation: Review(_, _),List(pdfff, pdff),None) has truth value 0.7537411428904291
-	Objective function value: 0.04239530911140588
-	
-	Not bounded:	
-	--------------
-	- Execution Statistics -
-	--------------
-	# signal steps		32
-	# collect steps		32
-	Computation time		6047 milliseconds
-	Master JVM CPU time	8271 milliseconds
-	Termination reason	GlobalConstraintMet
-	# collect operations	15504
-	# signal operations	15504
-	# vertices (add/remove)	969 (969/0)
-	# edges (add/remove)	4524 (4524/0)
-	
-	GroundedPredicate 174: Review[ ] (pdff, pdf) has truth value 0.930022493508579
-	GroundedPredicate 175: Review[ ] (docx, docxx) has truth value 0.15544357488772667
-	GroundedPredicate 143: Text2PDF[ ] (docx, pdf) has truth value 0.949612018190998
-	GroundedPredicate 203: Copy[ ] (docx, docxx) has truth value 0.930022493508579
-	GroundedPredicate 186: Review[ ] (pdfff, pdff) has truth value 0.7772178744386382
-	Objective function value: 0.0
-	
-	Matlab CVX output:
-	 number of iterations   = 13
-	 primal objective value =  1.31879036e-09
-	 dual   objective value = -3.86218628e-09
-	 gap := trace(XZ)       = 5.70e-09
-	 relative gap           = 5.70e-09
-	 actual relative gap    = 5.18e-09
-	 rel. primal infeas     = 3.22e-16
-	 rel. dual   infeas     = 6.05e-15
-	 norm(X), norm(y), norm(Z) = 6.5e+01, 1.6e-10, 1.9e+03
-	 norm(A), norm(b), norm(C) = 6.0e+01, 6.5e+01, 1.9e+03
-	 Total CPU time (secs)  = 2.73  
-	 CPU time per iteration = 0.21  
-	 termination code       =  0
-	 DIMACS: 4.2e-15  0.0e+00  1.2e-13  0.0e+00  5.2e-09  5.7e-09
-	-------------------------------------------------------------------
-	------------------------------------------------------------
-	Status: Solved
-	Optimal value (cvx_optval): +1.31879e-09
-	 
-		*/
-  
+  /**
+   *
+   * 02/04/2014 @ 11:17
+   * --------------
+   * - Execution Statistics -
+   * --------------
+   * # signal steps		68
+   * # collect steps		68
+   * Computation time		12419 milliseconds
+   * Master JVM CPU time	7391 milliseconds
+   * Termination reason	GlobalConstraintMet
+   * # collect operations	20230
+   * # signal operations	20230
+   * # vertices (add/remove)	595 (595/0)
+   * # edges (add/remove)	3752 (3752/0)
+   *
+   * Problem solved, getting back results.
+   * GroundedPredicate(174,relation: Review(_, _),List(pdff, pdf),None) has truth value 0.6854405856725959
+   * GroundedPredicate(175,relation: Review(_, _),List(docx, docxx),None) has truth value 0.1507482285780839
+   * GroundedPredicate(143,relation: Text2PDF(_, _),List(docx, pdf),None) has truth value 0.9
+   * GroundedPredicate(203,relation: Copy(_, _),List(docx, docxx),None) has truth value 0.6854405856725956
+   * GroundedPredicate(186,relation: Review(_, _),List(pdfff, pdff),None) has truth value 0.7537411428904291
+   * Objective function value: 0.04239530911140588
+   *
+   * Not bounded:
+   * --------------
+   * - Execution Statistics -
+   * --------------
+   * # signal steps		32
+   * # collect steps		32
+   * Computation time		6047 milliseconds
+   * Master JVM CPU time	8271 milliseconds
+   * Termination reason	GlobalConstraintMet
+   * # collect operations	15504
+   * # signal operations	15504
+   * # vertices (add/remove)	969 (969/0)
+   * # edges (add/remove)	4524 (4524/0)
+   *
+   * GroundedPredicate 174: Review[ ] (pdff, pdf) has truth value 0.930022493508579
+   * GroundedPredicate 175: Review[ ] (docx, docxx) has truth value 0.15544357488772667
+   * GroundedPredicate 143: Text2PDF[ ] (docx, pdf) has truth value 0.949612018190998
+   * GroundedPredicate 203: Copy[ ] (docx, docxx) has truth value 0.930022493508579
+   * GroundedPredicate 186: Review[ ] (pdfff, pdff) has truth value 0.7772178744386382
+   * Objective function value: 0.0
+   *
+   * Matlab CVX output:
+   * number of iterations   = 13
+   * primal objective value =  1.31879036e-09
+   * dual   objective value = -3.86218628e-09
+   * gap := trace(XZ)       = 5.70e-09
+   * relative gap           = 5.70e-09
+   * actual relative gap    = 5.18e-09
+   * rel. primal infeas     = 3.22e-16
+   * rel. dual   infeas     = 6.05e-15
+   * norm(X), norm(y), norm(Z) = 6.5e+01, 1.6e-10, 1.9e+03
+   * norm(A), norm(b), norm(C) = 6.0e+01, 6.5e+01, 1.9e+03
+   * Total CPU time (secs)  = 2.73
+   * CPU time per iteration = 0.21
+   * termination code       =  0
+   * DIMACS: 4.2e-15  0.0e+00  1.2e-13  0.0e+00  5.2e-09  5.7e-09
+   * -------------------------------------------------------------------
+   * ------------------------------------------------------------
+   * Status: Solved
+   * Optimal value (cvx_optval): +1.31879e-09
+   *
+   */
+
   "AbductionExample" should "provide a solution consistent with Matlab with tighter epsilons" in {
     val config = InferencerConfig(computeObjectiveValueOfSolution = true, absoluteEpsilon = 1e-08, relativeEpsilon = 1e-08, isBounded = true)
-	val inferenceResults = Inferencer.runInferenceFromString(abdExample, config = config)
-    println(inferenceResults)
+    val inferenceResults = Inferencer.runInferenceFromString(abdExample, config = config)
+    //println(inferenceResults)
     val objectiveFunctionVal = inferenceResults.objectiveFun.get
-    println("Objective function value: " + objectiveFunctionVal)
+    //println("Objective function value: " + objectiveFunctionVal)
 
     // 238 iterations later....
     objectiveFunctionVal should be(0.0 +- 5e-04)
     //println(PSLToCvxConverter.toCvx(abdExample)) 
     //println("\n"+ ConvergencePlotter.createPlotScript(solution.convergence) + "\n")
   }
-  
-    "AbductionExample" should "provide a solution consistent with Matlab with more lax epsilons" in {
+
+  "AbductionExample" should "provide a solution consistent with Matlab with more lax epsilons" in {
     val config = InferencerConfig(computeObjectiveValueOfSolution = true, absoluteEpsilon = 1e-05, relativeEpsilon = 1e-03, isBounded = true)
-	val inferenceResults = Inferencer.runInferenceFromString(abdExample, config = config)
-    println(inferenceResults)
+    val inferenceResults = Inferencer.runInferenceFromString(abdExample, config = config)
+    //println(inferenceResults)
     val objectiveFunctionVal = inferenceResults.objectiveFun.get
 
-    println("Objective function value: " + objectiveFunctionVal)
+    //println("Objective function value: " + objectiveFunctionVal)
 
     // 66 iterations later....
     objectiveFunctionVal should be(0.0 +- 6e-02)
     //println(PSLToCvxConverter.toCvx(abdExample)) 
     //println("\n"+ ConvergencePlotter.createPlotScript(solution.convergence) + "\n")
   }
-    "AbductionExample" should "provide a solution consistent with Matlab with extremely lax epsilons" in {
+  "AbductionExample" should "provide a solution consistent with Matlab with extremely lax epsilons" in {
     val config = InferencerConfig(computeObjectiveValueOfSolution = true, absoluteEpsilon = 1e-02, relativeEpsilon = 1e-02, isBounded = true)
-	val inferenceResults = Inferencer.runInferenceFromString(abdExample, config = config)
-    println(inferenceResults)
+    val inferenceResults = Inferencer.runInferenceFromString(abdExample, config = config)
+    //println(inferenceResults)
     val objectiveFunctionVal = inferenceResults.objectiveFun.get
-    
-    println("Objective function value: " + objectiveFunctionVal)
+
+    //println("Objective function value: " + objectiveFunctionVal)
 
     // 4 iterations later....
     objectiveFunctionVal should be(0.0 +- 40)

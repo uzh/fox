@@ -198,31 +198,31 @@ class GroundingSpec extends FlatSpec with Matchers with TestAnnouncements {
     //    assert(groundedConstraints(9).groundedPredicates.size == 2)
     //
     //    // votes(anna, *) knowing that votes(anna, demo) = 0.5; votes(anna, repub) = 0
-    //    println(groundedConstraints(0))
+    //    //println(groundedConstraints(0))
     //    assert(groundedConstraints(0).unboundGroundedPredicates.size == 1)
     //    assert(groundedConstraints(0).computeCoefficientMatrix.toList == List(1.0))
     //    assert(groundedConstraints(0).computeConstant == 0.5)
     //
     //    // votes(republicans, *)
-    //    println(groundedConstraints(1))
+    //    //println(groundedConstraints(1))
     //    assert(groundedConstraints(1).unboundGroundedPredicates.size == 3)
     //    assert(groundedConstraints(1).computeCoefficientMatrix.toList == List(1.0, 1.0, 1.0))
     //    assert(groundedConstraints(1).computeConstant == 1)
     //
     //    // votes(democrats, *) 
-    //    println(groundedConstraints(2))
+    //    //println(groundedConstraints(2))
     //    assert(groundedConstraints(2).unboundGroundedPredicates.size == 3)
     //    assert(groundedConstraints(2).computeCoefficientMatrix.toList == List(1.0, 1.0, 1.0))
     //    assert(groundedConstraints(2).computeConstant == 1)
     //
     //    // votes(bob, *) knowing votes(bob, republicans) = 0.666
-    //    println(groundedConstraints(3))
+    //    //println(groundedConstraints(3))
     //    assert(groundedConstraints(3).unboundGroundedPredicates.size == 2)
     //    assert(groundedConstraints(3).computeCoefficientMatrix.toList == List(1.0, 1.0))
     //    assert(groundedConstraints(3).computeConstant == 0.33399999999999996)
 
     // friend(anna, republicans), friend(republicans,anna)
-    //    println(groundedConstraints(4))
+    //    //println(groundedConstraints(4))
     //assert(groundedConstraints(4).unboundGroundedPredicates.size == 2)
     //[info] Grounding
     //[info] - should correctly ground the predicates for a small example
@@ -233,15 +233,15 @@ class GroundingSpec extends FlatSpec with Matchers with TestAnnouncements {
     //[info]   List(GroundedPredicate 39: friend[ Symmetric] (anna, bob) ) had size 1 instead of expected size 2 (GroundingSpec.scala:222)
     //    assert(groundedConstraints(4).computeCoefficientMatrix.toList == List(1.0, -1.0))
     //    assert(groundedConstraints(4).computeConstant == 0)
-    //    println(groundedConstraints(5))
+    //    //println(groundedConstraints(5))
     //    assert(groundedConstraints(5).unboundGroundedPredicates.size == 2)
     //    assert(groundedConstraints(5).computeCoefficientMatrix.toList == List(1.0, -1.0))
     //    assert(groundedConstraints(5).computeConstant == 0)
     //
-    //    println(groundedConstraints(6))
-    //    println(groundedConstraints(7))
-    //    println(groundedConstraints(8))
-    //    println(groundedConstraints(9))
+    //    //println(groundedConstraints(6))
+    //    //println(groundedConstraints(7))
+    //    //println(groundedConstraints(8))
+    //    //println(groundedConstraints(9))
     //TODO: The commented out checks above sometimes fails on Travis, but not from within Eclipse.
   }
 

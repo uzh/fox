@@ -107,8 +107,8 @@ class ExistsExample extends FlatSpec with Matchers with TestAnnouncements {
     val gps = inferenceResults.idToGpMap
     val objectiveFunctionVal = inferenceResults.objectiveFun.get
 
-    println(inferenceResults)
-    println("Objective function value: " + objectiveFunctionVal)
+    //println(inferenceResults)
+    //println("Objective function value: " + objectiveFunctionVal)
 
     objectiveFunctionVal should be(0.0 +- 5e-4) 
   }
