@@ -81,8 +81,8 @@ case class InferencerConfig(
   asynchronous: Boolean = false,
   breezeOptimizer: Boolean = true,
   globalConvergenceDetection: Option[Int] = Some(100), // Run convergence detection every 100 S/C steps.
-  absoluteEpsilon: Double = 1e-10,
-  relativeEpsilon: Double = 1e-4,
+  absoluteEpsilon: Double = 1e-8,
+  relativeEpsilon: Double = 1e-3,
   computeObjectiveValueOfSolution: Boolean = true,
   objectiveLoggingEnabled: Boolean = false,
   maxIterations: Int = 10000, // maximum number of iterations.
