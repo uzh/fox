@@ -50,7 +50,7 @@ import com.signalcollect.util.IntDoubleHashMap
 import akka.actor.ActorRef
 
 case class ProblemSolution(
-  stats: ExecutionInformation[Int, Any],
+  stats: ExecutionInformation[Int, Double],
   results: IntDoubleHashMap,
   convergence: Option[AbstractGlobalAdmmConvergenceDetection] = None,
   graphLoadingTime: Long) // in case we have local convergence this is None.
@@ -72,8 +72,8 @@ case class NonExistentConsensusVertexHandlerFactory(
   asynchronous: Boolean, // If the execution is asynchronous
   initialState: Double, // the initial value for the consensus variable.
   isBounded: Boolean // shall we use bounding (cutoff below 0 and above 1)? 
-  ) extends EdgeAddedToNonExistentVertexHandlerFactory[Int, Any] {
-  def createInstance: EdgeAddedToNonExistentVertexHandler[Int, Any] =
+  ) extends EdgeAddedToNonExistentVertexHandlerFactory[Int, Double] {
+  def createInstance: EdgeAddedToNonExistentVertexHandler[Int, Double] =
     new NonExistentConsensusVertexHandler(asynchronous, initialState, isBounded)
   override def toString = "NoneExistentConsensusVertexFactory"
 }
@@ -82,8 +82,8 @@ case class NonExistentConsensusVertexHandler(
   asynchronous: Boolean, // If the execution is asynchronous
   initialState: Double, // the initial value for the consensus variable.
   isBounded: Boolean // shall we use bounding (cutoff below 0 and above 1)? 
-  ) extends EdgeAddedToNonExistentVertexHandler[Int, Any] {
-  def handleImpossibleEdgeAddition(edge: Edge[Int], vertexId: Int): Option[Vertex[Int, _, Int, Any]] = {
+  ) extends EdgeAddedToNonExistentVertexHandler[Int, Double] {
+  def handleImpossibleEdgeAddition(edge: Edge[Int], vertexId: Int): Option[Vertex[Int, _, Int, Double]] = {
     if (asynchronous) {
       Some(
         new AsyncConsensusVertex(
@@ -127,7 +127,7 @@ object Wolf {
             checkingInterval = config.globalConvergenceDetection.get)
         }
         println("Global convergence detection initialized.")
-        val stats = graph.execute(ExecutionConfiguration[Int, Any]().
+        val stats = graph.execute(ExecutionConfiguration[Int, Double]().
           withExecutionMode(if (config.asynchronous) ExecutionMode.PureAsynchronous else ExecutionMode.Synchronous).
           withGlobalTerminationDetection(globalConvergence).
           withStepsLimit(config.maxIterations))
@@ -170,7 +170,7 @@ object Wolf {
     functions: Traversable[OptimizableFunction],
     nodeActors: Option[Array[ActorRef]] = None,
     config: WolfConfig = new WolfConfig(),
-    serializeMessages: Boolean = false): Graph[Int, Any] = {
+    serializeMessages: Boolean = false): Graph[Int, Double] = {
     println(s"Creating the ADMM graph ...")
     if (nodeActors == None) {
       println("[Info] The parameter nodeActors is None: Running in single node mode.")
@@ -182,14 +182,14 @@ object Wolf {
       isBounded = config.isBounded // shall we use bounding (cutoff below 0 and above 1)? 
       )
     val graphBuilder = {
-      nodeActors.map(new GraphBuilder[Int, Any]().withPreallocatedNodes(_)).
-        getOrElse(new GraphBuilder[Int, Any]()).
+      nodeActors.map(new GraphBuilder[Int, Double]().withPreallocatedNodes(_)).
+        getOrElse(new GraphBuilder[Int, Double]()).
         // TODO: Make bulk message bus and bulk size configurable.
         withEagerIdleDetection(config.eagerSignalCollectConvergenceDetection).
-        withMessageBusFactory(new BulkAkkaMessageBusFactory[Int, Any](10000, true)).
+        withMessageBusFactory(new BulkAkkaMessageBusFactory[Int, Double](10000, true)).
         withStatsReportingInterval(config.heartbeatIntervalInMs).
         withMessageSerialization(serializeMessages).
-        //withSchedulerFactory(if (config.asynchronous) new PslSchedulerFactory[Int, Any]() else new Throughput[Int, Any]).
+        //withSchedulerFactory(if (config.asynchronous) new PslSchedulerFactory[Int, Double]() else new Throughput[Int, Double]).
         withEdgeAddedToNonExistentVertexHandlerFactory(consensusHandlerFactory).
         withKryoRegistrations(List(
           "com.signalcollect.admm.ObjectiveValueAggregator$",
@@ -230,7 +230,7 @@ object Wolf {
   }
 
   def createSubproblem(
-    graph: Graph[Int, Any],
+    graph: Graph[Int, Double],
     id: Int,
     f: OptimizableFunction,
     config: WolfConfig = new WolfConfig()) = {
@@ -256,8 +256,7 @@ object Wolf {
     } else {
       new SubproblemVertex(
         subproblemId = subId,
-        optimizableFunction = f,
-        initialVariableAssignments = Array())
+        optimizableFunction = f)
     }
     for (consensusId <- f.idToIndexMappings) {
       subproblem.addEdge(new DummyEdge(consensusId), graph)

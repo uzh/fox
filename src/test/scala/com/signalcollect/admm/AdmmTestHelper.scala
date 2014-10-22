@@ -56,13 +56,13 @@ object AdmmTestHelper {
     -i
   }
 
-  def consensus(graph: Graph[Any, Any], id: Int): ConsensusVertex = {
+  def consensus(graph: Graph[Int, Double], id: Int): ConsensusVertex = {
     graph.forVertexWithId(id, {
       v: ConsensusVertex => v
     })
   }
 
-  def subproblem(graph: Graph[Any, Any], id: Int): SubproblemVertex = {
+  def subproblem(graph: Graph[Int, Double], id: Int): SubproblemVertex = {
     graph.forVertexWithId(id, {
       v: SubproblemVertex => v
     })
@@ -70,7 +70,7 @@ object AdmmTestHelper {
 
   def createGraph(z: Array[Double], hlts: Map[Int, List[OptimizableFunction]], stepSize: Double): IntDoubleHashMap = {
     val emptyMap = AdmmTestHelper.createEmptyMap(z)
-    val graph = new GraphBuilder[Int, Any]().withConsole(false).build
+    val graph = new GraphBuilder[Int, Double]().withConsole(false).build
 
     var id = 0
 
@@ -78,7 +78,7 @@ object AdmmTestHelper {
       graph.addVertex(new ConsensusVertex(createId(i), z(i)))
 
       for { j <- 0 until hlts(i).length } {
-        graph.addVertex(new SubproblemVertex(createSubproblemId(id), hlts(i)(j), Array()))
+        graph.addVertex(new SubproblemVertex(createSubproblemId(id), hlts(i)(j)))
         // Edges in both directions.
         graph.addEdge(createSubproblemId(id), new DummyEdge(createId(i)))
         graph.addEdge(createId(i), new DummyEdge(createSubproblemId(id)))

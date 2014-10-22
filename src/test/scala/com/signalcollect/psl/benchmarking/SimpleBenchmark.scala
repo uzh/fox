@@ -182,7 +182,7 @@ fact [truthValue = 1.0]: likes(fred, star-wars)
 
   val startTime = System.currentTimeMillis
   val config = InferencerConfig(
-    asynchronous = true,
+    asynchronous = false,
     globalConvergenceDetection = Some(100),
     //globalConvergenceDetection = None,
     maxIterations = 10000,
@@ -191,7 +191,7 @@ fact [truthValue = 1.0]: likes(fred, star-wars)
     relativeEpsilon = 1e-3,
     isBounded = true,
     objectiveLoggingEnabled = true,
-    eagerSignalCollectConvergenceDetection = false,
+    eagerSignalCollectConvergenceDetection = true,
     stepSize = 1.0)
   val inferenceResults = Inferencer.runInferenceFromString(
     movieExample1, config = config)

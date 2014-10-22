@@ -34,14 +34,14 @@ final class AsyncConsensusVertex(
   var shouldSignal = false
   var signalsReceivedSinceCollect = 0
 
-  override def executeSignalOperation(graphEditor: GraphEditor[Int, Any]) {
+  override def executeSignalOperation(graphEditor: GraphEditor[Int, Double]) {
     shouldSignal = false
     super.executeSignalOperation(graphEditor)
   }
 
-  override def deliverSignalWithSourceId(signal: Any, sourceId: Int, graphEditor: GraphEditor[Int, Any]): Boolean = {
+  override def deliverSignalWithSourceId(signal: Double, sourceId: Int, graphEditor: GraphEditor[Int, Double]): Boolean = {
     signalsReceivedSinceCollect += 1
-    mostRecentSignalMap.put(sourceId, signal.asInstanceOf[Double])
+    mostRecentSignalMap.put(sourceId, signal)
     if (signalsReceivedSinceCollect == _targetIds.size) {
       shouldSignal = true
       signalsReceivedSinceCollect = 0

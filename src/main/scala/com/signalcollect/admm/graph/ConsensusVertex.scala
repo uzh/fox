@@ -43,7 +43,7 @@ class ConsensusVertex(
   variableId: Int, // the id of the variable, which identifies it also in the subproblem nodes.
   initialState: Double = 0.0, // the initial value for the consensus variable.
   isBounded: Boolean = true ) // shall we use bounding (cutoff below 0 and above 1)? 
-  extends MemoryEfficientDataGraphVertex[Double, Double](variableId, initialState) with Consensus {
+  extends MemoryEfficientDataGraphVertex[Double, Double, Double](variableId, initialState) with Consensus {
 
   @inline final def upperBound: Double = 1.0 // each consensus variable can only assume values in the range [lowerBound, upperBound].
   @inline final def lowerBound: Double = 0.0
@@ -70,7 +70,7 @@ class ConsensusVertex(
    * We do not signal with the edges (so no need to define signal()),
    * instead the signalling is done here.
    */
-  override def executeSignalOperation(graphEditor: GraphEditor[Int, Any]) {
+  override def executeSignalOperation(graphEditor: GraphEditor[Int, Double]) {
     val signal = state
     _targetIds.foreach { targetId =>
       graphEditor.sendSignal(signal, targetId, id)
