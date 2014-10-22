@@ -80,18 +80,18 @@ case class InferenceResult(
 case class InferencerConfig(
   asynchronous: Boolean = false,
   breezeOptimizer: Boolean = true,
-  globalConvergenceDetection: Option[Int] = Some(2), // Run convergence detection every 2 S/C steps.
-  absoluteEpsilon: Double = 1e-5,
-  relativeEpsilon: Double = 1e-3,
+  globalConvergenceDetection: Option[Int] = Some(100), // Run convergence detection every 100 S/C steps.
+  absoluteEpsilon: Double = 1e-10,
+  relativeEpsilon: Double = 1e-4,
   computeObjectiveValueOfSolution: Boolean = true,
   objectiveLoggingEnabled: Boolean = false,
-  maxIterations: Int = 2000, // maximum number of iterations.
+  maxIterations: Int = 10000, // maximum number of iterations.
   stepSize: Double = 1.0,
   tolerance: Double = 0,
   isBounded: Boolean = true,
   serializeMessages: Boolean = false,
-  removeSymmetricConstraints: Boolean = false,
-  eagerSignalCollectConvergenceDetection: Boolean = false,
+  removeSymmetricConstraints: Boolean = true,
+  eagerSignalCollectConvergenceDetection: Boolean = true,
   heartbeatIntervalInMs: Int = 50) {
 
   def getWolfConfig() = {

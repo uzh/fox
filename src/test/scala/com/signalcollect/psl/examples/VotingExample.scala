@@ -65,8 +65,6 @@ class VotingExample extends FlatSpec with Matchers with TestAnnouncements {
 
     val config = InferencerConfig(
       computeObjectiveValueOfSolution = true,
-      absoluteEpsilon = 10e-09,
-      relativeEpsilon = 10e-04,
       isBounded = false,
       removeSymmetricConstraints = false)
     val inferenceResults = Inferencer.runInference(pslData, config = config)
