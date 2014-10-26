@@ -92,7 +92,7 @@ case class InferencerConfig(
   serializeMessages: Boolean = false,
   removeSymmetricConstraints: Boolean = true,
   eagerSignalCollectConvergenceDetection: Boolean = true,
-  heartbeatIntervalInMs: Int = 50) {
+  heartbeatIntervalInMs: Int = 0) {
 
   def getWolfConfig() = {
     new WolfConfig(

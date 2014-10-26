@@ -65,8 +65,8 @@ case class WolfConfig(
   stepSize: Double = 1.0,
   isBounded: Boolean = true,
   serializeMessages: Boolean = false,
-  eagerSignalCollectConvergenceDetection: Boolean = false,
-  heartbeatIntervalInMs: Int = 50)
+  eagerSignalCollectConvergenceDetection: Boolean = true,
+  heartbeatIntervalInMs: Int = 0)
 
 case class NonExistentConsensusVertexHandlerFactory(
   asynchronous: Boolean, // If the execution is asynchronous
