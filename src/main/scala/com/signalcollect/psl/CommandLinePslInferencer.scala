@@ -14,15 +14,15 @@ object CommandLinePslInferencer extends App {
       relativeEpsilon = 1e-3))
   val inferences = inferenceResults.solution.results
   val gps = inferenceResults.idToGpMap
-  inferences.foreach {
-    case (id, truthValue) =>
-      if (truthValue > 0) {
-        val gp = gps(id)
-        if (!gp.truthValue.isDefined) {
-          println(s"$gp has truth value $truthValue")
-        }
+  def reportInference(gpId: Int, truthValue: Double) {
+    if (truthValue > 0) {
+      val gp = gps(gpId)
+      if (!gp.truthValue.isDefined) {
+        println(s"$gp has truth value $truthValue")
       }
+    }
   }
+  inferences.foreach(reportInference)
 
   System.exit(0)
 

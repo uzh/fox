@@ -158,7 +158,7 @@ object Grounding {
                 val varB = Variable("B", Set(predicate.classes(1)))
                 val bindings = generateBindings(List(varA, varB), individuals)
                 bindings.flatMap {
-                  binding => List(Some(predicate, List(binding("A"), binding("B"))))
+                  binding => List(Some((predicate, List(binding("A"), binding("B")))))
                 }
               case Symmetric =>
                 val varA = Variable("A", predicate.classes.toSet)
@@ -167,8 +167,8 @@ object Grounding {
                 bindings.flatMap {
                   binding =>
                     List(
-                      Some(predicate, List(binding("A"), binding("B"))),
-                      Some(predicate, List(binding("B"), binding("A"))))
+                      Some((predicate, List(binding("A"), binding("B")))),
+                      Some((predicate, List(binding("B"), binding("A")))))
                 }
               case _ => List(None)
             }

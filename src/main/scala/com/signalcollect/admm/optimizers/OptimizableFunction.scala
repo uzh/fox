@@ -65,7 +65,7 @@ trait OptimizableFunction {
   def idToIndexMappings: Array[Int]
 
   // Helper function to convert from a map to a properly ordered array.
-  @inline final def mapToArray(m: Map[Int, Double]): Array[Double] = {
+  final def mapToArray(m: Map[Int, Double]): Array[Double] = {
     val mappings = idToIndexMappings
     val l = mappings.length
     val mapped = new Array[Double](l)
@@ -78,7 +78,7 @@ trait OptimizableFunction {
     mapped
   }
 
-  @inline final def arrayToMap(a: Array[Double]): Map[Int, Double] = {
+  final def arrayToMap(a: Array[Double]): Map[Int, Double] = {
     idToIndexMappings.zip(a).toMap
   }
 
