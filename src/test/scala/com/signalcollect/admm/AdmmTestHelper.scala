@@ -70,7 +70,7 @@ object AdmmTestHelper {
 
   def createGraph(z: Array[Double], hlts: Map[Int, List[OptimizableFunction]], stepSize: Double): IntDoubleHashMap = {
     val emptyMap = AdmmTestHelper.createEmptyMap(z)
-    val graph = new GraphBuilder[Int, Any]().withConsole(false).build
+    val graph = new GraphBuilder[Int, Double]().withConsole(false).build
 
     var id = 0
 

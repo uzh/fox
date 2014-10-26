@@ -40,7 +40,7 @@ case class GlobalAdmmConvergenceDetection(
   type ResultType = (PrimalData, DualData)
   val aggregationOperation = MultiAggregator(PrimalAggregator, DualAggregator)
   def shouldTerminate(t: (PrimalData, DualData)) = isConverged(t)
-  def shouldTerminate(g: Graph[Int, Any]): Boolean = {
+  def shouldTerminate(g: Graph[Int, Double]): Boolean = {
     val aggregationResult = g.aggregate(aggregationOperation)
     shouldTerminate(aggregationResult)
   }
@@ -68,13 +68,13 @@ case class GlobalAdmmConvergenceDetectionWithDebugging(
       false
     }
   }
-  def shouldTerminate(g: Graph[Int, Any]): Boolean = {
+  def shouldTerminate(g: Graph[Int, Double]): Boolean = {
     val aggregationResult = g.aggregate(aggregationOperation)
     shouldTerminate(aggregationResult)
   }
 }
 
-abstract class AbstractGlobalAdmmConvergenceDetection extends GlobalTerminationDetection[Int, Any] {
+abstract class AbstractGlobalAdmmConvergenceDetection extends GlobalTerminationDetection[Int, Double] {
   override def aggregationInterval = 1
   def stepSize: Double
   def absoluteEpsilon: Double

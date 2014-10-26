@@ -40,7 +40,7 @@ class SubproblemVertex(
   subproblemId: Int, // The id of the subproblem.
   val optimizableFunction: OptimizableFunction, // The function that is contained in the subproblem.
   initialVariableAssignments: Array[Double])
-  extends MemoryEfficientDataGraphVertex[Array[Double], Double](subproblemId, initialVariableAssignments) 
+  extends MemoryEfficientDataGraphVertex[Array[Double], Double, Double](subproblemId, initialVariableAssignments) 
   with Subproblem {
 
   type OutgoingSignalType = Double
@@ -52,7 +52,7 @@ class SubproblemVertex(
    * We do not signal with the edges (so no need to define signal()),
    * instead the signalling is done here.
    */
-  override def executeSignalOperation(graphEditor: GraphEditor[Int, Any]) {
+  override def executeSignalOperation(graphEditor: GraphEditor[Int, Double]) {
     // TODO: We don't really need the S/C vertex target ids. Can we save some memory here?
     var alreadySentId = Set.empty[Int]
     val idToIndexMapping = optimizableFunction.idToIndexMappings
@@ -73,7 +73,7 @@ class SubproblemVertex(
     lastSignalState = state
   }
 
-  override def afterInitialization(graphEditor: GraphEditor[Int, Any]) {
+  override def afterInitialization(graphEditor: GraphEditor[Int, Double]) {
     executeCollectOperation(graphEditor)
   }
 
