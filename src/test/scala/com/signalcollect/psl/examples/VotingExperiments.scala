@@ -177,17 +177,17 @@ object ExperimentHelper {
       }
     }
 
-    for { i <- minExponent until maxExponent } {
-      for { j <- minExponent until maxExponent } {
-        val config = new InferencerConfig(
-          computeObjectiveValueOfSolution = true,
-          absoluteEpsilon = Math.pow(10, -i),
-          relativeEpsilon = Math.pow(10, -j),
-          isBounded = true,
-          stepSize = stepSize)
-        results += runExperiment(pslData, 2 * diff * diff + i * diff + j, config)
-      }
-    }
+//    for { i <- minExponent until maxExponent } {
+//      for { j <- minExponent until maxExponent } {
+//        val config = new InferencerConfig(
+//          computeObjectiveValueOfSolution = true,
+//          absoluteEpsilon = Math.pow(10, -i),
+//          relativeEpsilon = Math.pow(10, -j),
+//          isBounded = true,
+//          stepSize = stepSize)
+//        results += runExperiment(pslData, 2 * diff * diff + i * diff + j, config)
+//      }
+//    }
 
     for { i <- minExponent until maxExponent } {
       for { j <- minExponent until maxExponent } {
@@ -201,17 +201,17 @@ object ExperimentHelper {
       }
     }
 
-    for { i <- minExponent until maxExponent } {
-      for { j <- minExponent until maxExponent } {
-        val config = new InferencerConfig(
-          computeObjectiveValueOfSolution = true,
-          absoluteEpsilon = Math.pow(10, -i),
-          relativeEpsilon = Math.pow(10, -j),
-          isBounded = true,
-          stepSize = stepSize)
-        results += runExperiment(pslData, 6 * diff * diff + i * diff + j, config)
-      }
-    }
+//    for { i <- minExponent until maxExponent } {
+//      for { j <- minExponent until maxExponent } {
+//        val config = new InferencerConfig(
+//          computeObjectiveValueOfSolution = true,
+//          absoluteEpsilon = Math.pow(10, -i),
+//          relativeEpsilon = Math.pow(10, -j),
+//          isBounded = true,
+//          stepSize = stepSize)
+//        results += runExperiment(pslData, 6 * diff * diff + i * diff + j, config)
+//      }
+//    }
 
     results
   }

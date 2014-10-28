@@ -180,13 +180,48 @@ fact [truthValue = 1.0]: likes(george, grease)
 fact [truthValue = 1.0]: likes(fred, star-wars)
 """
 
+  val simple = """
+class Person: a, b, c
+
+predicate: likes(Person, Person)
+#rule [weight = 1]: => !likes(A, B)
+rule [weight = 100]: likes(A, B) && likes(B, C) => likes(A, C)
+
+fact [truthValue = 1.0]: likes(a, b)
+fact [truthValue = 1.0]: likes(b, c)
+"""
+
+  val chain = """
+class Person: a
+
+predicate: likes(Person, Person)
+#rule [weight = 1]: => !likes(A, B)
+rule [weight = 1]: likes(A, B) && likes(B, C) => likes(A, C)
+
+fact [truthValue = 1.0]: likes(a, b)
+fact [truthValue = 1.0]: likes(b, c)
+fact [truthValue = 1.0]: likes(c, d)
+fact [truthValue = 1.0]: likes(d, e)
+fact [truthValue = 1.0]: likes(e, f)
+"""
+
+  val marriage = """
+predicate:         votes(_, _)
+predicate:         married(_, _)
+#rule [1]: => !married(A, B)
+#rule [1]: => !votes(A, B)
+rule [1]:                  votes(A, P) && married(A, B) => votes(B, P)
+fact:                  votes(anna, demo)
+fact:                  married(anna, bob)
+fact:                  votes(carl, bob)
+"""
+
   val startTime = System.currentTimeMillis
-  val config = InferencerConfig(
-      //breezeOptimizer = false
-      //,globalConvergenceDetection = None,
+  val config = InferencerConfig( //breezeOptimizer = false
+  //,globalConvergenceDetection = None,
   )
   val inferenceResults = Inferencer.runInferenceFromString(
-    movieExample1, config = config)
+    chain, config = config)
   val durationInSeconds = ((System.currentTimeMillis - startTime) / 100.0).round / 10.0
   println(s"Running inference took $durationInSeconds seconds.")
   println(inferenceResults)

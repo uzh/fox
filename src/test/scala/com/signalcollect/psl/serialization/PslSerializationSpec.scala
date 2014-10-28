@@ -62,8 +62,7 @@ class PslSerializationSpec extends FlatSpec with Matchers with TestAnnouncements
 	"""
 
   "PSL Serialization" should "be able to do inference when all messages are serialized" in {
-    val config = InferencerConfig(computeObjectiveValueOfSolution = true, absoluteEpsilon = 10e-09, relativeEpsilon = 10e-04, isBounded = true,
-      serializeMessages = true)
+    val config = InferencerConfig(computeObjectiveValueOfSolution = true, absoluteEpsilon = 10e-09, relativeEpsilon = 10e-04, serializeMessages = true)
     val inferenceResults = Inferencer.runInferenceFromString(example, config = config)
 
     val solution = inferenceResults.solution
