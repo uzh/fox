@@ -115,11 +115,10 @@ object Wolf {
       val (stats, convergence) = if (config.globalConvergenceDetection.isDefined) {
         // Global convergence case:
         val globalConvergence = if (config.objectiveLoggingEnabled) {
-          GlobalAdmmConvergenceDetectionWithDebugging(
-            functions,
+          new GlobalAdmmConvergenceDetection(
             absoluteEpsilon = config.absoluteEpsilon,
             relativeEpsilon = config.relativeEpsilon,
-            checkingInterval = config.globalConvergenceDetection.get)
+            checkingInterval = config.globalConvergenceDetection.get) with DebugLogging
         } else {
           GlobalAdmmConvergenceDetection(
             absoluteEpsilon = config.absoluteEpsilon,
