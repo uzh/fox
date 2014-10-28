@@ -40,6 +40,8 @@ libraryDependencies ++= Seq(
   "net.sourceforge.jtransforms" % "jtransforms" % "2.4.0" % "compile",
   "org.scalanlp" %% "breeze" % "0.9" % "compile",
   "org.scalanlp" %% "breeze-natives" % "0.9" % "compile",
+  "org.slf4j" % "slf4j-api" % "1.7.7" % "compile",
+  "org.slf4j" % "slf4j-simple" % "1.7.7" % "compile",
   "junit" % "junit" % "4.8.2"  % "test",
   "org.scalatest" %% "scalatest" % "2.2.1" % "test"
 )
