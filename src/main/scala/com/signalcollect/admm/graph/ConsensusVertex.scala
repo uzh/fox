@@ -42,7 +42,7 @@ trait Consensus {
 class ConsensusVertex(
   variableId: Int, // the id of the variable, which identifies it also in the subproblem nodes.
   initialState: Double = 0.0, // the initial value for the consensus variable.
-  isBounded: Boolean = true ) // shall we use bounding (cutoff below 0 and above 1)? 
+  isBounded: Boolean = true) // shall we use bounding (cutoff below 0 and above 1)? 
   extends MemoryEfficientDataGraphVertex[Double, Double, Double](variableId, initialState) with Consensus {
 
   @inline final def upperBound: Double = 1.0 // each consensus variable can only assume values in the range [lowerBound, upperBound].
@@ -52,9 +52,23 @@ class ConsensusVertex(
 
   @inline def variableId = id
   @inline def variableCount = _targetIds.size
-  @inline def consensus = state
-  @inline def oldConsensus = lastSignalState
-  
+
+  @inline def consensus = {
+    if (isBounded) {
+      bounded(state)
+    } else {
+      state
+    }
+  }
+
+  @inline def oldConsensus = {
+    if (isBounded) {
+      bounded(lastSignalState)
+    } else {
+      lastSignalState
+    }
+  }
+
   @inline def collect = {
     // New consensus is average vote.
     val newConsensus = averageConsensusVote
@@ -71,7 +85,7 @@ class ConsensusVertex(
    * instead the signalling is done here.
    */
   override def executeSignalOperation(graphEditor: GraphEditor[Int, Double]) {
-    val signal = state
+    val signal = consensus
     _targetIds.foreach { targetId =>
       graphEditor.sendSignal(signal, targetId, id)
     }
@@ -124,13 +138,7 @@ class ConsensusVertex(
    *  to anything except zero.
    *  This is perfectly fine with PSL inference, but may have drawbacks in other cases.
    */
-  override def scoreSignal = {
-    if (state != 0.0) {
-      1.0
-    } else {
-      0.0
-    }
-  }
+  override def scoreSignal = 1
 
   @inline def bounded(i: Double): Double = {
     math.max(math.min(i, upperBound), lowerBound)

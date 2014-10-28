@@ -79,6 +79,7 @@ case class InferenceResult(
 
 case class InferencerConfig(
   asynchronous: Boolean = false,
+  lazyInferencing: Boolean = true,
   breezeOptimizer: Boolean = true,
   globalConvergenceDetection: Option[Int] = Some(100), // Run convergence detection every 100 S/C steps.
   absoluteEpsilon: Double = 1e-8,
@@ -94,9 +95,10 @@ case class InferencerConfig(
   eagerSignalCollectConvergenceDetection: Boolean = true,
   heartbeatIntervalInMs: Int = 0) {
 
-  def getWolfConfig() = {
-    new WolfConfig(
+  def getWolfConfig = {
+    WolfConfig(
       asynchronous = asynchronous,
+      lazyInferencing = lazyInferencing,
       globalConvergenceDetection = globalConvergenceDetection,
       objectiveLoggingEnabled = objectiveLoggingEnabled,
       absoluteEpsilon = absoluteEpsilon,

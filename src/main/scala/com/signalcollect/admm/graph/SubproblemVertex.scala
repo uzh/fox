@@ -63,14 +63,11 @@ class SubproblemVertex(
       val targetId = idToIndexMapping(i)
       if (!alreadySentId.contains(targetId)) {
         val targetIdValue = state(i)
-        if (targetIdValue != 0.0) {
-          graphEditor.sendSignal(targetIdValue, targetId, id)
-        }
+        graphEditor.sendSignal(targetIdValue, targetId, id)
         alreadySentId += targetId
       }
       i += 1
     }
-    lastSignalState = state
   }
 
   override def afterInitialization(graphEditor: GraphEditor[Int, Double]) {
