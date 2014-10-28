@@ -72,12 +72,7 @@ class ConsensusVertex(
 
   @inline def collect = {
     // New consensus is average vote.
-    val newConsensus = averageConsensusVote
-    if (isBounded) {
-      bounded(newConsensus)
-    } else {
-      newConsensus
-    }
+    averageConsensusVote
   }
 
   /**
@@ -103,7 +98,7 @@ class ConsensusVertex(
   }
 
   @inline def consensusVotes: Array[Double] = {
-    val votes = new Array[Double](_targetIds.size)
+    val votes = new Array[Double](variableCount)
     var i = 0
     _targetIds.foreach { targetId =>
       votes(i) = mostRecentSignalMap(targetId)
@@ -113,7 +108,7 @@ class ConsensusVertex(
   }
 
   @inline def averageConsensusVote: Double = {
-    consensusVoteSum / _targetIds.size
+    consensusVoteSum / variableCount
   }
 
   @inline def consensusVoteSum: Double = {

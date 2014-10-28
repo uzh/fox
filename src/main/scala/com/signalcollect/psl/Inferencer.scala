@@ -79,7 +79,7 @@ case class InferenceResult(
 
 case class InferencerConfig(
   asynchronous: Boolean = false,
-  lazyInferencing: Boolean = true,
+  lazyInferencing: Boolean = false,
   breezeOptimizer: Boolean = false,
   globalConvergenceDetection: Option[Int] = Some(100), // Run convergence detection every 100 S/C steps.
   absoluteEpsilon: Double = 1e-8,
@@ -89,11 +89,11 @@ case class InferencerConfig(
   maxIterations: Int = 10000, // maximum number of iterations.
   stepSize: Double = 1.0,
   tolerance: Double = 0,
-  isBounded: Boolean = false,
+  isBounded: Boolean = true,
   serializeMessages: Boolean = false,
   removeSymmetricConstraints: Boolean = true,
-  eagerSignalCollectConvergenceDetection: Boolean = true,
-  heartbeatIntervalInMs: Int = 0) {
+  eagerSignalCollectConvergenceDetection: Boolean = false,
+  heartbeatIntervalInMs: Int = 10) {
 
   def getWolfConfig = {
     WolfConfig(
