@@ -46,8 +46,6 @@ class MovieRecommendationsWithClasses extends FlatSpec with Matchers with TestAn
     
 	predicate: likes(Person, _)
 	predicate: playsIn(Actor, Movie)
-#	predicate: likes(_, _)
-#	predicate: playsIn(_, _)
 	    
 	rule [weight = 1]: likes(PERSON, MOVIE) && playsIn(ACTOR, MOVIE) => likes(PERSON, ACTOR)
 	rule [weight = 1]: likes(PERSON, MOVIE-A) && playsIn(ACTOR, MOVIE-B) && playsIn(ACTOR, MOVIE-B) => likes(PERSON, MOVIE-B)
@@ -66,7 +64,7 @@ class MovieRecommendationsWithClasses extends FlatSpec with Matchers with TestAn
 	fact [truthValue = 0.9]: likes(sara, pulp-fiction)
 	fact [truthValue = 0.3]: likes(sara, grease)
 	fact [truthValue = 0.8]: likes(sara, star-wars)
-	fact [truthValue = 0.8]: likes(sara, transpotting)
+	fact [truthValue = 0.8]: likes(sara, trainspotting)
 	fact [truthValue = 0.8]: likes(sara, blade-runner)
 	
 	fact [truthValue = 0.9]: likes(philip, pulp-fiction)
