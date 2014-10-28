@@ -42,7 +42,8 @@ trait Consensus {
 class ConsensusVertex(
   variableId: Int, // the id of the variable, which identifies it also in the subproblem nodes.
   initialState: Double = 0.0, // the initial value for the consensus variable.
-  isBounded: Boolean = true) // shall we use bounding (cutoff below 0 and above 1)? 
+  isBounded: Boolean = true,
+  implicitZero: Boolean = true) // shall we use bounding (cutoff below 0 and above 1)? 
   extends MemoryEfficientDataGraphVertex[Double, Double, Double](variableId, initialState) with Consensus {
 
   @inline final def upperBound: Double = 1.0 // each consensus variable can only assume values in the range [lowerBound, upperBound].
@@ -138,7 +139,13 @@ class ConsensusVertex(
    *  to anything except zero.
    *  This is perfectly fine with PSL inference, but may have drawbacks in other cases.
    */
-  override def scoreSignal = 1
+  override def scoreSignal = {
+    if (state != 0.0 || !implicitZero) {
+      1.0
+    } else {
+      0.0
+    }
+  }
 
   @inline def bounded(i: Double): Double = {
     math.max(math.min(i, upperBound), lowerBound)

@@ -40,7 +40,8 @@ trait Subproblem {
  */
 class SubproblemVertex(
   subproblemId: Int, // The id of the subproblem.
-  val optimizableFunction: OptimizableFunction) // The function that is contained in the subproblem.
+  val optimizableFunction: OptimizableFunction,
+  implicitZero: Boolean = true) // The function that is contained in the subproblem.
   extends MemoryEfficientDataGraphVertex[Array[Double], Double, Double](subproblemId, null.asInstanceOf[Array[Double]])
   with Subproblem {
 
@@ -62,8 +63,10 @@ class SubproblemVertex(
     while (i < idToIndexMappingLength) {
       val targetId = idToIndexMapping(i)
       if (!alreadySentId.contains(targetId)) {
-        val targetIdValue = state(i)
-        graphEditor.sendSignal(targetIdValue, targetId, id)
+        if (targetId != 0 || !implicitZero) {
+          val targetIdValue = state(i)
+          graphEditor.sendSignal(targetIdValue, targetId, id)
+        }
         alreadySentId += targetId
       }
       i += 1
