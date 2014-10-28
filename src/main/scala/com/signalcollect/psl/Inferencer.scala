@@ -89,7 +89,7 @@ case class InferencerConfig(
   maxIterations: Int = 10000, // maximum number of iterations.
   stepSize: Double = 1.0,
   tolerance: Double = 0,
-  isBounded: Boolean = true,
+  isBounded: Boolean = false,
   serializeMessages: Boolean = false,
   removeSymmetricConstraints: Boolean = true,
   eagerSignalCollectConvergenceDetection: Boolean = true,
