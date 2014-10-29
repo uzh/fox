@@ -18,7 +18,6 @@
  *
  */
 
-
 package com.signalcollect.psl.examples
 
 import org.scalatest.FlatSpec
@@ -46,131 +45,66 @@ class FriendsExample extends FlatSpec with Matchers with TestAnnouncements {
 
   val friends = """
 	predicate: 		friends(_, _)
-    predicate: True()
     
-    // Gives a default soft truth value of 1/(4+1) to unknown predicates.
-    rule [1]: True() => friends(A,B)
-    rule [4]: True() => !friends(A,B)
+  // Gives a default soft truth value of 1/(4+1) to unknown predicates.
+  rule [1]: => friends(A,B)
+  rule [4]: => !friends(A,B)
     
-    fact [1.0]: True()
 	fact: friends(anna, bob)
-    fact: !friends(bob, carl)
+  fact: !friends(bob, carl)
 	"""
   "FriendsExample" should "provide a solution consistent for friends, with a default value of 0.2" in {
     val pslData = PslParser.parse(friends)
 
-    val config = InferencerConfig(objectiveLoggingEnabled = true, absoluteEpsilon = 1e-08, relativeEpsilon = 1e-03, isBounded = true)
+    val config = InferencerConfig(objectiveLoggingEnabled = true, 
+        absoluteEpsilon = 1e-08, relativeEpsilon = 1e-03, isBounded = true)
     val inferenceResults = Inferencer.runInference(pslData, config = config)
 
     println(inferenceResults)
     val objectiveFunctionVal = inferenceResults.objectiveFun.get
 
-    objectiveFunctionVal should be(3.2 +- 6e-2)
+    objectiveFunctionVal should be(3.2 +- 1e-5)
   }
-
-  /**
-   * Not bounded
-   * --------------
-   * - Execution Statistics -
-   * --------------
-   * # signal steps		38
-   * # collect steps		38
-   * Computation time		6711 milliseconds
-   * Master JVM CPU time	4511 milliseconds
-   * Termination reason	GlobalConstraintMet
-   * # collect operations	1577
-   * # signal operations	1577
-   * # vertices (add/remove)	83 (83/0)
-   * # edges (add/remove)	204 (204/0)
-   *
-   * GroundedPredicate 1: friends[ ] (carl, anna) has truth value 0.20270518891142217
-   * GroundedPredicate 2: friends[ ] (anna, carl) has truth value 0.20270518891142228
-   * GroundedPredicate 11: friends[ ] (bob, anna) has truth value 0.20270518891142217
-   * GroundedPredicate 4: friends[ ] (carl, bob) has truth value 0.20270518891142233
-   * Objective function value: 3.2001463609409293
-   *
-   * Bounded
-   * --------------
-   * - Execution Statistics -
-   * --------------
-   * # signal steps		40
-   * # collect steps		40
-   * Computation time		7089 milliseconds
-   * Master JVM CPU time	3765 milliseconds
-   * Termination reason	GlobalConstraintMet
-   * # collect operations	1140
-   * # signal operations	1140
-   * # vertices (add/remove)	57 (57/0)
-   * # edges (add/remove)	152 (152/0)
-   *
-   * GroundedPredicate 1: friends[ ] (carl, anna) has truth value 0.20105260181969786
-   * GroundedPredicate 2: friends[ ] (anna, carl) has truth value 0.2010526018196978
-   * GroundedPredicate 11: friends[ ] (bob, anna) has truth value 0.2010526018196978
-   * GroundedPredicate 4: friends[ ] (carl, bob) has truth value 0.2010526018196978
-   * Objective function value: 3.200022159411816
-   */
 
   val freenemies = """
 	predicate: friends(_, _)
-    predicate: True()
-    
-    // negative weights make a convex problem concave... not converging.
-    // is this case it's actually a linear problem, so it works.
-    rule [weight = -1, distanceMeasure = linear]: True() => friends(A,B)
-    
-    fact: True()
+  // negative weights make a convex problem concave... not converging.
+  // is this case it's actually a linear problem, so it works.
+  rule [weight = -1, distanceMeasure = linear]: => friends(A,B)
 	fact: friends(anna, bob)
-    fact: !friends(bob, carl)
+  fact: !friends(bob, carl)
 	"""
   "FriendsExample" should "provide a solution consistent for freenemies, an example with negative weights" in {
     val pslData = PslParser.parse(freenemies)
 
-    val config = InferencerConfig(objectiveLoggingEnabled = true, absoluteEpsilon = 10e-08, relativeEpsilon = 10e-03, isBounded = true)
+    val config = InferencerConfig(objectiveLoggingEnabled = true, 
+        absoluteEpsilon = 10e-08, relativeEpsilon = 10e-03, isBounded = true)
     val inferenceResults = Inferencer.runInference(pslData, config = config)
 
     println(inferenceResults)
     val objectiveFunctionVal = inferenceResults.objectiveFun.get
 
-    objectiveFunctionVal should be(0.0 +- 6e-2)
+    objectiveFunctionVal should be(0.0 +- 1e-5)
   }
 
   // No friends except the explicitly mentioned (as std in CWA).
   val enemies = """
 	predicate: 		friends(_, _)
-    predicate: True()
-    
-    rule [1]: True() => !friends(A,B)
-    
-    fact: True()
+  rule [1]: => !friends(A,B)
 	fact: friends(anna, bob)
-    fact: !friends(bob, carl)
+  fact: !friends(bob, carl)
 	"""
   "FriendsExample" should "provide a solution consistent for enemies, an example with negative prior" in {
     val pslData = PslParser.parse(enemies)
 
-    val config = InferencerConfig(objectiveLoggingEnabled = true, absoluteEpsilon = 10e-08, relativeEpsilon = 10e-03, isBounded = true)
+    val config = InferencerConfig(objectiveLoggingEnabled = true, 
+        absoluteEpsilon = 10e-08, relativeEpsilon = 10e-03, isBounded = true)
     val inferenceResults = Inferencer.runInference(pslData, config = config)
 
     println(inferenceResults)
     val objectiveFunctionVal = inferenceResults.objectiveFun.get
 
-    objectiveFunctionVal should be(0.0 +- 6e-2)
+    objectiveFunctionVal should be(0.0 +- 1e-5)
   }
 
-  // No friends except the explicitly mentioned (as std in CWA).
-  val hardenemies = """
-	predicate: 		friends(_, _)
-    predicate: True()
-    
-    rule[1]: True() => friends(A,B)
-    rule[1]: True() => !friends(A,B)
-    
-    rule: friends(A,B) => friends(B,A)
-    rule: !friends(A,B) => !friends(B,A)
-    
-    fact: True()
-	fact: friends(anna, bob)
-    fact: !friends(bob, carl)
-	"""
- 
 }

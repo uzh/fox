@@ -54,15 +54,7 @@ case class InferenceResult(
 
   override def toString() = {
     var s = solution.stats.toString
-    solution.results.foreach {
-      case (id, truthValue) =>
-        if (truthValue > 0) {
-          val gp = idToGpMap(id)
-          if (!gp.truthValue.isDefined) {
-            s += s"\n$gp has truth value $truthValue"
-          }
-        }
-    }
+    s += printSelected()
     objectiveFun match {
       case Some(x) =>
         s += s"\nObjective function value: $x"
@@ -72,6 +64,22 @@ case class InferenceResult(
       case Some(x) =>
         s += s"\nGrounding time: $groundingTime"
       case None =>
+    }
+    s
+  }
+
+  def printSelected(predicateNames: List[String] = List.empty) = {
+    var s = ""
+    solution.results.foreach {
+      case (id, truthValue) =>
+        if (truthValue > 0) {
+          val gp = idToGpMap(id)
+          if (predicateNames.isEmpty || predicateNames.contains(gp.definition.name)) {
+            if (!gp.truthValue.isDefined) {
+              s += s"\n$gp has truth value $truthValue"
+            }
+          }
+        }
     }
     s
   }
@@ -163,8 +171,9 @@ object Inferencer {
 
     if (config.objectiveLoggingEnabled) {
       // TODO: How is this different from the value computed by the ObjectiveValueAggregator and stored inside the solution? 
-      val objectiveFunctionVal = functionsAndConstraints.foldLeft(0.0) { 
-        case (sum, nextFunction) => sum + nextFunction.evaluateAt(solution.results) }
+      val objectiveFunctionVal = functionsAndConstraints.foldLeft(0.0) {
+        case (sum, nextFunction) => sum + nextFunction.evaluateAt(solution.results)
+      }
       println("Computed the objective function.")
       InferenceResult(solution, idToGpMap, Some(objectiveFunctionVal), Some(groundingTime))
     } else {
