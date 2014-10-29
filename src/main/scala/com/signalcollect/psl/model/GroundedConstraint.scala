@@ -115,16 +115,16 @@ case class GroundedConstraint(
     if (comparator != "leq") {
       val maxPossibleValue = coefficientMatrix.map { coeff => if (coeff > 0) coeff else 0 }.sum
       if (maxPossibleValue < constant) {
-        println(s"[Warning]: Constraint is always false and be discarded: ${property} on ${groundedPredicates}")
-        println(s"MaxPossibleValue: ${maxPossibleValue}, constant: ${constant}")
+        //println(s"[Warning]: Constraint is always false and be discarded: ${property} on ${groundedPredicates}")
+        //println(s"MaxPossibleValue: ${maxPossibleValue}, constant: ${constant}")
         return None
       }
     }
     if (comparator != "geq") {
       val minPossibleValue = coefficientMatrix.map { coeff => if (coeff > 0) 0 else coeff }.sum
       if (minPossibleValue > constant) {
-        println(s"[Warning]: Constraint is always false and be discarded: ${property} on ${groundedPredicates}")
-        println(s"MinimumPossibleValue: ${minPossibleValue}, constant: ${constant}")
+        //println(s"[Warning]: Constraint is always false and will be discarded: ${property} on ${groundedPredicates}")
+        //println(s"MinimumPossibleValue: ${minPossibleValue}, constant: ${constant}")
         return None
       }
     }

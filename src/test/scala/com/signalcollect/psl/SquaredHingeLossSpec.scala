@@ -141,10 +141,10 @@ class SquaredHingeLossSpec extends FlatSpec with Matchers with TestAnnouncements
       resultMap(i) should be(expected(i) +- 5e-5)
       ownResultMap(i) should be(expected(i) +- 5e-5)
     }
-    //    println("Ours: Evaluation at result: " + ownOptimizer.evaluateAt(ownResultMap))
-    //    println("Ours: Gradient at result: " + ownOptimizer.gradientAt(ownResultMap))
-    //    println("Theirs: Evaluation at result: " + ownOptimizer.evaluateAt(resultMap))
-    //    println("Theirs: Gradient at result: " + ownOptimizer.gradientAt(resultMap))
+    //    //println("Ours: Evaluation at result: " + ownOptimizer.evaluateAt(ownResultMap))
+    //    //println("Ours: Gradient at result: " + ownOptimizer.gradientAt(ownResultMap))
+    //    //println("Theirs: Evaluation at result: " + ownOptimizer.evaluateAt(resultMap))
+    //    //println("Theirs: Gradient at result: " + ownOptimizer.gradientAt(resultMap))
     // TODO: check also the number of iterations?
   }
 

@@ -46,8 +46,6 @@ class MovieRecommendationsWithClasses extends FlatSpec with Matchers with TestAn
     
 	predicate: likes(Person, _)
 	predicate: playsIn(Actor, Movie)
-#	predicate: likes(_, _)
-#	predicate: playsIn(_, _)
 	    
 	rule [weight = 1]: likes(PERSON, MOVIE) && playsIn(ACTOR, MOVIE) => likes(PERSON, ACTOR)
 	rule [weight = 1]: likes(PERSON, MOVIE-A) && playsIn(ACTOR, MOVIE-B) && playsIn(ACTOR, MOVIE-B) => likes(PERSON, MOVIE-B)
@@ -66,7 +64,7 @@ class MovieRecommendationsWithClasses extends FlatSpec with Matchers with TestAn
 	fact [truthValue = 0.9]: likes(sara, pulp-fiction)
 	fact [truthValue = 0.3]: likes(sara, grease)
 	fact [truthValue = 0.8]: likes(sara, star-wars)
-	fact [truthValue = 0.8]: likes(sara, transpotting)
+	fact [truthValue = 0.8]: likes(sara, trainspotting)
 	fact [truthValue = 0.8]: likes(sara, blade-runner)
 	
 	fact [truthValue = 0.9]: likes(philip, pulp-fiction)
@@ -77,16 +75,15 @@ class MovieRecommendationsWithClasses extends FlatSpec with Matchers with TestAn
 	"""
 
   "MovieRecommendationsWithClasses" should "correctly minimize the simplified movie example" in {
-    val config = InferencerConfig(objectiveLoggingEnabled = true, absoluteEpsilon = 10e-08, relativeEpsilon = 10e-03, isBounded = true,
-        removeSymmetricConstraints = false)
+    val config = InferencerConfig(computeObjectiveValueOfSolution = true)
     val inferenceResults = Inferencer.runInferenceFromString(movieExampleWithClasses, config = config)
 
     val solution = inferenceResults.solution
     val gps = inferenceResults.idToGpMap
     val objectiveFunctionVal = inferenceResults.objectiveFun.get
 
-    println(inferenceResults)
-    println("Objective function value: " + objectiveFunctionVal)
+    //println(inferenceResults)
+    //println("Objective function value: " + objectiveFunctionVal)
 
     //println(PSLToCvxConverter.toCvx(simplifiedMovieExample)) 
     //println("\n"+ ConvergencePlotter.createPlotScript(solution.convergence) + "\n")

@@ -110,7 +110,7 @@ case class GroundedRule(
     }
   }
 
-  def createOptimizableFunction(stepSize: Double, tolerance: Double = 0.0): Option[OptimizableFunction] = {
+  def createOptimizableFunction(stepSize: Double, tolerance: Double = 0.0, breezeOptimizer: Boolean = false): Option[OptimizableFunction] = {
     // Easy optimization, if all are facts, ignore.
     if (groundedPredicates.size == 0) {
       return None
@@ -167,22 +167,22 @@ case class GroundedRule(
             if (definition.weight < 0) {
               println(s"[WARNING]: Adding a concave function like: neg * max(0, coeff*x - const)^2")
             }
-            Optimizer.squaredHingeLoss(stepSize, zMap, definition.weight, constant, coefficientMatrix, zIndices, id)
+            if (breezeOptimizer) {
+              new SquaredHingeLossOptimizer(
+                id,
+                weight = definition.weight,
+                constant = constant,
+                zIndices = zIndices,
+                stepSize = stepSize,
+                initialZmap = zMap,
+                coefficientMatrix = coefficientMatrix)
+            } else {
+              Optimizer.squaredHingeLoss(stepSize, zMap, definition.weight, constant, coefficientMatrix, zIndices, id)
+            }
           }
-
-        case ExperimentalSquared =>
-          //val reference = Optimizer.squaredHingeLoss(stepSize, zMap, definition.weight, constant, coefficientMatrix, zIndices, id)
-          val alternative = new SquaredHingeLossOptimizer(
-            id,
-            weight = definition.weight,
-            constant = constant,
-            zIndices = zIndices,
-            stepSize = stepSize,
-            initialZmap = zMap,
-            coefficientMatrix = coefficientMatrix)
-          //Verifier.create(reference, alternative)
-          alternative
-        case _ => Optimizer.hingeLoss(stepSize, zMap, definition.weight, constant, coefficientMatrix, zIndices, id)
+        case _ =>
+          throw new Exception("No distance measure specified.")
+        //Optimizer.hingeLoss(stepSize, zMap, definition.weight, constant, coefficientMatrix, zIndices, id)
       }
       Some(optimizableFunction)
     } else {

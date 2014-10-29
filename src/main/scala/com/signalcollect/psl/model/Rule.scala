@@ -34,10 +34,8 @@ case class Rule(
     val properties = (weight, distanceMeasure) match {
       case (Double.MaxValue, Squared) => ""
       case (Double.MaxValue, Linear) => s" [$Linear]"
-      case (Double.MaxValue, ExperimentalSquared) => s" [$ExperimentalSquared]"
       case (w, Squared) => s" [weight = $w]"
       case (w, Linear) => s" [weight = $w, distanceMeasure = $Linear]"
-      case (w, ExperimentalSquared) => s" [weight = $w, distanceMeasure = $ExperimentalSquared]"
     }
     s"rule$properties: $conditionsString => $implicationsString"
   }

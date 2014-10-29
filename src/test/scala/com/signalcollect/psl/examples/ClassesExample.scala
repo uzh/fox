@@ -79,12 +79,14 @@ class ClassesExample extends FlatSpec with Matchers with TestAnnouncements {
   
   "ClassesExample" should "infer the proper classes" in {
     val pslData = PslParser.parse(basicExample)
-    val config = InferencerConfig(objectiveLoggingEnabled = true, 
-        absoluteEpsilon = 1e-8, relativeEpsilon = 1e-3, isBounded = true, removeSymmetricConstraints = true)
+
+    //println(basicExample)
+    val config = InferencerConfig(computeObjectiveValueOfSolution = true)
     val inferenceResults = Inferencer.runInference(pslData, config = config)
-    println(inferenceResults)
+
+    //println(inferenceResults)
     val objectiveFunctionVal = inferenceResults.objectiveFun.get
-    objectiveFunctionVal should be(0 +- 0.05)
+    objectiveFunctionVal should be(0.0 +- 0.05)
   }
 
 }

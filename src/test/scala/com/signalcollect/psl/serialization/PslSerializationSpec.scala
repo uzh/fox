@@ -62,8 +62,7 @@ class PslSerializationSpec extends FlatSpec with Matchers with TestAnnouncements
 	"""
 
   "PSL Serialization" should "be able to do inference when all messages are serialized" in {
-    val config = InferencerConfig(objectiveLoggingEnabled = true, absoluteEpsilon = 10e-09, relativeEpsilon = 10e-04, isBounded = true,
-      serializeMessages = true)
+    val config = InferencerConfig(computeObjectiveValueOfSolution = true, absoluteEpsilon = 10e-09, relativeEpsilon = 10e-04, serializeMessages = true)
     val inferenceResults = Inferencer.runInferenceFromString(example, config = config)
 
     val solution = inferenceResults.solution
@@ -78,17 +77,14 @@ class PslSerializationSpec extends FlatSpec with Matchers with TestAnnouncements
         if (truthValue > 0.01) {
           val gp = gps(id)
           if (!gp.truthValue.isDefined) {
-            println(s"$gp has truth value $truthValue")
+            //println(s"$gp has truth value $truthValue")
           }
         }
     }
 
-    println("Objective function value: " + objectiveFunctionVal)
+    //println("Objective function value: " + objectiveFunctionVal)
 
     objectiveFunctionVal should be(0.02 +- 0.02)
-
-    //println(PSLToCvxConverter.toCvx(simplifiedMovieExample)) 
-    println("\n" + ConvergencePlotter.createPlotScript(solution.convergence) + "\n")
   }
 
 }
