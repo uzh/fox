@@ -44,56 +44,47 @@ import scala.annotation.tailrec
 class ClassesExample extends FlatSpec with Matchers with TestAnnouncements {
 
   val basicExample = """
-	class Person: anna, bob, sara
-    class Woman: anna, sara
-	class Party: demo, repub
-	predicate[PartialFunctional]: votes(Person, Party)
-	predicate [Symmetric]: 		friends(Person, Person)
-    predicate [Symmetric]: 		bff(Woman, Woman)
-	rule [weight = 1]: 	votes(A,P) && friends(A,B) => votes(B,P) 
-    rule [weight = 100]: 	votes(A,P) && bff(A,B) => votes(B,P) 
-	fact: friends(anna, bob)
-    fact: bff(sara, anna)
-	fact [truthValue = 0.6]: votes(anna, demo)
+	  class Person: bob, sara
+	  class Party: demo
+	  predicate[PartialFunctional]: votes(Person, Party)
+	  predicate [Symmetric]: 		friends(Person, Person)
+	  rule [weight = 1]: 	votes(A,P) && friends(A,B) => votes(B,P) 
+  	fact: friends(anna, bob)
+  	fact [truthValue = 0.6]: votes(anna, demo)
     fact [truthValue = 0.1]: votes(anna, repub)
     individuals: carl
 """
 
-  val complexExample = """
-	predicate[PartialFunctional]: 	votes(_, _)
-	predicate [Symmetric]: 		friends(_, _)
-	predicate: Person(_)
+  val equivalentWithoutClassesExample = """
+  	predicate[PartialFunctional]: 	votes(_, _)
+  	predicate [Symmetric]: 		friends(_, _)
+  	predicate: Person(_)
     predicate: Party(_)
 
     rule [weight = 1]: 	Person(A) && Person(B) && Party(P) && votes(A,P) && friends(A,B) => votes(B,P)
-    //rule [weight = 1]: 	votes(A,P) && friends(A,B) => votes(B,P) 
-    rule: 	Person(A) => !Party(A) 
-    rule: 	Party(A) => !Person(A)  
-    rule: friends(A, B) => Person(A)
-    rule: friends(A, B) => Person(B)
-    rule: votes(B, P) => Person(B) 
-    rule: votes(B, P) => Party(P) 
-    
-    fact: Party(greenparty)
-    
-	fact: friends(anna, bob)
-	fact [truthValue = 0.8]: votes(anna, democrats)
-    fact [truthValue = 0.2]: votes(carl, repub)
+    rule [100]: 	Person(A) => !Party(A) 
+    rule [100]: 	Party(A) => !Person(A)  
+    rule [100]: friends(A, B) => Person(A)
+    rule [100]: friends(A, B) => Person(B)
+    rule [100]: votes(B, P) => Person(B) 
+    rule [100]: votes(B, P) => Party(P) 
+
+  	fact: friends(anna, bob)
+  	fact [truthValue = 0.6]: votes(anna, demo)
+    fact [truthValue = 0.1]: votes(anna, repub)
     fact: friends(sara, anna)
     
-    individuals: mah
+    individuals: carl
 	"""
   
   "ClassesExample" should "infer the proper classes" in {
     val pslData = PslParser.parse(basicExample)
-
-    println(basicExample)
-    val config = InferencerConfig(objectiveLoggingEnabled = true, absoluteEpsilon = 10e-08, relativeEpsilon = 10e-03, isBounded = true,
-      removeSymmetricConstraints = false)
+    val config = InferencerConfig(objectiveLoggingEnabled = true, 
+        absoluteEpsilon = 1e-8, relativeEpsilon = 1e-3, isBounded = true, removeSymmetricConstraints = true)
     val inferenceResults = Inferencer.runInference(pslData, config = config)
-
     println(inferenceResults)
     val objectiveFunctionVal = inferenceResults.objectiveFun.get
+    objectiveFunctionVal should be(0 +- 0.05)
   }
 
 }

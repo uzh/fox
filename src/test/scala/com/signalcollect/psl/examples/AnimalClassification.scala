@@ -39,30 +39,15 @@ import scala.annotation.tailrec
 
 class AnimalClassification extends FlatSpec with Matchers with TestAnnouncements {
 
-  val animalExample = """
-    predicate: barks(_)
-    predicate: meows(_)
-    predicate: moohs(_)
-	predicate [Functional]: animalClass(_, _)
-	    
-	rule [weight = 1]: barks(ANIMAL) => animalClass(ANIMAL, dog)
-    rule [weight = 1]: meows(ANIMAL) => animalClass(ANIMAL, cat)
-    rule [weight = 1]: moohs(ANIMAL) => animalClass(ANIMAL, cow)
-
-    fact [truthValue = 0.1]: barks(lisa)
-    fact [truthValue = 0.2]: meows(lisa)
-    	fact [truthValue = 0.5]: moohs(lisa)
-    	"""
-    
   val animalClassExample = """
     class Animal: lisa, blabla
     class AnimalClass: dog, cat, cow
     predicate: barks(Animal)
     predicate: meows(Animal)
     predicate: moohs(Animal)
-	predicate [Functional]: animalClass(Animal, AnimalClass)
-	    
-	rule [weight = 1]: barks(ANIMAL) => animalClass(ANIMAL, dog)
+  	predicate [PartialFunctional]: animalClass(Animal, AnimalClass)
+  	    
+  	rule [weight = 1]: barks(ANIMAL) => animalClass(ANIMAL, dog)
     rule [weight = 1]: meows(ANIMAL) => animalClass(ANIMAL, cat)
     rule [weight = 1]: moohs(ANIMAL) => animalClass(ANIMAL, cow)
 
@@ -71,13 +56,12 @@ class AnimalClassification extends FlatSpec with Matchers with TestAnnouncements
     fact [truthValue = 0.5]: moohs(lisa)
     	"""
 
-  //println(PSLToCvxConverter.toCvx(animalExample))
-
-  val config = InferencerConfig(absoluteEpsilon = 10e-08, relativeEpsilon = 10e-03, objectiveLoggingEnabled = true)  
-  val inferenceResults = Inferencer.runInferenceFromString(animalClassExample, config = config)
+  "AnimalClassification" should "provide a solution consistent with Matlab" in {
+    val config = InferencerConfig(objectiveLoggingEnabled = true,
+      absoluteEpsilon = 1e-05, relativeEpsilon = 1e-03, isBounded = true)
+    val inferenceResults = Inferencer.runInferenceFromString(animalClassExample, config = config)
   println(inferenceResults)
-  val objectiveFunctionVal = inferenceResults.objectiveFun.get
-
-  println("Objective function value: " + objectiveFunctionVal)
-
+    val objectiveFunctionVal = inferenceResults.objectiveFun.get
+    objectiveFunctionVal should be(0.0 +- 1e-5)
+  }
 }
