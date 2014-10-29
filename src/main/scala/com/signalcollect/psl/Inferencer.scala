@@ -92,8 +92,8 @@ case class InferencerConfig(
   isBounded: Boolean = true,
   serializeMessages: Boolean = false,
   removeSymmetricConstraints: Boolean = true,
-  eagerSignalCollectConvergenceDetection: Boolean = false,
-  heartbeatIntervalInMs: Int = 10) {
+  eagerSignalCollectConvergenceDetection: Boolean = true,
+  heartbeatIntervalInMs: Int = 0) {
 
   def getWolfConfig = {
     WolfConfig(
