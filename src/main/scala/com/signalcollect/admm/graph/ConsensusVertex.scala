@@ -24,6 +24,7 @@ import com.signalcollect.GraphEditor
 import com.signalcollect.MemoryEfficientDataGraphVertex
 
 trait Consensus {
+  def variableId: Int
   def consensusVotes: Array[Double]
   def consensus: Double
   def oldConsensus: Double
@@ -41,26 +42,37 @@ trait Consensus {
 class ConsensusVertex(
   variableId: Int, // the id of the variable, which identifies it also in the subproblem nodes.
   initialState: Double = 0.0, // the initial value for the consensus variable.
-  isBounded: Boolean = true ) // shall we use bounding (cutoff below 0 and above 1)? 
+  isBounded: Boolean = true,
+  implicitZero: Boolean = true) // shall we use bounding (cutoff below 0 and above 1)? 
   extends MemoryEfficientDataGraphVertex[Double, Double, Double](variableId, initialState) with Consensus {
 
-  final def upperBound: Double = 1.0 // each consensus variable can only assume values in the range [lowerBound, upperBound].
-  final def lowerBound: Double = 0.0
+  @inline final def upperBound: Double = 1.0 // each consensus variable can only assume values in the range [lowerBound, upperBound].
+  @inline final def lowerBound: Double = 0.0
 
   type OutgoingSignalType = Double
 
-  def variableCount = _targetIds.size
-  def consensus = state
-  def oldConsensus = lastSignalState
-  
-  def collect = {
-    // New consensus is average vote.
-    val newConsensus = averageConsensusVote
+  @inline def variableId = id
+  @inline def variableCount = _targetIds.size
+
+  @inline def consensus = {
     if (isBounded) {
-      bounded(newConsensus)
+      bounded(state)
     } else {
-      newConsensus
+      state
     }
+  }
+
+  @inline def oldConsensus = {
+    if (isBounded) {
+      bounded(lastSignalState)
+    } else {
+      lastSignalState
+    }
+  }
+
+  @inline def collect = {
+    // New consensus is average vote.
+    averageConsensusVote
   }
 
   /**
@@ -69,8 +81,8 @@ class ConsensusVertex(
    * instead the signalling is done here.
    */
   override def executeSignalOperation(graphEditor: GraphEditor[Int, Double]) {
-    val signal = state
-    targetIds.foreach { targetId =>
+    val signal = consensus
+    _targetIds.foreach { targetId =>
       graphEditor.sendSignal(signal, targetId, id)
     }
     lastSignalState = state
@@ -81,14 +93,14 @@ class ConsensusVertex(
    * is efficiently done in 'executeSignalOperation'.
    * This function should therefore never be called.
    */
-  def computeSignal(targetId: Int): Double = {
+  @inline def computeSignal(targetId: Int): Double = {
     throw new UnsupportedOperationException
   }
 
-  def consensusVotes: Array[Double] = {
-    val votes = new Array[Double](targetIds.size)
+  @inline def consensusVotes: Array[Double] = {
+    val votes = new Array[Double](variableCount)
     var i = 0
-    targetIds.foreach { targetId =>
+    _targetIds.foreach { targetId =>
       votes(i) = mostRecentSignalMap(targetId)
       i += 1
     }
@@ -96,7 +108,7 @@ class ConsensusVertex(
   }
 
   @inline def averageConsensusVote: Double = {
-    consensusVoteSum / targetIds.size
+    consensusVoteSum / variableCount
   }
 
   @inline def consensusVoteSum: Double = {
@@ -123,14 +135,14 @@ class ConsensusVertex(
    *  This is perfectly fine with PSL inference, but may have drawbacks in other cases.
    */
   override def scoreSignal = {
-    if (state != 0.0) {
+    if (state != 0.0 || !implicitZero) {
       1.0
     } else {
       0.0
     }
   }
 
-  def bounded(i: Double): Double = {
+  @inline def bounded(i: Double): Double = {
     math.max(math.min(i, upperBound), lowerBound)
   }
 

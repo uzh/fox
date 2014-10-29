@@ -107,43 +107,43 @@ object SimpleBenchmark extends App {
   //    	fact [truthValue = 1.0]: likes(philip, pulp-fiction)
   //    	"""
 
-//  val movieExample3 = """
-//class Person: sara, philip, fred, george, tom-cruise, james-stewart, harrison-ford
-//class Movie: mission-impossible, rear-window, vertigo, top-gun, blade-runner, indiana-jones-and-the-last-crusade, star-wars
-//class Actor: james-stewart, tom-cruise, harrison-ford
-//
-//predicate: likes(Person, _)
-//predicate: playsIn(Actor, Movie)
-//
-//rule [weight = 5]: likes(PERSON, MOVIE) && playsIn(ACTOR, MOVIE) => likes(PERSON, ACTOR)
-//rule [weight = 5]: likes(PERSON, MOVIE-A) && playsIn(ACTOR, MOVIE-A) && playsIn(ACTOR, MOVIE-B) => likes(PERSON, MOVIE-B)
-//rule [weight = 1]: likes(PERSON-A, A) && likes(PERSON-B, A) && likes(PERSON-B, B) => likes(PERSON-A, B)
-//  
-//fact: playsIn(tom-cruise, top-gun)
-//fact: playsIn(tom-cruise, mission-impossible)
-//fact: playsIn(james-stewart, rear-window)
-//fact: playsIn(james-stewart, vertigo)
-//fact: playsIn(harrison-ford, indiana-jones-and-the-last-crusade)
-//fact: playsIn(harrison-ford, blade-runner)
-//fact: playsIn(harrison-ford, star-wars)
-//
-//fact [truthValue = 0.1]: likes(sara, tom-cruise)
-//fact [truthValue = 0.9]: likes(sara, harrison-ford)
-//
-//fact [truthValue = 0.9]: likes(sara, pulp-fiction)
-//fact [truthValue = 0.8]: likes(sara, star-wars)
-//fact [truthValue = 0.8]: likes(sara, blade-runner)
-//
-//fact [truthValue = 0.9]: likes(philip, pulp-fiction)
-//fact [truthValue = 1.0]: likes(philip, blade-runner)
-//fact [truthValue = 0.8]: likes(philip, harrison-ford)
-//fact [truthValue = 1.0]: likes(philip, rear-window)
-//fact [truthValue = 0.2]: likes(philip, top-gun)
-//
-//fact [truthValue = 1.0]: likes(fred, star-wars)
-//"""
+  //  val movieExample3 = """
+  //class Person: sara, philip, fred, george, tom-cruise, james-stewart, harrison-ford
+  //class Movie: mission-impossible, rear-window, vertigo, top-gun, blade-runner, indiana-jones-and-the-last-crusade, star-wars
+  //class Actor: james-stewart, tom-cruise, harrison-ford
+  //
+  //predicate: likes(Person, _)
+  //predicate: playsIn(Actor, Movie)
+  //
+  //rule [weight = 5]: likes(PERSON, MOVIE) && playsIn(ACTOR, MOVIE) => likes(PERSON, ACTOR)
+  //rule [weight = 5]: likes(PERSON, MOVIE-A) && playsIn(ACTOR, MOVIE-A) && playsIn(ACTOR, MOVIE-B) => likes(PERSON, MOVIE-B)
+  //rule [weight = 1]: likes(PERSON-A, A) && likes(PERSON-B, A) && likes(PERSON-B, B) => likes(PERSON-A, B)
+  //  
+  //fact: playsIn(tom-cruise, top-gun)
+  //fact: playsIn(tom-cruise, mission-impossible)
+  //fact: playsIn(james-stewart, rear-window)
+  //fact: playsIn(james-stewart, vertigo)
+  //fact: playsIn(harrison-ford, indiana-jones-and-the-last-crusade)
+  //fact: playsIn(harrison-ford, blade-runner)
+  //fact: playsIn(harrison-ford, star-wars)
+  //
+  //fact [truthValue = 0.1]: likes(sara, tom-cruise)
+  //fact [truthValue = 0.9]: likes(sara, harrison-ford)
+  //
+  //fact [truthValue = 0.9]: likes(sara, pulp-fiction)
+  //fact [truthValue = 0.8]: likes(sara, star-wars)
+  //fact [truthValue = 0.8]: likes(sara, blade-runner)
+  //
+  //fact [truthValue = 0.9]: likes(philip, pulp-fiction)
+  //fact [truthValue = 1.0]: likes(philip, blade-runner)
+  //fact [truthValue = 0.8]: likes(philip, harrison-ford)
+  //fact [truthValue = 1.0]: likes(philip, rear-window)
+  //fact [truthValue = 0.2]: likes(philip, top-gun)
+  //
+  //fact [truthValue = 1.0]: likes(fred, star-wars)
+  //"""
 
-    val movieExample4 = """
+  val movieExample4 = """
 class Person: sara, philip, fred, george, tim, tom-cruise, james-stewart, harrison-ford
 class Movie: mission-impossible, rear-window, vertigo, top-gun, blade-runner, indiana-jones-and-the-last-crusade, star-wars, grease
 class Actor: james-stewart, tom-cruise, harrison-ford
@@ -179,21 +179,49 @@ fact [truthValue = 1.0]: likes(george, grease)
 
 fact [truthValue = 1.0]: likes(fred, star-wars)
 """
-  
+
+  val simple = """
+class Person: a, b, c
+
+predicate: likes(Person, Person)
+#rule [weight = 1]: => !likes(A, B)
+rule [weight = 100]: likes(A, B) && likes(B, C) => likes(A, C)
+
+fact [truthValue = 1.0]: likes(a, b)
+fact [truthValue = 1.0]: likes(b, c)
+"""
+
+  val chain = """
+class Person: a
+
+predicate: likes(Person, Person)
+#rule [weight = 1]: => !likes(A, B)
+rule [weight = 1]: likes(A, B) && likes(B, C) => likes(A, C)
+
+fact [truthValue = 1.0]: likes(a, b)
+fact [truthValue = 1.0]: likes(b, c)
+fact [truthValue = 1.0]: likes(c, d)
+fact [truthValue = 1.0]: likes(d, e)
+fact [truthValue = 1.0]: likes(e, f)
+"""
+
+  val marriage = """
+predicate:         votes(_, _)
+predicate:         married(_, _)
+#rule [1]: => !married(A, B)
+#rule [1]: => !votes(A, B)
+rule [1]:                  votes(A, P) && married(A, B) => votes(B, P)
+fact:                  votes(anna, demo)
+fact:                  married(anna, bob)
+fact:                  votes(carl, bob)
+"""
+
   val startTime = System.currentTimeMillis
-  val config = InferencerConfig(
-    globalConvergenceDetection = Some(128),
-    //    globalConvergenceDetection = None,
-    maxIterations = 10000,
-    serializeMessages = false,
-    absoluteEpsilon = 1e-8,
-    relativeEpsilon = 1e-8,
-    isBounded = true,
-    objectiveLoggingEnabled = true,
-    eagerSignalCollectConvergenceDetection = true,
-    stepSize = 1.0)
+  val config = InferencerConfig( //breezeOptimizer = false
+  //,globalConvergenceDetection = None,
+  )
   val inferenceResults = Inferencer.runInferenceFromString(
-    movieExample4, config = config)
+    chain, config = config)
   val durationInSeconds = ((System.currentTimeMillis - startTime) / 100.0).round / 10.0
   println(s"Running inference took $durationInSeconds seconds.")
   println(inferenceResults)

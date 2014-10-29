@@ -37,40 +37,13 @@ case class GlobalAdmmConvergenceDetection(
   relativeEpsilon: Double = 10e-3,
   override val checkingInterval: Long = 2)
   extends AbstractGlobalAdmmConvergenceDetection {
-  type ResultType = (PrimalData, DualData)
-  val aggregationOperation = MultiAggregator(PrimalAggregator, DualAggregator)
-  def shouldTerminate(t: (PrimalData, DualData)) = isConverged(t)
-  def shouldTerminate(g: Graph[Int, Double]): Boolean = {
-    val aggregationResult = g.aggregate(aggregationOperation)
-    shouldTerminate(aggregationResult)
-  }
 }
 
-case class GlobalAdmmConvergenceDetectionWithDebugging(
-  functions: Traversable[OptimizableFunction],
-  stepSize: Double = 1.0,
-  absoluteEpsilon: Double = 10e-8,
-  relativeEpsilon: Double = 10e-3,
-  override val checkingInterval: Long = 2)
-  extends AbstractGlobalAdmmConvergenceDetection {
-  var objectiveValueForSteps: TreeMap[Int, Double] = TreeMap()
-  type ResultType = ((PrimalData, DualData), Option[Map[Int, Double]])
-  val aggregationOperation = MultiAggregator(MultiAggregator(PrimalAggregator, DualAggregator), ObjectiveValueAggregator)
-  def shouldTerminate(t: ((PrimalData, DualData), Double)) = {
-    if (collectStepsSoFar % checkingInterval == 0) {
-      val (convergenceData, objectiveValue) = t
-      val converged = isConverged(convergenceData, true)
-      println(s"Objective value @ convergence detection step $convergenceDetectionStep = $objectiveValue")
-      objectiveValueForSteps += convergenceDetectionStep -> objectiveValue
-      converged
-    } else {
-      collectStepsSoFar += 1
-      false
-    }
-  }
-  def shouldTerminate(g: Graph[Int, Double]): Boolean = {
-    val aggregationResult = g.aggregate(aggregationOperation)
-    shouldTerminate(aggregationResult)
+trait DebugLogging extends GlobalAdmmConvergenceDetection {
+  abstract override def isConverged(primal: PrimalData, dual: DualData, objective: Double, debugLogging: Boolean) = {
+    val converged = super.isConverged(primal, dual, objective, true)
+    println(s"Objective value @ convergence detection step $convergenceDetectionStep = $objective")
+    converged
   }
 }
 
@@ -81,6 +54,7 @@ abstract class AbstractGlobalAdmmConvergenceDetection extends GlobalTerminationD
   def relativeEpsilon: Double
   def checkingInterval: Long
   assert(checkingInterval % 2 == 0, "Checking interval has to be an even number.")
+  var objectiveValueForSteps: TreeMap[Int, Double] = TreeMap()
   var primalResidualForSteps: TreeMap[Int, Double] = TreeMap()
   var primalEpsilonForSteps: TreeMap[Int, Double] = TreeMap()
   var dualResidualForSteps: TreeMap[Int, Double] = TreeMap()
@@ -91,34 +65,42 @@ abstract class AbstractGlobalAdmmConvergenceDetection extends GlobalTerminationD
 
   var nextConvergenceOutputAtPercentage = 0
 
-  def isConverged(t: (PrimalData, DualData), debugLogging: Boolean = false): Boolean = {
+  override def shouldTerminate(g: Graph[Int, Double]): Boolean = {
     collectStepsSoFar += 1
     if (collectStepsSoFar % checkingInterval == 1) {
-      val (primalData, dualData) = t
-      val primalConvergence = computePrimalConvergence(primalData, debugLogging)
-      val dualConvergence = computeDualConvergence(primalData, dualData, debugLogging)
-      val convergencePercentage = math.min(math.min(primalConvergence, dualConvergence), 1.0) * 100
-      if (nextConvergenceOutputAtPercentage == 0) {
-        print("[")
-      } else {
-        print("-")
-      }
-      while (convergencePercentage >= nextConvergenceOutputAtPercentage) {
-        print(s"$nextConvergenceOutputAtPercentage%")
-        if (nextConvergenceOutputAtPercentage != 100) {
-          print("-")
-        } else {
-          print(s"]")
-          println
-        }
-        nextConvergenceOutputAtPercentage += 10
-      }
-      if (debugLogging) { println(s"Primal convergence = $primalConvergence, dual convergence = $dualConvergence") }
-      val shouldTerminate = primalConvergence >= 1.0 && dualConvergence >= 1.0
-      shouldTerminate
+      val ((primal, dual), objective) = g.aggregate(MultiAggregator(MultiAggregator(PrimalAggregator, DualAggregator), ObjectiveValueAggregator))
+      isConverged(primal, dual, objective, false)
     } else {
       false
     }
+  }
+
+  def isConverged(primal: PrimalData, dual: DualData, objective: Double, debugLogging: Boolean): Boolean = {
+    val thisStep = convergenceDetectionStep
+    objectiveValueForSteps += thisStep -> objective
+    val primalConvergence = computePrimalConvergence(primal, debugLogging)
+    val dualConvergence = computeDualConvergence(primal, dual, debugLogging)
+    val convergencePercentage = math.min(math.min(primalConvergence, dualConvergence), 1.0) * 100
+    if (nextConvergenceOutputAtPercentage == 0) {
+      print("[")
+    } else {
+      print("-")
+    }
+    while (convergencePercentage >= nextConvergenceOutputAtPercentage) {
+      print(s"$nextConvergenceOutputAtPercentage%")
+      if (nextConvergenceOutputAtPercentage != 100) {
+        print("-")
+      } else {
+        print(s"]")
+        println
+      }
+      nextConvergenceOutputAtPercentage += 10
+    }
+    if (debugLogging) { println(s"Primal convergence = $primalConvergence, dual convergence = $dualConvergence") }
+    //val objectiveConverged = objectiveValueForSteps.get(thisStep - 1).map(_ == objective).getOrElse(false)
+    val objectiveConverged = objective == 0
+    val shouldTerminate = (primalConvergence >= 1.0 && dualConvergence >= 1.0) || objectiveConverged
+    shouldTerminate
   }
 
   /**

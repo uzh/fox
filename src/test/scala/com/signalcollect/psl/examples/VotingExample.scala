@@ -63,20 +63,15 @@ class VotingExample extends FlatSpec with Matchers with TestAnnouncements {
   "VotingExample" should "provide a solution consistent with Matlab" in {
     val pslData = PslParser.parse(votingExample)
 
-    val config = InferencerConfig(
-      objectiveLoggingEnabled = true,
-      absoluteEpsilon = 10e-09,
-      relativeEpsilon = 10e-04,
-      isBounded = false,
-      removeSymmetricConstraints = false)
+    val config = InferencerConfig(computeObjectiveValueOfSolution = true)
     val inferenceResults = Inferencer.runInference(pslData, config = config)
 
     val solution = inferenceResults.solution
     val gps = inferenceResults.idToGpMap
     val objectiveFunctionVal = inferenceResults.objectiveFun.get
 
-    println(inferenceResults)
-    println("Objective function value: " + objectiveFunctionVal)
+    //println(inferenceResults)
+    //println("Objective function value: " + objectiveFunctionVal)
 
     objectiveFunctionVal should be(0.0 +- 5e-5)
 
@@ -194,15 +189,14 @@ class VotingExample extends FlatSpec with Matchers with TestAnnouncements {
   //TODO(sara): This test sometimes fails because it ends up violating a constraint.
 //  "VotingExample" should "provide a solution consistent with Matlab also with more constraints" in {
 //    val pslData = PslParser.parse(votingExample2)
-//    val config = InferencerConfig(objectiveLoggingEnabled = true, absoluteEpsilon = 10e-10, relativeEpsilon = 10e-5, isBounded = true,
-//      removeSymmetricConstraints = false)
+//    val config = InferencerConfig(computeObjectiveValueOfSolution = true)
 //    val inferenceResults = Inferencer.runInference(pslData, config = config)
 //
 //    val solution = inferenceResults.solution
 //    val gps = inferenceResults.idToGpMap
 //    val objectiveFunctionVal = inferenceResults.objectiveFun.get
 //
-//    println(inferenceResults)
+//    //println(inferenceResults)
 //
 //    objectiveFunctionVal should be(0.0 +- 5e-5)
 //  }

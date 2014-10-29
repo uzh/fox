@@ -21,7 +21,7 @@
 package com.signalcollect.admm.utils
 
 import com.signalcollect.admm.AbstractGlobalAdmmConvergenceDetection
-import com.signalcollect.admm.GlobalAdmmConvergenceDetectionWithDebugging
+import com.signalcollect.admm.DebugLogging
 
 /**
  * Creates the Matlab script for displaying a graph of how the convergence evolves in the iterations.
@@ -47,7 +47,7 @@ object ConvergencePlotter {
     script += "dualRes = " + g.dualResidualForSteps.values.mkString("[", ", ", "]") + "\n"
     // If we are plotting a convergence with the debugging on, we have also the objective values for each step.
     g match {
-      case g: GlobalAdmmConvergenceDetectionWithDebugging =>
+      case g: DebugLogging =>
         script += "obj = " + g.objectiveValueForSteps.values.mkString("[", ", ", "]") + "\n"
     }
     // The dual epsilon that is used for the dual convergence is the one from the step before.

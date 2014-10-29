@@ -24,12 +24,6 @@ import com.signalcollect.GraphEditor
 import com.signalcollect.MemoryEfficientDataGraphVertex
 import com.signalcollect.admm.optimizers.OptimizableFunction
 
-trait Subproblem {
-  def multipliers: Array[Double]
-  def optimizableFunction: OptimizableFunction
-  def consensusAssignments: Array[Double]
-}
-
 /**
  *  In the ADMM algorithm there are two types of nodes: consensus variable nodes and subproblem nodes.
  *  Each subproblem node represents a piece of the big problem that can be solved independently, which is an optimizable function.
@@ -38,14 +32,15 @@ trait Subproblem {
  *  For example, in PSL the subproblem "friend(bob, anna) AND votes(anna, DP) => votes (bob, DP)" is connected to
  *  the consensus variables "votes(anna, DP)", "votes(bob, DP)" and "friend(bob, anna)".
  */
-class SubproblemVertex(
+class AsyncSubproblemVertex(
   subproblemId: Int, // The id of the subproblem.
-  val optimizableFunction: OptimizableFunction,
-  implicitZero: Boolean = true) // The function that is contained in the subproblem.
+  val optimizableFunction: OptimizableFunction) // The function that is contained in the subproblem.
   extends MemoryEfficientDataGraphVertex[Array[Double], Double, Double](subproblemId, null.asInstanceOf[Array[Double]])
   with Subproblem {
 
   type OutgoingSignalType = Double
+
+  var signalsReceivedSinceCollect = 0
 
   def multipliers = optimizableFunction.getYEfficient
 
@@ -63,14 +58,13 @@ class SubproblemVertex(
     while (i < idToIndexMappingLength) {
       val targetId = idToIndexMapping(i)
       if (!alreadySentId.contains(targetId)) {
-        if (targetId != 0 || !implicitZero) {
-          val targetIdValue = state(i)
-          graphEditor.sendSignal(targetIdValue, targetId, id)
-        }
+        val targetIdValue = state(i)
+        graphEditor.sendSignal(targetIdValue, targetId, id)
         alreadySentId += targetId
       }
       i += 1
     }
+    lastSignalState = state
   }
 
   override def afterInitialization(graphEditor: GraphEditor[Int, Double]) {
@@ -92,6 +86,7 @@ class SubproblemVertex(
   }
 
   def collect: Array[Double] = {
+    signalsReceivedSinceCollect = 0
     val consensus = consensusAssignments
     // Update the lagrangian multipliers (y) : y-step
     optimizableFunction.updateLagrangeEfficient(consensus)
@@ -101,7 +96,23 @@ class SubproblemVertex(
     newOptimizedAssignments
   }
 
-  override def scoreCollect = 1
+  /**
+   * Overriding the internal S/C signal implementation.
+   */
+  override def deliverSignalWithSourceId(signal: Double, sourceId: Int, graphEditor: GraphEditor[Int, Double]): Boolean = {
+    signalsReceivedSinceCollect += 1
+    mostRecentSignalMap.put(sourceId, signal)
+    false
+  }
+
+  override def scoreCollect = {
+    if (signalsReceivedSinceCollect == _targetIds.size) {
+      1
+    } else {
+      0
+    }
+  }
+
   // Always signal, even in the first iteration, when the consensus variable doesn't.
   override def scoreSignal = 1
 

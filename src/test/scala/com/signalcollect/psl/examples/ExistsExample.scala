@@ -99,16 +99,15 @@ class ExistsExample extends FlatSpec with Matchers with TestAnnouncements {
   "ExistsExample" should "provide a solution consistent with Matlab" in {
     val pslData = PslParser.parse(existsExample)
 
-    val config = InferencerConfig(objectiveLoggingEnabled = true, absoluteEpsilon = 10e-10, relativeEpsilon = 10e-05, isBounded = true,
-        removeSymmetricConstraints = false)  
+    val config = InferencerConfig(computeObjectiveValueOfSolution = true)  
     val inferenceResults = Inferencer.runInference(pslData, config=config)
 
     val solution = inferenceResults.solution
     val gps = inferenceResults.idToGpMap
     val objectiveFunctionVal = inferenceResults.objectiveFun.get
 
-    println(inferenceResults)
-    println("Objective function value: " + objectiveFunctionVal)
+    //println(inferenceResults)
+    //println("Objective function value: " + objectiveFunctionVal)
 
     objectiveFunctionVal should be(0.0 +- 5e-4) 
   }

@@ -86,21 +86,27 @@ case class InferenceResult(
 }
 
 case class InferencerConfig(
-  globalConvergenceDetection: Option[Int] = Some(2), // Run convergence detection every 2 S/C steps.
-  absoluteEpsilon: Double = 1e-5,
+  asynchronous: Boolean = false,
+  lazyInferencing: Boolean = false,
+  breezeOptimizer: Boolean = true,
+  globalConvergenceDetection: Option[Int] = Some(100), // Run convergence detection every 100 S/C steps.
+  absoluteEpsilon: Double = 1e-8,
   relativeEpsilon: Double = 1e-3,
+  computeObjectiveValueOfSolution: Boolean = true,
   objectiveLoggingEnabled: Boolean = false,
-  maxIterations: Int = 2000, // maximum number of iterations.
+  maxIterations: Int = 10000, // maximum number of iterations.
   stepSize: Double = 1.0,
   tolerance: Double = 0,
   isBounded: Boolean = true,
   serializeMessages: Boolean = false,
-  removeSymmetricConstraints: Boolean = false,
-  eagerSignalCollectConvergenceDetection: Boolean = false,
-  heartbeatIntervalInMs: Int = 50) {
+  removeSymmetricConstraints: Boolean = true,
+  eagerSignalCollectConvergenceDetection: Boolean = true,
+  heartbeatIntervalInMs: Int = 0) {
 
-  def getWolfConfig() = {
-    new WolfConfig(
+  def getWolfConfig = {
+    WolfConfig(
+      asynchronous = asynchronous,
+      lazyInferencing = lazyInferencing,
       globalConvergenceDetection = globalConvergenceDetection,
       objectiveLoggingEnabled = objectiveLoggingEnabled,
       absoluteEpsilon = absoluteEpsilon,
@@ -158,7 +164,7 @@ object Inferencer {
   }
 
   def solveInferenceProblem(groundedRules: Iterable[GroundedRule], groundedConstraints: Iterable[GroundedConstraint], idToGpMap: Map[Int, GroundedPredicate], groundingTime: Long, nodeActors: Option[Array[ActorRef]] = None, config: InferencerConfig = InferencerConfig()) = {
-    val functions = groundedRules.flatMap(_.createOptimizableFunction(config.stepSize, config.tolerance))
+    val functions = groundedRules.flatMap(_.createOptimizableFunction(config.stepSize, config.tolerance, config.breezeOptimizer))
     val constraints = groundedConstraints.flatMap(_.createOptimizableFunction(config.stepSize, config.tolerance))
     val functionsAndConstraints = functions ++ constraints
     println(s"Problem converted to consensus optimization with ${functions.size} functions and ${constraints.size} constraints that are not trivially true.")
@@ -167,14 +173,13 @@ object Inferencer {
       functionsAndConstraints,
       nodeActors,
       config.getWolfConfig)
-    println(s"Problem solved, getting back results.")
+    //println(s"Problem solved, getting back results.")
 
-    if (config.objectiveLoggingEnabled) {
-      // TODO: How is this different from the value computed by the ObjectiveValueAggregator and stored inside the solution? 
+    if (config.computeObjectiveValueOfSolution) {
       val objectiveFunctionVal = functionsAndConstraints.foldLeft(0.0) {
         case (sum, nextFunction) => sum + nextFunction.evaluateAt(solution.results)
       }
-      println("Computed the objective function.")
+      //println("Computed the objective function.")
       InferenceResult(solution, idToGpMap, Some(objectiveFunctionVal), Some(groundingTime))
     } else {
       InferenceResult(solution, idToGpMap)
