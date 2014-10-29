@@ -146,7 +146,8 @@ object Wolf {
       graph.shutdown
     }
   }
-
+  
+  //Convention: subproblems have negative ids.
   def createGraph(
     functions: Traversable[OptimizableFunction],
     nodeActors: Option[Array[ActorRef]] = None,

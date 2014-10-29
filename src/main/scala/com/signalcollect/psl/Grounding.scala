@@ -31,12 +31,12 @@ object Grounding {
    * Main grounding class.
    * Returns the grounded rules and a map from grounded predicate id => grounded predicate instance.
    */
-  def ground(pslData: ParsedPslFile, isBounded: Boolean = true, hasSymmetricConstraints: Boolean = true) = {
-    val groundedPredicates = createGroundedPredicates(pslData.rulesWithPredicates, pslData.predicates, pslData.facts, pslData.individualsByClass, hasSymmetricConstraints)
+  def ground(pslData: ParsedPslFile, isBounded: Boolean = true, removeSymmetricConstraints: Boolean = false) = {
+    val groundedPredicates = createGroundedPredicates(pslData.rulesWithPredicates, pslData.predicates, pslData.facts, pslData.individualsByClass, removeSymmetricConstraints)
     val idToGpMap = groundedPredicates.values.map(gp => (gp.id, gp)).toMap
     val groundedRules = createGroundedRules(pslData.rulesWithPredicates, groundedPredicates, pslData.individualsByClass)
     val groundedConstraints = createGroundedConstraints(pslData.predicates, groundedPredicates, pslData.individualsByClass,
-      groundedRules.size, pslData.rulesWithPredicates.size, hasSymmetricConstraints)
+      groundedRules.size, pslData.rulesWithPredicates.size, removeSymmetricConstraints)
     if (!isBounded){
     	val bounds = createGroundedConstraintBounds(groundedPredicates, groundedRules.size + groundedConstraints.size, groundedRules.size + groundedConstraints.size)
     	(groundedRules, groundedConstraints ++ bounds, idToGpMap)
@@ -127,7 +127,7 @@ object Grounding {
    * Then add the truth values that are in the facts and the predicates.
    */
   def createGroundedPredicates(rules: List[Rule], predicates: List[Predicate], facts: List[Fact], 
-      individuals: Map[String, Set[Individual]], hasSymmetricConstraints: Boolean = true): Map[(String, List[Individual]), GroundedPredicate] = {
+      individuals: Map[String, Set[Individual]], removeSymmetricConstraints: Boolean = false): Map[(String, List[Individual]), GroundedPredicate] = {
     // Ground predicates in rules.
     val groundedPredicatesKeys =
       rules.flatMap {
@@ -204,7 +204,7 @@ object Grounding {
     // Merge the two maps, overwriting the duplicate values.
     val allPredicateKeys = groundedPredicates ++ groundedConstraintPredicates
 
-    if (hasSymmetricConstraints) {
+    if (!removeSymmetricConstraints) {
       return allPredicateKeys
     }
 
@@ -287,7 +287,7 @@ object Grounding {
    */
   def createGroundedConstraints(predicates: List[Predicate], groundedPredicates: Map[(String, List[Individual]), GroundedPredicate],
     individuals: Map[String, Set[Individual]], startingId: Int = 0, startingConstraintId: Int = 0, 
-    hasSymmetricConstraints: Boolean = true): List[GroundedConstraint] = {
+    removeSymmetricConstraints: Boolean = false): List[GroundedConstraint] = {
     // The id of the grounded constraint.
     var id = startingId
     // The ruleId is the id for each predicate property we are making into a constraint.
@@ -301,7 +301,7 @@ object Grounding {
           property =>
             val (nextId, con) = property match {
                case Symmetric =>
-               	if (hasSymmetricConstraints){
+               	if (!removeSymmetricConstraints){
                	  createSymmetricConstraints(id, { ruleId += 1; ruleId }, predicate, groundedPredicates, individuals)
                	} else {
                	  // We have avoided creating symmetric constraints by rewriting all gps (a,b) and (b,a) to a normalized form 

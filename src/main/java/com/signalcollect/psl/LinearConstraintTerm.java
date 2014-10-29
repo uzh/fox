@@ -58,6 +58,7 @@ class LinearConstraintTerm extends HyperplaneTerm {
 		//
 		// /* Initializes scratch data */
 		double total = 0.0;
+		Double absDiff = 0.0;
 
 		/*
 		 * Minimizes without regard for the constraint, i.e., solves argmin
@@ -69,15 +70,20 @@ class LinearConstraintTerm extends HyperplaneTerm {
 		}
 
 		/*
-		 * Checks if the solution satisfies the constraint. If so, updates the
-		 * local primal variables and returns.
+		 * Checks how much the solution violates the constraint.
 		 */
-		if ((comparator.equals("leq") && total <= constant)
-				|| (comparator.equals("geq") && total >= constant)
-				|| (comparator.equals("eq") && total == constant)) {
+		if ((comparator.equals("leq") && total > constant)
+				|| (comparator.equals("geq") && total < constant)
+				|| (comparator.equals("eq") && total != constant)) {
+			absDiff = Math.abs(total - constant);
+		}
+		
+/*If the violation is less than a given tolerance (default = 0 ), updates the
+		 * local primal variables and returns.
+*/
+		if (tolerance >= 0 && absDiff <= tolerance) {
 			return;
 		}
-		// }
 
 		/*
 		 * If the naive minimization didn't work, or if it's an equality

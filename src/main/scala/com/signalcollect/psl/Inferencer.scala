@@ -56,7 +56,7 @@ case class InferenceResult(
     var s = solution.stats.toString
     solution.results.foreach {
       case (id, truthValue) =>
-        if (truthValue > 10e-3) {
+        if (truthValue > 0) {
           val gp = idToGpMap(id)
           if (!gp.truthValue.isDefined) {
             s += s"\n$gp has truth value $truthValue"

@@ -1,6 +1,4 @@
 /*
- * NOTICE: The original file was changed by Philip Stutz and Sara Magliacane.
- * 
  * This file is part of the PSL software.
  * Copyright 2011-2013 University of Maryland
  *
@@ -27,7 +25,6 @@ import scala.collection.immutable.Map;
  * 
  * @author Stephen Bach <bach@cs.umd.edu>
  */
-@SuppressWarnings("serial")
 abstract class ADMMObjectiveTerm implements Serializable {
 	protected ADMMReasoner reasoner;
 	public final double[] x;
