@@ -77,10 +77,11 @@ class LinearConstraintTerm extends HyperplaneTerm {
 				|| (comparator.equals("eq") && total != constant)) {
 			absDiff = Math.abs(total - constant);
 		}
-		
-/*If the violation is less than a given tolerance (default = 0 ), updates the
-		 * local primal variables and returns.
-*/
+
+		/*
+		 * If the violation is less than a given tolerance (default = 0 ),
+		 * updates the local primal variables and returns.
+		 */
 		if (tolerance >= 0 && absDiff <= tolerance) {
 			return;
 		}
