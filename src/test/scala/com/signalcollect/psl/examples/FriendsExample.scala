@@ -47,8 +47,8 @@ class FriendsExample extends FlatSpec with Matchers with TestAnnouncements {
 	predicate: 		friends(_, _)
     
   // Gives a default soft truth value of 1/(4+1) to unknown predicates.
-  rule [1]: => friends(A,B)
-  rule [4]: => !friends(A,B)
+  rule [1]: friends(A,B)
+  rule [4]: !friends(A,B)
     
 	fact: friends(anna, bob)
   fact: !friends(bob, carl)
@@ -90,7 +90,7 @@ class FriendsExample extends FlatSpec with Matchers with TestAnnouncements {
   // No friends except the explicitly mentioned (as std in CWA).
   val enemies = """
 	predicate: 		friends(_, _)
-  rule [1]: => !friends(A,B)
+  rule [1]: !friends(A,B)
 	fact: friends(anna, bob)
   fact: !friends(bob, carl)
 	"""

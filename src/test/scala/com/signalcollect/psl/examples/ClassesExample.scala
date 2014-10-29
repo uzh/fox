@@ -84,7 +84,7 @@ class ClassesExample extends FlatSpec with Matchers with TestAnnouncements {
     val inferenceResults = Inferencer.runInference(pslData, config = config)
     println(inferenceResults)
     val objectiveFunctionVal = inferenceResults.objectiveFun.get
-    objectiveFunctionVal should be(0 +- 0.05)
+    objectiveFunctionVal should be(0.0 +- 0.05)
   }
 
 }

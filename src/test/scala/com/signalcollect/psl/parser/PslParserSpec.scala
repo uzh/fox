@@ -29,16 +29,16 @@ class PslParserSpec extends FlatSpec with Matchers with TestAnnouncements {
 
   "PslParser" should "correctly parse a small PSL file" in {
     val parsed = PslParser.parse("""
-	predicate: 										votes(_, _)
-	predicate: 										idol(_, _)
-	predicate [Functional, Symmetric]: 				samePerson(_, _)
-	predicate [PartialFunctional, Symmetric]: 		hasSpouse(_, _)
-	predicate [InverseFunctional]: 					fatherOf(_, _)
-	predicate [InversePartialFunctional]: 			hasCar(_, _) // assumption: each car has at most one owner
+	predicate: votes(_, _)
+	predicate: idol(_, _)
+	predicate [Functional, Symmetric]: samePerson(_, _)
+	predicate [PartialFunctional, Symmetric]: hasSpouse(_, _)
+	predicate [InverseFunctional]: fatherOf(_, _)
+	predicate [InversePartialFunctional]: hasCar(_, _) // assumption: each car has at most one owner
 	
 	rule [weight = 0.5, distanceMeasure = linear]: 	votes(A,P) && idol(B,A)  => votes(B,P)  || votes(B, A)
-	rule [weight = 0.3]: 							votes(A,P) && !idol(B,A) => !votes(B,P) || votes(B, A) // default distance function (no squared)
-	rule: 											votes(A,P) && idol(B,A)  => votes(B, A) // default weight and distance function
+	rule [weight = 0.3]: votes(A,P) && !idol(B,A) => !votes(B,P) || votes(B, A) // default distance function (no squared)
+	rule: votes(A,P) && idol(B,A)  => votes(B, A) // default weight and distance function
 	
 	fact: votes(anna, republicans)
 	fact [truthValue = 0.5]: votes(anna, democrats)
@@ -102,11 +102,12 @@ class PslParserSpec extends FlatSpec with Matchers with TestAnnouncements {
 
   it should "correctly parse a small PSL file without facts" in {
     val parsed = PslParser.parse("""
-	predicate: 										votes(_, _)
+	predicate: votes(_, _)
 	predicate [Functional, Symmetric]: 				samePerson(_, _)
 	predicate [PartialFunctional, Symmetric]: 		hasSpouse(_, _)
 	predicate [InverseFunctional]: 					fatherOf(_, _)
 	predicate [InversePartialFunctional]: 			hasCar(_, _) // assumption: each car has at most one owner
+  predicate: idol(_, _)
 	
     rule [weight = 0.5, distanceMeasure = linear]: 	votes(A,P) && idol(B,A)  => votes(B,P)  || votes(B, A)
 	""")
@@ -138,8 +139,8 @@ class PslParserSpec extends FlatSpec with Matchers with TestAnnouncements {
 	predicate [InverseFunctional]: 					fatherOf(_, _)
 	predicate [InversePartialFunctional]: 			hasCar(_, _) // assumption: each car has at most one owner
 	
-	fact: votesFor(anna, republicans)
-	fact [truthValue = 0.5]: votesFor(anna, democrats)
+	fact: votes(anna, republicans)
+	fact [truthValue = 0.5]: votes(anna, democrats)
 	""")
 
     // Test individuals.
@@ -167,12 +168,12 @@ class PslParserSpec extends FlatSpec with Matchers with TestAnnouncements {
 
     //Test for facts.
     parsed.facts.size should equal(2)
-    parsed.facts(0).name should equal("votesFor")
+    parsed.facts(0).name should equal("votes")
     parsed.facts(0).truthValue should equal (Some(1.0))
     parsed.facts(0).variableGroundings(0).name should equal("anna")
     parsed.facts(0).variableGroundings(1).name should equal("republicans")
 
-    parsed.facts(1).name should equal("votesFor")
+    parsed.facts(1).name should equal("votes")
     parsed.facts(1).truthValue should equal(Some(0.5))
     parsed.facts(1).variableGroundings(0).name should equal("anna")
     parsed.facts(1).variableGroundings(1).name should equal("democrats")
@@ -181,6 +182,8 @@ class PslParserSpec extends FlatSpec with Matchers with TestAnnouncements {
 
   it should "support rules with syntactic sugar for the weight" in {
     val parsed = PslParser.parse("""
+  predicate: votes(_, _)
+  predicate: idol(_, _)
 	rule [0.5, distanceMeasure = linear]: 	votes(A,P) && idol(B,A)  => votes(B,P)  || votes(B, A)
 	rule [0.3]: 							votes(A,P) && !idol(B,A) => !votes(B,P) || votes(B, A) // default distance function (no squared)
 	""")
@@ -200,11 +203,12 @@ class PslParserSpec extends FlatSpec with Matchers with TestAnnouncements {
 
   it should "support facts with syntactic sugar for the weight" in {
     val parsed = PslParser.parse("""
-	fact [0.5]: votesFor(anna, democrats)
+  predicate: votes(_, _)
+	fact [0.5]: votes(anna, democrats)
 	""")
     //Test for facts.
     parsed.facts.size should equal(1)
-    parsed.facts(0).name should equal("votesFor")
+    parsed.facts(0).name should equal("votes")
     parsed.facts(0).truthValue should equal(Some(0.5))
     parsed.facts(0).variableGroundings(0).name should equal("anna")
     parsed.facts(0).variableGroundings(1).name should equal("democrats")

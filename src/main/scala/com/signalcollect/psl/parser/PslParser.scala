@@ -63,6 +63,8 @@ object PslParser extends ParseHelper[ParsedPslFile] with ImplicitConversions {
   protected override val whiteSpace = """(\s|//.*|#.*|(?m)/\*(\*(?!/)|[^*])*\*/)+""".r
 
   def defaultParser = pslFile
+  
+  var ruleId = 0
 
   lazy val predicateInRule: Parser[PredicateInRule] = {
     opt("!") ~ identifier ~ "(" ~ repsep(identifier, ",") <~ ")" ^^ {
@@ -100,8 +102,8 @@ object PslParser extends ParseHelper[ParsedPslFile] with ImplicitConversions {
   val hardRuleWeight = Double.MaxValue
 
   lazy val rule: Parser[Rule] = {
-    "rule" ~> opt(ruleProperties) ~ ":" ~ repsep(predicateInRule, "&&") ~ "=>" ~ opt(existentialClause) ~ repsep(predicateInRule, "||") ^^ {
-      case properties ~ ":" ~ conditions ~ "=>" ~ existClause ~ implications =>
+    "rule" ~> opt(ruleProperties) ~ ":" ~ opt(repsep(predicateInRule, "&&") ~ "=>") ~ opt(existentialClause) ~ repsep(predicateInRule, "||") ^^ {
+      case properties ~ ":" ~ bodyClause ~ existClause ~ headClause =>
         // If the properties map contains a 'distanceMeasure' property,
         val distanceMeasure = properties.flatMap(_.get("distanceMeasure")).
           // parse it and use it, else use the default measure.
@@ -110,11 +112,15 @@ object PslParser extends ParseHelper[ParsedPslFile] with ImplicitConversions {
         val weight = properties.flatMap(_.get("weight")).
           //  parse it and use that weight, else use weight 'hardRuleWeight' to simulate a hard rule.
           map(_.toDouble).getOrElse(hardRuleWeight)
-        //TODO: put a proper id.
-        Rule(0, conditions, implications, distanceMeasure, weight, existClause.getOrElse(Set.empty))
+        ruleId += 1
+        val bodyPredicates = bodyClause match {
+          case Some(x) => x._1 
+          case None => List.empty
+        }
+        Rule(ruleId, bodyPredicates, headClause, distanceMeasure, weight, existClause.getOrElse(Set.empty))
     }
   }
-  
+   
   lazy val existentialClause: Parser[Set[String]] ={
     "EXISTS" ~ "[" ~> repsep(identifier, ",") <~ "]" ^^ {
       case existVars => existVars.toSet
