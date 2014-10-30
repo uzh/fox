@@ -26,6 +26,7 @@ import com.signalcollect.admm.optimizers.SquaredHingeLossOptimizer
 import breeze.optimize.DiffFunction
 import breeze.linalg.DenseVector
 import com.signalcollect.util.Verifier
+import com.signalcollect.admm.optimizers.LinearConstraintOptimizer
 
 case class GroundedRule(
   id: Int, // TODO put a proper number
@@ -190,7 +191,11 @@ case class GroundedRule(
       // This would have been ~Infinity * max(0, coeff*x - constant)
       // We can rewrite this by adding a constraint: coeff*x - constant <= 0, or coeff*x <= constant
       val optimizableFunction: OptimizableFunction =
-        Optimizer.linearConstraint(stepSize, zMap, "leq", constant, coefficientMatrix, zIndices, tolerance, id)
+        if (breezeOptimizer) {
+          new LinearConstraintOptimizer(id, "leq", constant, zIndices, stepSize, zMap, coefficientMatrix)
+        } else {
+          Optimizer.linearConstraint(stepSize, zMap, "leq", constant, coefficientMatrix, zIndices, tolerance, id)
+        }
       Some(optimizableFunction)
     }
   }

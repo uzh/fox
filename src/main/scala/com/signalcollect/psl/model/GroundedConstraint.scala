@@ -22,6 +22,7 @@ package com.signalcollect.psl.model
 
 import com.signalcollect.admm.optimizers.OptimizableFunction
 import com.signalcollect.psl.Optimizer
+import com.signalcollect.admm.optimizers.LinearConstraintOptimizer
 
 /**
  * Constraints are in the form:
@@ -89,7 +90,7 @@ case class GroundedConstraint(
     groundedPredicates.filter(!_.truthValue.isDefined)
   }
 
-  def createOptimizableFunction(stepSize: Double, tolerance: Double = 0.0): Option[OptimizableFunction] = {
+  def createOptimizableFunction(stepSize: Double, tolerance: Double = 0.0, breezeOptimizer: Boolean = false): Option[OptimizableFunction] = {
     // Easy optimization, if all are facts, ignore.
     if (unboundGroundedPredicates.size == 0)
       return None
@@ -133,7 +134,11 @@ case class GroundedConstraint(
     val zMap: Map[Int, Double] = unboundGroundedPredicates.map(gp => (gp.id, 0.0)).toMap
     val zIndices: Array[Int] = unboundGroundedPredicates.map(gp => gp.id).toArray
     val optimizableFunction: OptimizableFunction =
-      Optimizer.linearConstraint(stepSize, zMap, comparator, constant, coefficientMatrix, zIndices, tolerance, id)
+      if (breezeOptimizer) {
+        new LinearConstraintOptimizer(id, comparator, constant, zIndices, stepSize, zMap, coefficientMatrix)
+      } else {
+        Optimizer.linearConstraint(stepSize, zMap, comparator, constant, coefficientMatrix, zIndices, tolerance, id)
+      }
     Some(optimizableFunction)
   }
 

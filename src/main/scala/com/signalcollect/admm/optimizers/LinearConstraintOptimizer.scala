@@ -41,24 +41,6 @@ class LinearConstraintOptimizer(
     squared
   }
 
-  lazy val linearConstraintFunction = {
-    new DiffFunction[DenseVector[Double]] {
-      def calculate(x: DenseVector[Double]) = {
-        val coeffsDotX = coeffs.dot(x)
-        // basic function + stepSize/2 * norm2(x - z + (y / stepSize))^2
-        (if (comparator == "leq" && coeffsDotX <= constant
-          || comparator == "geq" && coeffsDotX >= constant
-          || comparator == "eq" && coeffsDotX == constant) {
-          0.0
-        } else {
-          1.0E9
-        } + stepSize / 2 * norm2WithoutSquareRoot(x - z + y / stepSize),
-          // 1st derivative of function above.
-          (x - z) * stepSize + y)
-      }
-    }
-  }
-
   def basicFunction = {
     new Function1[DenseVector[Double], Double] {
       def apply(x: DenseVector[Double]) = {
@@ -119,7 +101,7 @@ class LinearConstraintOptimizer(
       || (comparator == "eq" && total == constant)) {
       x = newXIfNoLoss
     } else {
-      x = minimize(linearConstraintFunction, x)
+      // TODO: Project x onto coeffsDotX == constant plane.
     }
   }
 
