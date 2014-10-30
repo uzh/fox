@@ -41,7 +41,7 @@ class AnimalClassification extends FlatSpec with Matchers with TestAnnouncements
 
   val animalClassExample = """
     class Animal: lisa, blabla
-    class AnimalClass: dog, cat, cow
+    class AnimalClass: dog, cat
     predicate: barks(Animal)
     predicate: meows(Animal)
     predicate: moohs(Animal)
@@ -49,11 +49,11 @@ class AnimalClassification extends FlatSpec with Matchers with TestAnnouncements
   	    
   	rule [weight = 1]: barks(ANIMAL) => animalClass(ANIMAL, dog)
     rule [weight = 1]: meows(ANIMAL) => animalClass(ANIMAL, cat)
-    rule [weight = 1]: moohs(ANIMAL) => animalClass(ANIMAL, cow)
+    //rule [weight = 1]: moohs(ANIMAL) => animalClass(ANIMAL, cow)
 
     fact [truthValue = 0.1]: barks(lisa)
     fact [truthValue = 0.2]: meows(lisa)
-    fact [truthValue = 0.5]: moohs(lisa)
+    //fact [truthValue = 0.5]: moohs(lisa)
     	"""
   "AnimalClassification" should "provide a solution consistent with Matlab" in {
     val config = InferencerConfig(computeObjectiveValueOfSolution = true)  
