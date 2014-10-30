@@ -37,6 +37,17 @@ class LazySubproblemVertex(
    */
   lastSignalState = new Array[Double](multipliers.length)
 
+  var lastMultipliers = multipliers.clone
+
+  val absoluteThreshold = 1e-10
+  val relativeThreshold = 1e-6
+
+  def changed(a: Double, b: Double): Boolean = {
+    val absolute = math.abs(a - b)
+    val relative = absolute / a
+    relative > relativeThreshold || absolute > absoluteThreshold
+  }
+
   /**
    * Only send a signal if the signal is different from what was sent las time around.
    * Implicitly last time a 0 was sent.
@@ -46,11 +57,13 @@ class LazySubproblemVertex(
     val idToIndexMapping = optimizableFunction.idToIndexMappings
     val idToIndexMappingLength = idToIndexMapping.length
     var i = 0
+    val currentMultipliers = multipliers
+    //val mChanged = multipliersChanged
     while (i < idToIndexMappingLength) {
       val targetId = idToIndexMapping(i)
       if (!alreadySentId.contains(targetId)) {
         val targetIdValue = state(i)
-        if (targetIdValue != lastSignalState(i)) {
+        if (changed(lastMultipliers(i), currentMultipliers(i)) || changed(lastSignalState(i), targetIdValue)) {
           graphEditor.sendSignal(targetIdValue, targetId, id)
         }
         alreadySentId += targetId
@@ -58,6 +71,7 @@ class LazySubproblemVertex(
       i += 1
     }
     lastSignalState = state.clone
+    lastMultipliers = multipliers.clone
   }
 
 }

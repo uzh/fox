@@ -87,7 +87,7 @@ case class InferenceResult(
 
 case class InferencerConfig(
   asynchronous: Boolean = false,
-  lazyInferencing: Boolean = false,
+  lazyInferencing: Boolean = true,
   breezeOptimizer: Boolean = true,
   globalConvergenceDetection: Option[Int] = Some(100), // Run convergence detection every 100 S/C steps.
   absoluteEpsilon: Double = 1e-8,

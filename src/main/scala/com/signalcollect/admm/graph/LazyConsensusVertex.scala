@@ -32,15 +32,4 @@ class LazyConsensusVertex(
   isBounded: Boolean = true // shall we use bounding (cutoff below 0 and above 1)? 
   ) extends ConsensusVertex(variableId, initialState, isBounded) {
 
-  /**
-   * Only signal if the state has changed.
-   */
-  override def scoreSignal = {
-    if (state != lastSignalState) {
-      1.0
-    } else {
-      0.0
-    }
-  }
-
 }
