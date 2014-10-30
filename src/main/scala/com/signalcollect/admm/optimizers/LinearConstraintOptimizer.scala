@@ -82,6 +82,16 @@ class LinearConstraintOptimizer(
     z = DenseVector(newZ)
   }
 
+  val length: Double = {
+    val sumOfSquaredCoefficients = coefficientMatrix.map(v => v*v).sum
+    math.sqrt(sumOfSquaredCoefficients)
+  }
+  
+  val unitNormalVector: DenseVector[Double] = {
+    val unitNormal = coefficientMatrix.map(v=> v/length)
+    DenseVector(unitNormal)
+  }
+  
   /**
    * Adaptation of Stephen Bach's solver.
    *
@@ -96,12 +106,20 @@ class LinearConstraintOptimizer(
     setZ(consensusAssignments)
     val newXIfNoLoss = z - (y / stepSize)
     val total = coeffs.dot(newXIfNoLoss)
+    x = newXIfNoLoss
     if ((comparator == "leq" && total <= constant)
       || (comparator == "geq" && total >= constant)
       || (comparator == "eq" && total == constant)) {
-      x = newXIfNoLoss
+      return
     } else {
-      // TODO: Project x onto coeffsDotX == constant plane.
+      if (x.length == 1){
+        x(0) = constant / coeffs(0)
+        return
+      }
+      // Project x onto coeffsDotX == constant plane.
+      var distance = - constant/length
+      distance += x.dot(unitNormalVector)
+      x = x - (distance * unitNormalVector)
     }
   }
 

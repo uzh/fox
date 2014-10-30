@@ -38,7 +38,7 @@ class LazySubproblemVertex(
   lastSignalState = new Array[Double](multipliers.length)
 
   /**
-   * Only send a signal if the signal is different from what was sent las time around.
+   * Only send a signal if the signal is different from what was sent last time around.
    * Implicitly last time a 0 was sent.
    */
   override def executeSignalOperation(graphEditor: GraphEditor[Int, Double]) {

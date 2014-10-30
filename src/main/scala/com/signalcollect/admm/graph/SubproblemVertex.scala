@@ -55,7 +55,6 @@ class SubproblemVertex(
    * instead the signalling is done here.
    */
   override def executeSignalOperation(graphEditor: GraphEditor[Int, Double]) {
-    // TODO: We don't really need the S/C vertex target ids. Can we save some memory here?
     var alreadySentId = Set.empty[Int]
     val idToIndexMapping = optimizableFunction.idToIndexMappings
     val idToIndexMappingLength = idToIndexMapping.length
@@ -92,15 +91,19 @@ class SubproblemVertex(
   }
 
   def collect: Array[Double] = {
+    val newOptimizedAssignments = admmStep
+    newOptimizedAssignments
+  }
+
+  def admmStep: Array[Double] = {
     val consensus = consensusAssignments
     // Update the lagrangian multipliers (y) : y-step
     optimizableFunction.updateLagrangeEfficient(consensus)
     // Minimize the local function and get argmin (x) : x-step
     optimizableFunction.optimizeEfficient(consensus)
-    val newOptimizedAssignments = optimizableFunction.getX
-    newOptimizedAssignments
+    optimizableFunction.getX
   }
-
+  
   override def scoreCollect = 1
   // Always signal, even in the first iteration, when the consensus variable doesn't.
   override def scoreSignal = 1
