@@ -31,10 +31,6 @@ class PslParserSpec extends FlatSpec with Matchers with TestAnnouncements {
     val parsed = PslParser.parse("""
 	predicate: votes(_, _)
 	predicate: idol(_, _)
-	predicate [Functional, Symmetric]: samePerson(_, _)
-	predicate [PartialFunctional, Symmetric]: hasSpouse(_, _)
-	predicate [InverseFunctional]: fatherOf(_, _)
-	predicate [InversePartialFunctional]: hasCar(_, _) // assumption: each car has at most one owner
 	
 	rule [weight = 0.5, distanceMeasure = linear]: 	votes(A,P) && idol(B,A)  => votes(B,P)  || votes(B, A)
 	rule [weight = 0.3]: votes(A,P) && !idol(B,A) => !votes(B,P) || votes(B, A) // default distance function (no squared)
@@ -42,6 +38,11 @@ class PslParserSpec extends FlatSpec with Matchers with TestAnnouncements {
 	
 	fact: votes(anna, republicans)
 	fact [truthValue = 0.5]: votes(anna, democrats)
+
+  predicate [Functional, Symmetric]: samePerson(_, _)
+  predicate [PartialFunctional, Symmetric]: hasSpouse(_, _)
+  predicate [InverseFunctional]: fatherOf(_, _)
+  predicate [InversePartialFunctional]: hasCar(_, _) // assumption: each car has at most one owner
 	""")
 
     // Test individuals.

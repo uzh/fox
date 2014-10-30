@@ -44,14 +44,14 @@ import scala.annotation.tailrec
 class FriendsExample extends FlatSpec with Matchers with TestAnnouncements {
 
   val friends = """
+  rule [4]: !friends(A,B)
 	predicate: 		friends(_, _)
     
+  fact: !friends(bob, carl)
   // Gives a default soft truth value of 1/(4+1) to unknown predicates.
   rule [1]: friends(A,B)
-  rule [4]: !friends(A,B)
     
 	fact: friends(anna, bob)
-  fact: !friends(bob, carl)
 	"""
   "FriendsExample" should "provide a solution consistent for friends, with a default value of 0.2" in {
     val pslData = PslParser.parse(friends)
@@ -59,7 +59,7 @@ class FriendsExample extends FlatSpec with Matchers with TestAnnouncements {
     val config = InferencerConfig(computeObjectiveValueOfSolution = true)
     val inferenceResults = Inferencer.runInference(pslData, config = config)
 
-    //println(inferenceResults)
+    println(inferenceResults)
     val objectiveFunctionVal = inferenceResults.objectiveFun.get
 
     objectiveFunctionVal should be(3.2 +- 1e-5)

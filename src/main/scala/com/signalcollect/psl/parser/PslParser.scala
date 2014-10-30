@@ -165,18 +165,31 @@ object PslParser extends ParseHelper[ParsedPslFile] with ImplicitConversions {
   }
 
   lazy val pslFile: Parser[ParsedPslFile] = {
-    rep(classType) ~! rep(predicate) ~! rep(rule) ~! rep(fact) ~! opt(individuals) ^^ {
-      case classes ~ predicates ~ rules ~ groundings ~ individuals =>
-        individuals match {
-          case Some(ind) =>
-          	ParsedPslFile(classes.toMap, predicates, rules, groundings, ind)
-          case None => 
-            ParsedPslFile(classes.toMap, predicates, rules, groundings)
-        }
-
+    rep(pslLine) ^^ {
+      case lines =>
+       val predicates = lines.flatMap{ case f: Predicate => Some(f) case _ => None} 
+       val rules = lines.flatMap{ case f: Rule => Some(f) case _ => None}   
+       val facts = lines.flatMap{ case f: Fact => Some(f) case _ => None}
+       val inds = lines.flatMap{ case f: Set[Individual] => Some(f) case _ => None}
+       val classes = lines.flatMap{ case f: (String, Set[Individual]) => Some(f) case _ => None}
+       
+       if (inds.length == 0 ){
+         ParsedPslFile(classes.toMap, predicates, rules, facts)
+       }
+       else {
+         val unionOfIndividuals = inds.foldLeft(inds(0))(_.union(_))
+          ParsedPslFile(classes.toMap, predicates, rules, facts, unionOfIndividuals)  
+       } 
     }
   }
-  
+
+ lazy val pslLine: Parser[Any] = {
+    (classType|predicate|rule|fact|individuals) ^^ {
+      case line =>
+        line
+    }
+  }
+    
   lazy val individuals: Parser[Set[Individual]] = {
     "individuals" ~> ":" ~ repsep(identifier, ",") ^^ {
       case ":" ~ individuals =>

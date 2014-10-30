@@ -26,10 +26,10 @@ import com.signalcollect.psl.model.Rule
 import com.signalcollect.psl.model.Individual
 
 case class ParsedPslFile(
-  classes: Map[String, Set[Individual]],
-  predicates: List[Predicate],
-  rules: List[Rule],
-  facts: List[Fact],
+  classes: Map[String, Set[Individual]] = Map.empty,
+  predicates: List[Predicate] = List.empty,
+  rules: List[Rule] = List.empty,
+  facts: List[Fact] = List.empty,
   constants: Set[Individual] = Set.empty) {
 
   def individualsInFacts = factsWithPredicates.flatMap(_.indsWithClasses).distinct
