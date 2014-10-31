@@ -62,6 +62,26 @@ class AbductionExample extends FlatSpec with Matchers with TestAnnouncements {
     predicate : Image2PDF(_, _)
     predicate : Plot(_, _)
  
+    // Explicit negative priors for all predicates.
+    rule [1]: => !After(A, B)
+    rule [1]: => !PDF(A)
+    rule [1]: => !Tex(A)
+    rule [1]: => !Bib(A)
+    rule [1]: => !Excel(A)
+    rule [1]: => !Doc(A)
+    rule [1]: => !Image(A)
+    rule [1]: => !Contains(A, B)
+    rule [1]: => !TextSim(A, B)
+    rule [1]: => !ImageSim(A, B)
+    rule [1]: => !SameMetadata(A, B)
+    rule [1]: => !Text2PDF(A, B)
+    rule [1]: => !Tex2PDF(A, B)
+    rule [1]: => !Review(A, B)
+    rule [1]: => !CopyText(A, B)
+    rule [1]: => !Copy(A, B)
+    rule [1]: => !Image2PDF(A, B)
+    rule [1]: => !Plot(A, B)
+
     // All the similar elements with the same metadata are copies, unless they have a different type.
     rule [10]:  PDF(X) && PDF(Y) && TextSim(X, Y)  && After(X, Y) && SameMetadata(X, Y) => Copy(X,Y)
     rule [10]:  Tex(X) && Tex(Y) && TextSim(X, Y)  && After(X, Y) && SameMetadata(X, Y) => Copy(X,Y)
@@ -153,12 +173,14 @@ class AbductionExample extends FlatSpec with Matchers with TestAnnouncements {
 
 	"""
 
-  "AbductionExample" should "provide a solution consistent with Matlab" in {
+  "AbductionExample" should "provide a good solution" in {
+    // TODO: Matlab solution?
     val config = InferencerConfig(computeObjectiveValueOfSolution = true)
     val inferenceResults = Inferencer.runInferenceFromString(abdExample, config = config)
+    //println(inferenceResults)
     val interestingPredicates = List("Text2PDF", "Tex2PDF", "Review", "CopyText", "Copy", "Image2PDF", "Plot")
     //println(inferenceResults.printSelected(interestingPredicates))
     val objectiveFunctionVal = inferenceResults.objectiveFun.get
-    objectiveFunctionVal should be(9.0 +- 0.2)
+    objectiveFunctionVal should be(28.24 +- 0.1)
   }
 }
