@@ -43,7 +43,7 @@ class ConsensusVertex(
   variableId: Int, // the id of the variable, which identifies it also in the subproblem nodes.
   initialState: Double, // the initial value for the consensus variable.
   isBounded: Boolean, // shall we use bounding (cutoff below 0 and above 1)? 
-  implicitZero: Boolean) 
+  implicitZero: Boolean)
   extends MemoryEfficientDataGraphVertex[Double, Double, Double](variableId, initialState) with Consensus {
 
   @inline final def upperBound: Double = 1.0 // each consensus variable can only assume values in the range [lowerBound, upperBound].
@@ -71,6 +71,7 @@ class ConsensusVertex(
   }
 
   @inline def collect = {
+    if (!hasCollectedOnce) hasCollectedOnce = true
     // New consensus is average vote.
     averageConsensusVote
   }
@@ -126,6 +127,8 @@ class ConsensusVertex(
 
   override def scoreCollect = 1
 
+  var hasCollectedOnce = false
+
   /**
    * Compute whether we should send signals to the subproblem vertices.
    *  Note: The computation starts in the subproblem vertices.
@@ -135,11 +138,20 @@ class ConsensusVertex(
    *  This is perfectly fine with PSL inference, but may have drawbacks in other cases.
    */
   override def scoreSignal = {
-    if (state != 0.0 || !implicitZero) {
-      1.0
-    } else {
-      0.0
-    }
+//    if (implicitZero) {
+//      if (state != 0.0) {
+//        1.0
+//      } else {
+//        0.0
+//      }
+//    } 
+//    else {
+      if (hasCollectedOnce) { 
+        1.0 
+      } else { 
+        0.0 
+      }
+//    }
   }
 
   @inline def bounded(i: Double): Double = {

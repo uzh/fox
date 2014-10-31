@@ -64,7 +64,7 @@ class SubproblemVertex(
       val targetId = idToIndexMapping(i)
       if (!alreadySentId.contains(targetId)) {
         val targetIdValue = state(i)
-        if (targetIdValue != 0 || !implicitZero) {
+        if (targetIdValue != 0.0 || !implicitZero) {
           graphEditor.sendSignal(targetIdValue, targetId, id)
         }
         alreadySentId += targetId

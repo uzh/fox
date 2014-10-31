@@ -85,8 +85,6 @@ class ExistsExample extends FlatSpec with Matchers with TestAnnouncements {
     //rule [1]: isLate(X,today) => isLate(X,tomorrow)
     //rule [weight = 1]: causeIsLate(P,snow, PLACE,today) => causeIsLate(P,snow, PLACE,tomorrow)
     // rule [1]: isLate(X,TIME) => isLate(X,next(TIME))
-    // function: def next(i:Int) = i + 1
-    // class Time: for (i <- 0 until 10)
    
 	fact [truthValue = 1.0]: isLate(sara, today)
    	//fact [truthValue = 0.8]: isLate(anna, yesterday)

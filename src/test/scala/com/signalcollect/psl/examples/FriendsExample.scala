@@ -49,7 +49,8 @@ class FriendsExample extends FlatSpec with Matchers with TestAnnouncements {
     
   fact: !friends(bob, carl)
   // Gives a default soft truth value of 1/(4+1) to unknown predicates.
-  rule [1]: friends(A,B)
+  // 1 + 5*friends(A,B)^2 - 2 friends(A,B) => friends(A,B) = 1/5
+  //rule [1]: friends(A,B)
     
 	fact: friends(anna, bob)
 	"""
@@ -58,7 +59,8 @@ class FriendsExample extends FlatSpec with Matchers with TestAnnouncements {
     val config = InferencerConfig(computeObjectiveValueOfSolution = true)
     val inferenceResults = Inferencer.runInference(pslData, config = config)
     val objectiveFunctionVal = inferenceResults.objectiveFun.get
-
+    println(inferenceResults)
+    //println(PSLToCvxConverter.toCvx(friends))
     objectiveFunctionVal should be(3.2 +- 1e-5)
   }
 
@@ -114,15 +116,15 @@ class FriendsExample extends FlatSpec with Matchers with TestAnnouncements {
     fact: !friends(bob, carl)
 	"""
   //TODO(sara): The result looks good to me, but the objective function evaluates to infinity. Commenting out for now.
-//  "FriendsExample" should "provide a solution consistent for hardenemies, an example with negative prior and a hard rule" in {
-//    val pslData = PslParser.parse(hardenemies)
-//
-//    val config = InferencerConfig(computeObjectiveValueOfSolution = true)
-//    val inferenceResults = Inferencer.runInference(pslData, config = config)
-//
-//    //println(inferenceResults)
-//    val objectiveFunctionVal = inferenceResults.objectiveFun.get
-//
-//    objectiveFunctionVal should be(3.0 +- 6e-2)
-//  }
+  //  "FriendsExample" should "provide a solution consistent for hardenemies, an example with negative prior and a hard rule" in {
+  //    val pslData = PslParser.parse(hardenemies)
+  //
+  //    val config = InferencerConfig(computeObjectiveValueOfSolution = true)
+  //    val inferenceResults = Inferencer.runInference(pslData, config = config)
+  //
+  //    //println(inferenceResults)
+  //    val objectiveFunctionVal = inferenceResults.objectiveFun.get
+  //
+  //    objectiveFunctionVal should be(3.0 +- 6e-2)
+  //  }
 }
