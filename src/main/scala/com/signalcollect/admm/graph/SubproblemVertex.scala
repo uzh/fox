@@ -41,7 +41,7 @@ trait Subproblem {
 class SubproblemVertex(
   subproblemId: Int, // The id of the subproblem.
   val optimizableFunction: OptimizableFunction,
-  implicitZero: Boolean = true) // The function that is contained in the subproblem.
+  implicitZero: Boolean) // The function that is contained in the subproblem.
   extends MemoryEfficientDataGraphVertex[Array[Double], Double, Double](subproblemId, null.asInstanceOf[Array[Double]])
   with Subproblem {
 

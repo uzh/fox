@@ -24,18 +24,52 @@ import com.signalcollect.GraphEditor
 import com.signalcollect.MemoryEfficientDataGraphVertex
 import com.signalcollect.admm.optimizers.OptimizableFunction
 
+object MSG {
+  val SKIP_COLLECT = -1
+  val ENSURE_COLLECT = -2
+}
+
 /**
- * Lazy version of the subproblem vertex, only signals if something has changed.
+ * Lazy version of the subproblem vertex, only signals to the consensus vertex if the signal changes.
+ * If no signal changes, but the multipliers still changed, the vertex ensures that it will get
+ * scheduled again by sending special messages to itself.
+ *
+ * The skip collect message ensures this vertex skips the next step, which is the one during which
+ * the consensus vertices collect. The ensure collect message gets sent in the subsequent step and
+ * ensures that S/C will schedule thew vertex, even if no consensus vertex sent a signal to it.
  */
-class LazySubproblemVertex(
+final class LazySubproblemVertex(
   subproblemId: Int, // The id of the subproblem.
-  optimizableFunction: OptimizableFunction) // The function that is contained in the subproblem.
-  extends SubproblemVertex(subproblemId, optimizableFunction) {
+  optimizableFunction: OptimizableFunction, // The function that is contained in the subproblem.
+  val absoluteSignallingThreshold: Double,
+  implicitZero: Boolean) // 
+  extends SubproblemVertex(subproblemId, optimizableFunction, implicitZero) {
+
+  val multipliersLength = multipliers.length
 
   /**
    * Ensure last signal state is all 0, which corresponds to having implicitly sent a 0.
    */
-  lastSignalState = new Array[Double](multipliers.length)
+  lastSignalState = new Array[Double](multipliersLength)
+
+  var lastMultipliers = multipliers.clone
+
+  @inline def changed(a: Double, b: Double): Boolean = {
+    val delta = math.abs(a - b)
+    delta > absoluteSignallingThreshold
+  }
+
+  @inline def atLeastOneMultiplierChanged: Boolean = {
+    val currentMultipliers = multipliers
+    var i = 0
+    while (i < multipliersLength) {
+      if (changed(lastMultipliers(i), currentMultipliers(i))) {
+        return true
+      }
+      i += 1
+    }
+    false
+  }
 
   /**
    * Only send a signal if the signal is different from what was sent last time around.
@@ -44,20 +78,45 @@ class LazySubproblemVertex(
   override def executeSignalOperation(graphEditor: GraphEditor[Int, Double]) {
     var alreadySentId = Set.empty[Int]
     val idToIndexMapping = optimizableFunction.idToIndexMappings
-    val idToIndexMappingLength = idToIndexMapping.length
     var i = 0
-    while (i < idToIndexMappingLength) {
+    var atLeastOneSignalSent = false
+    while (i < multipliersLength) {
       val targetId = idToIndexMapping(i)
       if (!alreadySentId.contains(targetId)) {
         val targetIdValue = state(i)
-        if (targetIdValue != lastSignalState(i)) {
+        val signalChanged = changed(lastSignalState(i), targetIdValue)
+        if (signalChanged && (targetId != 0 || !implicitZero)) {
+          atLeastOneSignalSent = true
           graphEditor.sendSignal(targetIdValue, targetId, id)
         }
         alreadySentId += targetId
       }
       i += 1
     }
+    if (!atLeastOneSignalSent && atLeastOneMultiplierChanged) {
+      // We do not change our signal right now, but we would like to get scheduled again, because the mutipliers changed.
+      graphEditor.sendSignal(MSG.SKIP_COLLECT, id, id)
+    }
     lastSignalState = state.clone
+    lastMultipliers = multipliers.clone
   }
+
+  var skipCollect = false
+
+  override def deliverSignalWithSourceId(signal: Double, sourceId: Int, graphEditor: GraphEditor[Int, Double]): Boolean = {
+    if (sourceId == id) {
+      if (signal == MSG.SKIP_COLLECT) {
+        skipCollect = true
+        graphEditor.sendSignal(MSG.ENSURE_COLLECT, id, id)
+      } else if (signal == MSG.ENSURE_COLLECT) {
+        skipCollect = false
+      }
+      false
+    } else {
+      super.deliverSignalWithSourceId(signal, sourceId, graphEditor)
+    }
+  }
+
+  override def scoreCollect = if (skipCollect) 0 else 1
 
 }

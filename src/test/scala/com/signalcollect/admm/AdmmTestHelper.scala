@@ -75,10 +75,10 @@ object AdmmTestHelper {
     var id = 0
 
     for { i <- 0 until z.length } {
-      graph.addVertex(new ConsensusVertex(createId(i), z(i)))
+      graph.addVertex(new ConsensusVertex(createId(i), z(i), true, true))
 
       for { j <- 0 until hlts(i).length } {
-        graph.addVertex(new SubproblemVertex(createSubproblemId(id), hlts(i)(j)))
+        graph.addVertex(new SubproblemVertex(createSubproblemId(id), hlts(i)(j), true))
         // Edges in both directions.
         graph.addEdge(createSubproblemId(id), new DummyEdge(createId(i)))
         graph.addEdge(createId(i), new DummyEdge(createSubproblemId(id)))
