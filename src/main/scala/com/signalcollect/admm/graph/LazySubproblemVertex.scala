@@ -41,9 +41,8 @@ object MSG {
 final class LazySubproblemVertex(
   subproblemId: Int, // The id of the subproblem.
   optimizableFunction: OptimizableFunction, // The function that is contained in the subproblem.
-  val absoluteSignallingThreshold: Double,
-  implicitZero: Boolean) // 
-  extends SubproblemVertex(subproblemId, optimizableFunction, implicitZero) {
+  val absoluteSignallingThreshold: Double)
+  extends SubproblemVertex(subproblemId, optimizableFunction) {
 
   val multipliersLength = multipliers.length
 

@@ -88,7 +88,6 @@ case class InferenceResult(
 case class InferencerConfig(
   asynchronous: Boolean = false,
   lazyThreshold: Option[Double] = None, // Absolute threshold for lazy vertices.
-  implicitZero: Boolean = false, // Flag that determines if zero messages should be sent implicitly.
   breezeOptimizer: Boolean = true,
   globalConvergenceDetection: Option[Int] = Some(100), // Run convergence detection every 100 S/C steps.
   absoluteEpsilon: Double = 1e-8,
@@ -108,7 +107,6 @@ case class InferencerConfig(
     WolfConfig(
       asynchronous = asynchronous,
       lazyThreshold = lazyThreshold,
-      implicitZero = implicitZero,
       globalConvergenceDetection = globalConvergenceDetection,
       objectiveLoggingEnabled = objectiveLoggingEnabled,
       absoluteEpsilon = absoluteEpsilon,

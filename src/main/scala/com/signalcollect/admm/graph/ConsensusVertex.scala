@@ -42,8 +42,7 @@ trait Consensus {
 class ConsensusVertex(
   variableId: Int, // the id of the variable, which identifies it also in the subproblem nodes.
   initialState: Double, // the initial value for the consensus variable.
-  isBounded: Boolean, // shall we use bounding (cutoff below 0 and above 1)? 
-  implicitZero: Boolean)
+  isBounded: Boolean) // shall we use bounding (cutoff below 0 and above 1)? ) 
   extends MemoryEfficientDataGraphVertex[Double, Double, Double](variableId, initialState) with Consensus {
 
   @inline final def upperBound: Double = 1.0 // each consensus variable can only assume values in the range [lowerBound, upperBound].

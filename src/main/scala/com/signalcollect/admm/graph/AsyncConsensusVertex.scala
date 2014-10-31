@@ -29,7 +29,7 @@ final class AsyncConsensusVertex(
   variableId: Int, // the id of the variable, which identifies it also in the subproblem nodes.
   initialState: Double = 0.0, // the initial value for the consensus variable.
   isBounded: Boolean = true) // shall we use bounding (cutoff below 0 and above 1)? 
-  extends ConsensusVertex(variableId, initialState, isBounded, false) {
+  extends ConsensusVertex(variableId, initialState, isBounded) {
 
   var shouldSignal = false
   var signalsReceivedSinceCollect = 0
