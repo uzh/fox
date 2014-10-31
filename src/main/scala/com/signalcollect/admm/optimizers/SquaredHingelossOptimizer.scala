@@ -47,7 +47,7 @@ class SquaredHingeLossOptimizer(
         val coeffsDotX = coeffs.dot(x)
         //weight * max(coeffs^T * x - constant, 0)^2 + stepSize/2 * norm2(x - z + (y / stepSize))^2
         (math.pow(math.max(coeffsDotX - constant, 0), 2) * weight + stepSize / 2 * norm2WithoutSquareRoot(x - z + y / stepSize),
-          // 1st derivative of function above.
+          // gradient of function above.
           if (constant < coeffsDotX) {
             coeffs * (coeffsDotX - constant) * 2.0 * weight + (x - z) * stepSize + y
           } else {
@@ -63,8 +63,10 @@ class SquaredHingeLossOptimizer(
         val coeffsDotX = coeffs.dot(x)
         //weight * max(coeffs^T * x - constant, 0)^2
         (math.pow(math.max(coeffsDotX - constant, 0), 2) * weight,
-          // 1st derivative of function above.
+          // gradient of function above.
           if (constant < coeffsDotX) {
+            // weight * [ c_0^2 *x_0^2  + 2*c_0*c_1*x_1*x_0 + ... + 2*c_0*c_n*x_n*x_0 - 2*c_0*constant * x_0...]
+            // df/dx_0 = weight* 2* c_0* [c_0*x_0 + c_1*x_1 + ... + c_n*x_n - constant]
             coeffs * (coeffsDotX - constant) * 2.0 * weight
           } else {
             DenseVector.zeros(coeffs.length)
