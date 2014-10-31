@@ -53,7 +53,7 @@ class ConsensusVertex(
   @inline def variableId = id
   @inline def variableCount = _targetIds.size
   
-  @inline var hasCollectedOnce = false
+  var hasCollectedOnce = false
 
   @inline def consensus = {
     if (isBounded) {

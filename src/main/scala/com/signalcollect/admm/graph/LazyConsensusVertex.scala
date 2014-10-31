@@ -31,12 +31,14 @@ final class LazyConsensusVertex(
   initialState: Double, // the initial value for the consensus variable.
   isBounded: Boolean) // shall we use bounding (cutoff below 0 and above 1)? 
   extends ConsensusVertex(variableId, initialState, isBounded) {
-
+  
   /**
-   * Only signal if the state has changed.
+   * Always signal after the first collect:
+   * We only get new votes if something has actually changed, so it always makes sense to tell everyone about the change.
+   * This has the advantage that a subproblem vertex that sends a signal to a consensus vertex can rely on being scheduled again.
    */
   override def scoreSignal = {
-    if (hasCollectedOnce && state != lastSignalState) {
+    if (hasCollectedOnce) {
       1.0
     } else {
       0.0
