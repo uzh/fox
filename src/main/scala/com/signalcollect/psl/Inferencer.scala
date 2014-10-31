@@ -87,7 +87,7 @@ case class InferenceResult(
 
 case class InferencerConfig(
   asynchronous: Boolean = false,
-  lazyInferencing: Boolean = true,
+  lazyThreshold: Option[Double] = Some(1e-8),
   breezeOptimizer: Boolean = true,
   globalConvergenceDetection: Option[Int] = Some(100), // Run convergence detection every 100 S/C steps.
   absoluteEpsilon: Double = 1e-8,
@@ -106,7 +106,7 @@ case class InferencerConfig(
   def getWolfConfig = {
     WolfConfig(
       asynchronous = asynchronous,
-      lazyInferencing = lazyInferencing,
+      lazyThreshold = lazyThreshold,
       globalConvergenceDetection = globalConvergenceDetection,
       objectiveLoggingEnabled = objectiveLoggingEnabled,
       absoluteEpsilon = absoluteEpsilon,

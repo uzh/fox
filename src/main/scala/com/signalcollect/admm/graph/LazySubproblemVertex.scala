@@ -25,50 +25,65 @@ import com.signalcollect.MemoryEfficientDataGraphVertex
 import com.signalcollect.admm.optimizers.OptimizableFunction
 
 object MSG {
-  val SKIP_COLLECT = Double.NaN
-  val ENSURE_COLLECT = Double.NegativeInfinity
+  val SKIP_COLLECT = -1
+  val ENSURE_COLLECT = -2
 }
 
 /**
- * Lazy version of the subproblem vertex, only signals if something has changed.
+ * Lazy version of the subproblem vertex, only signals to the consensus vertex if the signal changes.
+ * If no signal changes, but the multipliers still changed, the vertex ensures that it will get
+ * scheduled again by sending special messages to itself.
+ *
+ * The skip collect message ensures this vertex skips the next step, which is the one during which
+ * the consensus vertices collect. The ensure collect message gets sent in the subsequent step and
+ * ensures that S/C will schedule thew vertex, even if no consensus vertex sent a signal to it.
  */
-class LazySubproblemVertex(
+final class LazySubproblemVertex(
   subproblemId: Int, // The id of the subproblem.
-  optimizableFunction: OptimizableFunction) // The function that is contained in the subproblem.
+  optimizableFunction: OptimizableFunction, // The function that is contained in the subproblem.
+  val absoluteSignallingThreshold: Double) // 
   extends SubproblemVertex(subproblemId, optimizableFunction) {
+
+  val multipliersLength = multipliers.length
 
   /**
    * Ensure last signal state is all 0, which corresponds to having implicitly sent a 0.
    */
-  lastSignalState = new Array[Double](multipliers.length)
+  lastSignalState = new Array[Double](multipliersLength)
 
   var lastMultipliers = multipliers.clone
 
-  def absoluteThreshold = 1e-16
-
-  def changed(a: Double, b: Double): Boolean = {
+  @inline def changed(a: Double, b: Double): Boolean = {
     val delta = math.abs(a - b)
-    delta > absoluteThreshold
+    delta > absoluteSignallingThreshold
+  }
+
+  @inline def atLeastOneMultiplierChanged: Boolean = {
+    val currentMultipliers = multipliers
+    var i = 0
+    while (i < multipliersLength) {
+      if (changed(lastMultipliers(i), currentMultipliers(i))) {
+        return true
+      }
+      i += 1
+    }
+    false
   }
 
   /**
-   * Only send a signal if the signal is different from what was sent las time around.
+   * Only send a signal if the signal is different from what was sent last time around.
    * Implicitly last time a 0 was sent.
    */
   override def executeSignalOperation(graphEditor: GraphEditor[Int, Double]) {
     var alreadySentId = Set.empty[Int]
     val idToIndexMapping = optimizableFunction.idToIndexMappings
-    val idToIndexMappingLength = idToIndexMapping.length
     var i = 0
-    val currentMultipliers = multipliers
     var atLeastOneSignalSent = false
-    var atLeastOneMultiplierChanged = false
-    while (i < idToIndexMappingLength) {
+    while (i < multipliersLength) {
       val targetId = idToIndexMapping(i)
       if (!alreadySentId.contains(targetId)) {
         val targetIdValue = state(i)
         val signalChanged = changed(lastSignalState(i), targetIdValue)
-        atLeastOneMultiplierChanged = atLeastOneMultiplierChanged || changed(lastMultipliers(i), currentMultipliers(i))
         if (signalChanged) {
           atLeastOneSignalSent = true
           graphEditor.sendSignal(targetIdValue, targetId, id)

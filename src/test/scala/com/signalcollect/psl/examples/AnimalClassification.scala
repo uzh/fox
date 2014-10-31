@@ -58,9 +58,7 @@ class AnimalClassification extends FlatSpec with Matchers with TestAnnouncements
   "AnimalClassification" should "provide a solution consistent with Matlab" in {
     val config = InferencerConfig(computeObjectiveValueOfSolution = true, tolerance = 1e-5)  
     val inferenceResults = Inferencer.runInferenceFromString(animalClassExample, config = config)
-    println(inferenceResults)
     val objectiveFunctionVal = inferenceResults.objectiveFun.get
-    println("Objective function value: " + objectiveFunctionVal)
     objectiveFunctionVal should be(0.0 +- 1e-5)
   }
 }
