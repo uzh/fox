@@ -50,7 +50,7 @@ class FriendsExample extends FlatSpec with Matchers with TestAnnouncements {
   fact: !friends(bob, carl)
   // Gives a default soft truth value of 1/(4+1) to unknown predicates.
   // 1 + 5*friends(A,B)^2 - 2 friends(A,B) => friends(A,B) = 1/5
-  //rule [1]: friends(A,B)
+  rule [1]: friends(A,B)
     
 	fact: friends(anna, bob)
 	"""
@@ -59,8 +59,6 @@ class FriendsExample extends FlatSpec with Matchers with TestAnnouncements {
     val config = InferencerConfig(computeObjectiveValueOfSolution = true)
     val inferenceResults = Inferencer.runInference(pslData, config = config)
     val objectiveFunctionVal = inferenceResults.objectiveFun.get
-    println(inferenceResults)
-    //println(PSLToCvxConverter.toCvx(friends))
     objectiveFunctionVal should be(3.2 +- 1e-5)
   }
 

@@ -168,24 +168,24 @@ class VotingExample extends FlatSpec with Matchers with TestAnnouncements {
    */
 
   val votingExample2 = """
-	predicate[PartialFunctional]: 	votes(_, _)
-	predicate[Symmetric]: 		friends(_, _)
+	  predicate[PartialFunctional]: 	votes(_, _)
+	  predicate[Symmetric]: 		friends(_, _)
     predicate[Symmetric]: 		enemies(_, _)
 
     rule [weight = 1]: 	votes(A,P) && friends(A,B) => votes(B,P) 
     rule [weight = 1]: 	votes(A,P) && enemies(A,B) => !votes(B,P) 
-    rule: 	enemies(A,B) => !friends(A,B) 
-    rule: 	friends(A,B) => !enemies(A,B)  
+    rule [10]: 	enemies(A,B) => !friends(A,B) 
+    rule [10]: 	friends(A,B) => !enemies(A,B)  
     
-	fact: friends(anna, bob)
+	  fact: friends(anna, bob)
     fact: friends(daria, bob)
-	fact [truthValue = 0.8]: votes(anna, democrats)
+	  fact [truthValue = 0.8]: votes(anna, democrats)
     fact [truthValue = 0.2]: votes(carl, repub)
     fact [truthValue = 0.7]: votes(daria, repub)
     fact [truthValue = 0.7]: votes(enrico, greenparty)
     fact [truthValue = 0.8]: enemies(carl, bob)
 	"""
-  
+
   //TODO(sara): This test sometimes fails because it ends up violating a constraint.
   it should "provide a solution consistent with Matlab also with more constraints" in {
     val pslData = PslParser.parse(votingExample2)

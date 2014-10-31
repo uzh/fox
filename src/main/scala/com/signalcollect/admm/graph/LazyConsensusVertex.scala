@@ -36,8 +36,8 @@ final class LazyConsensusVertex(
   /**
    * Only signal if the state has changed.
    */
-  override def scoreSignal = {
-    if ((state != 0.0 || !implicitZero) && state != lastSignalState) {
+  override def scoreSignal = {   
+    if (hasCollectedOnce && state != lastSignalState) {
       1.0
     } else {
       0.0

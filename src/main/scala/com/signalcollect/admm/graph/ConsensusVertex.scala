@@ -53,6 +53,8 @@ class ConsensusVertex(
 
   @inline def variableId = id
   @inline def variableCount = _targetIds.size
+  
+  @inline var hasCollectedOnce = false
 
   @inline def consensus = {
     if (isBounded) {
@@ -127,8 +129,6 @@ class ConsensusVertex(
 
   override def scoreCollect = 1
 
-  var hasCollectedOnce = false
-
   /**
    * Compute whether we should send signals to the subproblem vertices.
    *  Note: The computation starts in the subproblem vertices.
@@ -138,20 +138,11 @@ class ConsensusVertex(
    *  This is perfectly fine with PSL inference, but may have drawbacks in other cases.
    */
   override def scoreSignal = {
-//    if (implicitZero) {
-//      if (state != 0.0) {
-//        1.0
-//      } else {
-//        0.0
-//      }
-//    } 
-//    else {
       if (hasCollectedOnce) { 
         1.0 
       } else { 
         0.0 
       }
-//    }
   }
 
   @inline def bounded(i: Double): Double = {
