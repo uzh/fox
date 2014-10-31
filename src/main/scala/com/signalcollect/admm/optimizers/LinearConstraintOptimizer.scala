@@ -119,7 +119,7 @@ class LinearConstraintOptimizer(
       // Project x onto coeffsDotX == constant plane.
       var distance = - constant/length
       distance += x.dot(unitNormalVector)
-      x = x - (distance * unitNormalVector)
+      x = x - (unitNormalVector * distance)
     }
   }
 
