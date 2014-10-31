@@ -55,11 +55,8 @@ class FriendsExample extends FlatSpec with Matchers with TestAnnouncements {
 	"""
   "FriendsExample" should "provide a solution consistent for friends, with a default value of 0.2" in {
     val pslData = PslParser.parse(friends)
-
     val config = InferencerConfig(computeObjectiveValueOfSolution = true)
     val inferenceResults = Inferencer.runInference(pslData, config = config)
-
-    println(inferenceResults)
     val objectiveFunctionVal = inferenceResults.objectiveFun.get
 
     objectiveFunctionVal should be(3.2 +- 1e-5)
@@ -78,8 +75,6 @@ class FriendsExample extends FlatSpec with Matchers with TestAnnouncements {
 
     val config = InferencerConfig(computeObjectiveValueOfSolution = true)
     val inferenceResults = Inferencer.runInference(pslData, config = config)
-
-    //println(inferenceResults)
     val objectiveFunctionVal = inferenceResults.objectiveFun.get
 
     objectiveFunctionVal should be(0.0 +- 1e-5)
@@ -98,7 +93,6 @@ class FriendsExample extends FlatSpec with Matchers with TestAnnouncements {
     val config = InferencerConfig(computeObjectiveValueOfSolution = true)
     val inferenceResults = Inferencer.runInference(pslData, config = config)
 
-    //println(inferenceResults)
     val objectiveFunctionVal = inferenceResults.objectiveFun.get
 
     objectiveFunctionVal should be(0.0 +- 1e-5)
