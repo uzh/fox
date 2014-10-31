@@ -27,19 +27,11 @@ import breeze.optimize.minimize
 class SquaredHingeLossOptimizer(
   setId: Int,
   val weight: Double,
-  val constant: Double,
-  val zIndices: Array[Int],
-  var stepSize: Double = 1.0,
+  constant: Double,
+  zIndices: Array[Int],
+  stepSize: Double = 1.0,
   initialZmap: Map[Int, Double],
-  coefficientMatrix: Array[Double]) extends OptimizableFunction {
-
-  def id = Some(setId)
-
-  def norm2WithoutSquareRoot(v: DenseVector[Double]): Double = {
-    var squared = 0.0
-    v.foreach(x => squared += x * x)
-    squared
-  }
+  coefficientMatrix: Array[Double]) extends OptimizerBase(setId, constant, zIndices, stepSize, initialZmap, coefficientMatrix) {
 
   lazy val quadraticLossFunction = {
     new DiffFunction[DenseVector[Double]] {
@@ -81,28 +73,6 @@ class SquaredHingeLossOptimizer(
 
   def gradientAt(xMap: Map[Int, Double]): Map[Int, Double] = {
     zIndices.zip(basicFunction.gradientAt(DenseVector(zIndices.map(xMap))).data).toMap
-  }
-
-  var z: DenseVector[Double] = DenseVector(zIndices.map(initialZmap))
-  var x: DenseVector[Double] = DenseVector.zeros(zIndices.length)
-  var y: DenseVector[Double] = DenseVector.zeros(zIndices.length)
-
-  val coeffs = DenseVector(coefficientMatrix: _*)
-
-  def getStepSize: Double = stepSize
-  def setStepSize(s: Double) = stepSize = s
-  def getYEfficient: Array[Double] = y.data
-  def getX = x.data
-  def setY(y: Array[Double]) {
-    this.y = DenseVector(y: _*)
-  }
-  def updateLagrangeEfficient(newZ: Array[Double]) {
-    z = DenseVector(newZ)
-    y += (x - z) * stepSize
-  }
-  def idToIndexMappings: Array[Int] = zIndices
-  def setZ(newZ: Array[Double]) {
-    z = DenseVector(newZ)
   }
 
   /**

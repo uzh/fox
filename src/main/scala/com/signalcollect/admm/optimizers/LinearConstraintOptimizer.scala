@@ -27,20 +27,13 @@ import breeze.optimize.minimize
 class LinearConstraintOptimizer(
   setId: Int,
   val comparator: String,
-  val constant: Double,
-  val zIndices: Array[Int],
-  var stepSize: Double = 1.0,
+  constant: Double,
+  zIndices: Array[Int],
+  stepSize: Double = 1.0,
   initialZmap: Map[Int, Double],
   coefficientMatrix: Array[Double],
-  val tolerance: Double = 0.0) extends OptimizableFunction {
+  val tolerance: Double = 0.0) extends OptimizerBase(setId, constant, zIndices, stepSize, initialZmap, coefficientMatrix) {
 
-  def id = Some(setId)
-
-  def norm2WithoutSquareRoot(v: DenseVector[Double]): Double = {
-    var squared = 0.0
-    v.foreach(x => squared += x * x)
-    squared
-  }
 
   def basicFunction = {
     new Function1[DenseVector[Double], Double] {
@@ -68,38 +61,6 @@ class LinearConstraintOptimizer(
     basicFunction(DenseVector(someX))
   }
 
-  var z: DenseVector[Double] = DenseVector(zIndices.map(initialZmap))
-  var x: DenseVector[Double] = DenseVector.zeros(zIndices.length)
-  var y: DenseVector[Double] = DenseVector.zeros(zIndices.length)
-
-  val coeffs = DenseVector(coefficientMatrix: _*)
-
-  def getStepSize: Double = stepSize
-  def setStepSize(s: Double) = stepSize = s
-  def getYEfficient: Array[Double] = y.data
-  def getX = x.data
-  def setY(y: Array[Double]) {
-    this.y = DenseVector(y: _*)
-  }
-  def updateLagrangeEfficient(newZ: Array[Double]) {
-    z = DenseVector(newZ)
-    y += (x - z) * stepSize
-  }
-  def idToIndexMappings: Array[Int] = zIndices
-  def setZ(newZ: Array[Double]) {
-    z = DenseVector(newZ)
-  }
-
-  val length: Double = {
-    val sumOfSquaredCoefficients = coefficientMatrix.map(v => v * v).sum
-    math.sqrt(sumOfSquaredCoefficients)
-  }
-
-  val unitNormalVector: DenseVector[Double] = {
-    val unitNormal = coefficientMatrix.map(v => v / length)
-    DenseVector(unitNormal)
-  }
-
   /**
    * Adaptation of Stephen Bach's solver.
    *
@@ -119,11 +80,11 @@ class LinearConstraintOptimizer(
       || (comparator == "geq" && total < constant)
       || (comparator == "eq" && total != constant)) {
       // If the constraint is broken, check how much.
-//      val absDiff = math.abs(total - constant)
-//      // Under a certain tolerance, ignore the violation.
-//      if (tolerance >= 0 && absDiff <= tolerance) {
-//        return
-//      }
+      //      val absDiff = math.abs(total - constant)
+      //      // Under a certain tolerance, ignore the violation.
+      //      if (tolerance >= 0 && absDiff <= tolerance) {
+      //        return
+      //      }
 
       if (x.length == 1) {
         x(0) = constant / coeffs(0)
