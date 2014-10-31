@@ -86,7 +86,7 @@ class LinearConstraintTerm extends HyperplaneTerm {
 //			return;
 //		}
 
-		if (absDiff >= 0){
+		if (absDiff == 0){
 			return;
 		}
 		
