@@ -100,29 +100,24 @@ class FriendsExample extends FlatSpec with Matchers with TestAnnouncements {
 
   // No friends except the explicitly mentioned (as std in CWA).
   val hardenemies = """
-	predicate: 		friends(_, _)
-    predicate: True()
+	  predicate [Symmetric]: 		friends(_, _)
     
-    rule[1]: True() => friends(A,B)
-    rule[1]: True() => !friends(A,B)
+    rule[1]: friends(A,B)
+    rule[1]: !friends(A,B)
     
-    rule: friends(A,B) => friends(B,A)
-    rule: !friends(A,B) => !friends(B,A)
-    
-    fact: True()
-	fact: friends(anna, bob)
+	  fact: friends(anna, bob)
     fact: !friends(bob, carl)
 	"""
   //TODO(sara): The result looks good to me, but the objective function evaluates to infinity. Commenting out for now.
-  //  "FriendsExample" should "provide a solution consistent for hardenemies, an example with negative prior and a hard rule" in {
-  //    val pslData = PslParser.parse(hardenemies)
-  //
-  //    val config = InferencerConfig(computeObjectiveValueOfSolution = true)
-  //    val inferenceResults = Inferencer.runInference(pslData, config = config)
-  //
-  //    //println(inferenceResults)
-  //    val objectiveFunctionVal = inferenceResults.objectiveFun.get
-  //
-  //    objectiveFunctionVal should be(3.0 +- 6e-2)
-  //  }
+  "FriendsExample" should "provide a solution consistent for hardenemies, an example with negative prior and a hard rule" in {
+    val pslData = PslParser.parse(hardenemies)
+
+    val config = InferencerConfig(computeObjectiveValueOfSolution = true)
+    val inferenceResults = Inferencer.runInference(pslData, config = config)
+
+    //println(inferenceResults)
+    val objectiveFunctionVal = inferenceResults.objectiveFun.get
+
+    objectiveFunctionVal should be(1.0 +- 6e-2)
+  }
 }
