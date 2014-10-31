@@ -93,8 +93,8 @@ final class LazySubproblemVertex(
       }
       i += 1
     }
-    if (!atLeastOneSignalSent && atLeastOneMultiplierChanged) {
-      // We do not change our signal right now, but we would like to get scheduled again, because the mutipliers changed.
+    // We do not change our signal right now, but we would like to get scheduled again, because the multipliers changed.
+    if (atLeastOneMultiplierChanged) {
       graphEditor.sendSignal(MSG.SKIP_COLLECT, id, id)
     }
     lastSignalState = state.clone
