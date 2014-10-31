@@ -44,7 +44,11 @@ abstract class HyperplaneTerm extends ADMMObjectiveTerm {
 		if (x.length >= 3) {
 			/* 
 			 * Finds a unit vector normal to the hyperplane and a point in the
-			 * hyperplane for future projections
+			 * hyperplane for future projections.
+			 * A normal vector to the hyperplane coeff*x = constant would be [coeff].
+			 * The distance of a point x0 to the plane is: 
+			 * |coeff*x0 - constant|/|coeff|_2
+			 *
 			 */
 			double length = 0.0;
 			for (int i = 0; i < coeffs.length; i++)
@@ -73,9 +77,28 @@ abstract class HyperplaneTerm extends ADMMObjectiveTerm {
 			x[0] = constant / coeffs[0];
 		}
 		else if (x.length == 2) {
-			x[0] = reasoner.stepSize * reasoner.z.apply(zIndices[0]) - y[0];
-			x[0] -= reasoner.stepSize * coeffs[0] / coeffs[1] * (-1 * constant / coeffs[1] + reasoner.z.apply(zIndices[1]) - y[1]/reasoner.stepSize);
-			x[0] /= reasoner.stepSize * (1 + coeffs[0] * coeffs[0] / coeffs[1] / coeffs[1]);
+			/*
+			 * argmin \rho/2 * |x - z + y/\rho|_2^2 
+			 * s.t. c_0 x_0 + c_1 x_1 = constant
+			 * 
+			 * argmin \rho/2 * [ (x_0 - z_0 + y_0/\rho)^2 + (x_1 - z_1 + y_1/\rho)^2 ]
+			 * s.t. c_0 x_0 + c_1 x_1 = constant
+			 *  
+			 * x_0 = z_0 - y_0/\rho 
+			 * x_0 -= c_0/c_1 * (- constant/c_1 + z_1 - y_1/rho)
+			 * x_0 /= (1 + c_0^2/ c_1^2) 
+			 * 
+			 * According to the x.length > 2 solution, this should be:
+			 * x_0 = z_0 - y_0/\rho 
+			 * x_0 -= c_0/c_1 * [constant/c_1 + z_1 - y_1/rho ]
+			 * > x_0 -= (c_0/c_1)^2 * (z_0 - y_0/\rho)
+			 * x_0 /= (1 + c_0^2/ c_1^2) 
+			 */
+			x[0] =  reasoner.z.apply(zIndices[0]) - y[0]/reasoner.stepSize;
+			x[0] -= (coeffs[0] / coeffs[1]) * ((-1 * constant / coeffs[1]) + reasoner.z.apply(zIndices[1]) - y[1]/reasoner.stepSize);
+			// TODO(sara): check if the following is necessary.
+			// x[0] -= (coeffs[0] / coeffs[1]) * (reasoner.z.apply(zIndices[0]) - y[0]/reasoner.stepSize);
+			x[0] /= (1 + coeffs[0] * coeffs[0] / (coeffs[1] * coeffs[1]));
 			
 			// Satisfy the constraint: coeff_0 * x_0 + coeff_1 * x_1 = constant
 			x[1] = (constant - coeffs[0] * x[0]) / coeffs[1];
@@ -85,15 +108,26 @@ abstract class HyperplaneTerm extends ADMMObjectiveTerm {
 			for (int i = 0; i < x.length; i++)
 				point[i] = reasoner.z.apply(zIndices[i]) - y[i] / reasoner.stepSize;
 			
-			/* For point (constant / coeffs[0], 0,...) in hyperplane dotted with unitNormal */
-			double multiplier = -1 * constant / coeffs[0] * unitNormal[0];
+			/* For point (constant / coeffs[0], 0,...) in hyperplane dotted with unitNormal
+			 * unitNormal contains the coefficients normalized by the L2 norm of the vector.
+			 * 
+			 * distance(point)=|coeff*point -constant |/|coeff|_2 
+			 * 
+			 * x = z - y/\rho - unit normal vector * distance (z_i-y_i) from the hyperplane
+			 * multiplier = - constant / length 
+			 */
+			double multiplier = (-1 * constant / coeffs[0]) * unitNormal[0];
 			
 			for (int i = 0; i < x.length; i++)
 				multiplier += point[i] * unitNormal[i];
 			
+			/* x_i = z_i - y_i/\rho  
+			*  x_i -=  (\Sigma_j(-constant/length + coeff_j * (z_j - y_j/\rho)/length)) * coeff_i/ length 
+			*  x_i -=  (\Sigma_j(-constant + coeff_j * (z_j - y_j/\rho)) * coeff_i/ length^2 
+			*  x_i -=  (\Sigma_j(-constant + coeff_j * (z_j - y_j/\rho)) * coeff_i/ (\Sigma_j coeff_j^2)
+			*/
 			for (int i = 0; i < x.length; i++)
 				x[i] = point[i] - multiplier * unitNormal[i];
-			// x_i = point_i + constant * coeff_i^2/length - point_i * coeff_i^2/length^2
 		}
 	}
 }

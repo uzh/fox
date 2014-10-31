@@ -97,7 +97,7 @@ case class InferencerConfig(
   objectiveLoggingEnabled: Boolean = false,
   maxIterations: Int = 10000, // maximum number of iterations.
   stepSize: Double = 1.0,
-  tolerance: Double = 0,
+  tolerance: Double = 1e-12, // for Double precision is 15-17 decimal places, lower after arithmetic operations.
   isBounded: Boolean = true,
   serializeMessages: Boolean = false,
   removeSymmetricConstraints: Boolean = true,
@@ -167,7 +167,7 @@ object Inferencer {
 
   def solveInferenceProblem(groundedRules: Iterable[GroundedRule], groundedConstraints: Iterable[GroundedConstraint], idToGpMap: Map[Int, GroundedPredicate], groundingTime: Long, nodeActors: Option[Array[ActorRef]] = None, config: InferencerConfig = InferencerConfig()) = {
     val functions = groundedRules.flatMap(_.createOptimizableFunction(config.stepSize, config.tolerance, config.breezeOptimizer))
-    val constraints = groundedConstraints.flatMap(_.createOptimizableFunction(config.stepSize, config.tolerance))
+    val constraints = groundedConstraints.flatMap(_.createOptimizableFunction(config.stepSize, config.tolerance, config.breezeOptimizer))
     val functionsAndConstraints = functions ++ constraints
     println(s"Problem converted to consensus optimization with ${functions.size} functions and ${constraints.size} constraints that are not trivially true.")
 

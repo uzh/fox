@@ -73,7 +73,7 @@ class LinearConstraintSpec extends FlatSpec with Matchers with TestAnnouncements
       constant,
       coeffs,
       zMap.keys.toArray,
-      10e-3,
+      0.0,
       1)
     hlt.setY(y)
     val resultMap = hlt.optimize(zMap)

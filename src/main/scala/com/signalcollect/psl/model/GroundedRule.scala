@@ -21,10 +21,10 @@
 package com.signalcollect.psl.model
 
 import com.signalcollect.admm.optimizers.OptimizableFunction
-import com.signalcollect.psl.Optimizer
+import com.signalcollect.admm.optimizers.HingeLossOptimizer
+import com.signalcollect.admm.optimizers.LinearConstraintOptimizer
 import com.signalcollect.admm.optimizers.SquaredHingeLossOptimizer
-import breeze.optimize.DiffFunction
-import breeze.linalg.DenseVector
+import com.signalcollect.psl.Optimizer
 import com.signalcollect.util.Verifier
 
 case class GroundedRule(
@@ -91,25 +91,6 @@ case class GroundedRule(
 
   def variables: List[Int] = groundedPredicates.map(gp => gp.id).toList
 
-  def diffFunction = {
-    val weight = definition.weight
-    val constant = computeConstant
-    val coeffs = DenseVector(computeCoefficientMatrix: _*)
-    new DiffFunction[DenseVector[Double]] {
-      def calculate(x: DenseVector[Double]) = {
-        val coeffsDotX = coeffs.dot(x)
-        //weight * max(coeffs^T * x - constant, 0)^2
-        (math.pow(math.max(coeffsDotX - constant, 0), 2) * weight,
-          // 1st derivative of function above.
-          if (constant < coeffsDotX) {
-            coeffs * (coeffsDotX - constant) * 2.0 * weight
-          } else {
-            DenseVector.zeros(coeffs.length)
-          })
-      }
-    }
-  }
-
   def createOptimizableFunction(stepSize: Double, tolerance: Double = 0.0, breezeOptimizer: Boolean = false): Option[OptimizableFunction] = {
     // Easy optimization, if all are facts, ignore.
     if (groundedPredicates.size == 0) {
@@ -154,7 +135,18 @@ case class GroundedRule(
             if (definition.weight < 0) {
               println(s"[WARNING]: Adding a concave function like: neg * max(0, coeff*x - const)")
             }
-            Optimizer.hingeLoss(stepSize, zMap, definition.weight, constant, coefficientMatrix, zIndices, id)
+            if (breezeOptimizer) {
+              new HingeLossOptimizer(
+                id,
+                weight = definition.weight,
+                constant = constant,
+                zIndices = zIndices,
+                stepSize = stepSize,
+                initialZmap = zMap,
+                coefficientMatrix = coefficientMatrix)
+            } else {
+              Optimizer.hingeLoss(stepSize, zMap, definition.weight, constant, coefficientMatrix, zIndices, id)
+            }
           }
 
         case Squared =>
@@ -190,7 +182,11 @@ case class GroundedRule(
       // This would have been ~Infinity * max(0, coeff*x - constant)
       // We can rewrite this by adding a constraint: coeff*x - constant <= 0, or coeff*x <= constant
       val optimizableFunction: OptimizableFunction =
-        Optimizer.linearConstraint(stepSize, zMap, "leq", constant, coefficientMatrix, zIndices, tolerance, id)
+        if (breezeOptimizer) {
+          new LinearConstraintOptimizer(id, "leq", constant, zIndices, stepSize, zMap, coefficientMatrix)
+        } else {
+          Optimizer.linearConstraint(stepSize, zMap, "leq", constant, coefficientMatrix, zIndices, tolerance, id)
+        }
       Some(optimizableFunction)
     }
   }
