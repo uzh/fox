@@ -24,6 +24,11 @@ import com.signalcollect.GraphEditor
 import com.signalcollect.MemoryEfficientDataGraphVertex
 import com.signalcollect.admm.optimizers.OptimizableFunction
 
+object MSG {
+  val SKIP_COLLECT = Double.NaN
+  val ENSURE_COLLECT = Double.NegativeInfinity
+}
+
 /**
  * Lazy version of the subproblem vertex, only signals if something has changed.
  */
@@ -39,13 +44,11 @@ class LazySubproblemVertex(
 
   var lastMultipliers = multipliers.clone
 
-  val absoluteThreshold = 1e-10
-  val relativeThreshold = 1e-6
+  def absoluteThreshold = 1e-16
 
   def changed(a: Double, b: Double): Boolean = {
-    val absolute = math.abs(a - b)
-    val relative = absolute / a
-    relative > relativeThreshold || absolute > absoluteThreshold
+    val delta = math.abs(a - b)
+    delta > absoluteThreshold
   }
 
   /**
@@ -58,20 +61,46 @@ class LazySubproblemVertex(
     val idToIndexMappingLength = idToIndexMapping.length
     var i = 0
     val currentMultipliers = multipliers
-    //val mChanged = multipliersChanged
+    var atLeastOneSignalSent = false
+    var atLeastOneMultiplierChanged = false
     while (i < idToIndexMappingLength) {
       val targetId = idToIndexMapping(i)
       if (!alreadySentId.contains(targetId)) {
         val targetIdValue = state(i)
-        if (changed(lastMultipliers(i), currentMultipliers(i)) || changed(lastSignalState(i), targetIdValue)) {
+        val signalChanged = changed(lastSignalState(i), targetIdValue)
+        atLeastOneMultiplierChanged = atLeastOneMultiplierChanged || changed(lastMultipliers(i), currentMultipliers(i))
+        if (signalChanged) {
+          atLeastOneSignalSent = true
           graphEditor.sendSignal(targetIdValue, targetId, id)
         }
         alreadySentId += targetId
       }
       i += 1
     }
+    if (!atLeastOneSignalSent && atLeastOneMultiplierChanged) {
+      // We do not change our signal right now, but we would like to get scheduled again, because the mutipliers changed.
+      graphEditor.sendSignal(MSG.SKIP_COLLECT, id, id)
+    }
     lastSignalState = state.clone
     lastMultipliers = multipliers.clone
   }
+
+  var skipCollect = false
+
+  override def deliverSignalWithSourceId(signal: Double, sourceId: Int, graphEditor: GraphEditor[Int, Double]): Boolean = {
+    if (sourceId == id) {
+      if (signal == MSG.SKIP_COLLECT) {
+        skipCollect = true
+        graphEditor.sendSignal(MSG.ENSURE_COLLECT, id, id)
+      } else if (signal == MSG.ENSURE_COLLECT) {
+        skipCollect = false
+      }
+      false
+    } else {
+      super.deliverSignalWithSourceId(signal, sourceId, graphEditor)
+    }
+  }
+
+  override def scoreCollect = if (skipCollect) 0 else 1
 
 }
