@@ -85,7 +85,7 @@ final class LazySubproblemVertex(
       if (!alreadySentId.contains(targetId)) {
         val targetIdValue = state(i)
         val signalChanged = changed(lastSignalState(i), targetIdValue)
-        if (signalChanged && (targetId != 0 || !implicitZero)) {
+        if (signalChanged && (targetIdValue != 0 || !implicitZero)) {
           atLeastOneSignalSent = true
           graphEditor.sendSignal(targetIdValue, targetId, id)
         }

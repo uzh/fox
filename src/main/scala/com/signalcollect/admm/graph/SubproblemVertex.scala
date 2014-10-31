@@ -63,8 +63,8 @@ class SubproblemVertex(
     while (i < idToIndexMappingLength) {
       val targetId = idToIndexMapping(i)
       if (!alreadySentId.contains(targetId)) {
-        if (targetId != 0 || !implicitZero) {
-          val targetIdValue = state(i)
+        val targetIdValue = state(i)
+        if (targetIdValue != 0 || !implicitZero) {
           graphEditor.sendSignal(targetIdValue, targetId, id)
         }
         alreadySentId += targetId
@@ -92,7 +92,7 @@ class SubproblemVertex(
   }
 
   def collect: Array[Double] = {
-     val consensus = consensusAssignments
+    val consensus = consensusAssignments
     // Update the lagrangian multipliers (y) : y-step
     optimizableFunction.updateLagrangeEfficient(consensus)
     // Minimize the local function and get argmin (x) : x-step
@@ -100,7 +100,7 @@ class SubproblemVertex(
     val newOptimizedAssignments = optimizableFunction.getX
     newOptimizedAssignments
   }
-  
+
   override def scoreCollect = 1
   // Always signal, even in the first iteration, when the consensus variable doesn't.
   override def scoreSignal = 1
