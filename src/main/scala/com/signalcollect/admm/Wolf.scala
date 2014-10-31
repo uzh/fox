@@ -58,6 +58,7 @@ case class ProblemSolution(
 case class WolfConfig(
   asynchronous: Boolean,
   lazyThreshold: Option[Double], // Absolute threshold for lazy signalling.
+  implicitZero: Boolean, // Flag that determiens if zero messages should be sent implicitly.
   globalConvergenceDetection: Option[Int], // Detect global convergence every 2 S/C steps by default. Note: should be a multiple of 2 for making sure convergence works.
   absoluteEpsilon: Double,
   relativeEpsilon: Double,
@@ -73,10 +74,11 @@ case class NonExistentConsensusVertexHandlerFactory(
   asynchronous: Boolean, // If the execution is asynchronous.
   initialState: Double, // Initial value for the consensus variable.
   isBounded: Boolean, // Use bounding (cutoff below 0 and above 1).
-  lazyThreshold: Option[Double] // Only send values that have changed.
+  lazyThreshold: Option[Double], // Only send values that have changed.
+  implicitZero: Boolean // Flag that determiens if zero messages should be sent implicitly.
   ) extends EdgeAddedToNonExistentVertexHandlerFactory[Int, Double] {
   def createInstance: EdgeAddedToNonExistentVertexHandler[Int, Double] =
-    new NonExistentConsensusVertexHandler(asynchronous, initialState, isBounded, lazyThreshold)
+    new NonExistentConsensusVertexHandler(asynchronous, initialState, isBounded, lazyThreshold, implicitZero)
   override def toString = "NoneExistentConsensusVertexFactory"
 }
 
@@ -84,11 +86,12 @@ case class NonExistentConsensusVertexHandler(
   asynchronous: Boolean, // If the execution is asynchronous.
   initialState: Double, // Initial value for the consensus variable.
   isBounded: Boolean, // Use bounding (cutoff below 0 and above 1).
-  lazyThreshold: Option[Double] // Only continue if a value changed by more than the threshold.
+  lazyThreshold: Option[Double], // Only continue if a value changed by more than the threshold.
+  implicitZero: Boolean // Flag that determiens if zero messages should be sent implicitly.
   ) extends EdgeAddedToNonExistentVertexHandler[Int, Double] {
   def handleImpossibleEdgeAddition(edge: Edge[Int], vertexId: Int): Option[Vertex[Int, _, Int, Double]] = {
     if (asynchronous) {
-      if (lazyThreshold.isDefined) throw new Exception("Asynchronous inferencing cannot be combined with lazy inferencing.")
+      if (lazyThreshold.isDefined || implicitZero) throw new Exception("Asynchronous inferencing cannot be combined with lazy inferencing or implicit zero.")
       Some(new AsyncConsensusVertex(
         variableId = vertexId,
         initialState = initialState,
@@ -98,12 +101,14 @@ case class NonExistentConsensusVertexHandler(
         Some(new LazyConsensusVertex(
           variableId = vertexId,
           initialState = initialState,
-          isBounded = isBounded))
+          isBounded = isBounded,
+          implicitZero = implicitZero))
       } else {
         Some(new ConsensusVertex(
           variableId = vertexId,
           initialState = initialState,
-          isBounded = isBounded))
+          isBounded = isBounded,
+          implicitZero = implicitZero))
       }
     }
   }
@@ -180,7 +185,8 @@ object Wolf {
       asynchronous = config.asynchronous, // If the execution is asynchronous.
       initialState = 0.0, // Initial value for the consensus variable.
       isBounded = config.isBounded, // Use bounding (cutoff below 0 and above 1) .
-      lazyThreshold = config.lazyThreshold // Only send values that have changed.
+      lazyThreshold = config.lazyThreshold, // Only send values that have changed.
+      implicitZero = config.implicitZero // Send 0 implicitly.
       )
     val graphBuilder = {
       nodeActors.map(new GraphBuilder[Int, Double]().withPreallocatedNodes(_)).
@@ -262,11 +268,13 @@ object Wolf {
         new LazySubproblemVertex(
           subproblemId = subId,
           optimizableFunction = f,
-          absoluteSignallingThreshold = config.lazyThreshold.get)
+          absoluteSignallingThreshold = config.lazyThreshold.get,
+          implicitZero = config.implicitZero)
       } else {
         new SubproblemVertex(
           subproblemId = subId,
-          optimizableFunction = f)
+          optimizableFunction = f,
+          implicitZero = config.implicitZero)
       }
     }
     for (consensusId <- f.idToIndexMappings) {

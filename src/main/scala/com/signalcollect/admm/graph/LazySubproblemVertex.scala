@@ -41,8 +41,9 @@ object MSG {
 final class LazySubproblemVertex(
   subproblemId: Int, // The id of the subproblem.
   optimizableFunction: OptimizableFunction, // The function that is contained in the subproblem.
-  val absoluteSignallingThreshold: Double) // 
-  extends SubproblemVertex(subproblemId, optimizableFunction) {
+  val absoluteSignallingThreshold: Double,
+  implicitZero: Boolean) // 
+  extends SubproblemVertex(subproblemId, optimizableFunction, implicitZero) {
 
   val multipliersLength = multipliers.length
 
@@ -84,7 +85,7 @@ final class LazySubproblemVertex(
       if (!alreadySentId.contains(targetId)) {
         val targetIdValue = state(i)
         val signalChanged = changed(lastSignalState(i), targetIdValue)
-        if (signalChanged) {
+        if (signalChanged && (targetId != 0 || !implicitZero)) {
           atLeastOneSignalSent = true
           graphEditor.sendSignal(targetIdValue, targetId, id)
         }

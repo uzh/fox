@@ -28,15 +28,16 @@ import com.signalcollect.MemoryEfficientDataGraphVertex
  */
 final class LazyConsensusVertex(
   variableId: Int, // the id of the variable, which identifies it also in the subproblem nodes.
-  initialState: Double = 0.0, // the initial value for the consensus variable.
-  isBounded: Boolean = true // shall we use bounding (cutoff below 0 and above 1)? 
-  ) extends ConsensusVertex(variableId, initialState, isBounded) {
+  initialState: Double, // the initial value for the consensus variable.
+  isBounded: Boolean, // shall we use bounding (cutoff below 0 and above 1)? 
+  implicitZero: Boolean
+  ) extends ConsensusVertex(variableId, initialState, isBounded, implicitZero) {
 
   /**
    * Only signal if the state has changed.
    */
   override def scoreSignal = {
-    if (state != lastSignalState) {
+    if ((state != 0.0 || !implicitZero) && state != lastSignalState) {
       1.0
     } else {
       0.0
