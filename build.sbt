@@ -10,10 +10,14 @@ organization := "com.signalcollect"
 
 scalaVersion := "2.11.2"
 
-/** See https://github.com/rwl/ParallelColt/issues/6 */
+/** 
+ * See https://github.com/rwl/ParallelColt/issues/6 and 
+ * https://github.com/sbt/sbt-assembly/issues/123
+ */
 mergeStrategy in assembly <<= (mergeStrategy in assembly) { (old) =>
   {
     case PathList("edu", "emory", "mathcs", "utils", xs @ _*) => MergeStrategy.first
+    case PathList(ps @ _*) if ps.last == ".DS_Store" => MergeStrategy.discard
     case other => old(other)
   }
 }
