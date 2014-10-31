@@ -44,7 +44,7 @@ class AnimalClassification extends FlatSpec with Matchers with TestAnnouncements
     class AnimalClass: dog, cat
     predicate: barks(Animal)
     predicate: meows(Animal)
-    predicate [Functional]: animalClass(Animal, AnimalClass)
+    predicate [PartialFunctional]: animalClass(Animal, AnimalClass)
         
     rule [weight = 1]: barks(ANIMAL) => animalClass(ANIMAL, dog)
     rule [weight = 1]: meows(ANIMAL) => animalClass(ANIMAL, cat)
@@ -58,7 +58,6 @@ class AnimalClassification extends FlatSpec with Matchers with TestAnnouncements
     val inferenceResults = Inferencer.runInferenceFromString(animalClassExample2Classes, config = config)
     println(inferenceResults)
     val objectiveFunctionVal = inferenceResults.objectiveFun.get
-    println("Objective function value: " + objectiveFunctionVal)
     objectiveFunctionVal should be(0.0 +- 1e-5)
   }
 
@@ -68,7 +67,7 @@ class AnimalClassification extends FlatSpec with Matchers with TestAnnouncements
     predicate: barks(Animal)
     predicate: meows(Animal)
     predicate: moohs(Animal)
-  	predicate [Functional]: animalClass(Animal, AnimalClass)
+  	predicate [PartialFunctional]: animalClass(Animal, AnimalClass)
   	    
   	rule [weight = 1]: barks(ANIMAL) => animalClass(ANIMAL, dog)
     rule [weight = 1]: meows(ANIMAL) => animalClass(ANIMAL, cat)

@@ -78,14 +78,18 @@ class LinearConstraintTerm extends HyperplaneTerm {
 			absDiff = Math.abs(total - constant);
 		}
 
-		/*
-		 * If the violation is less than a given tolerance (default = 0 ),
-		 * updates the local primal variables and returns.
-		 */
-		if (tolerance >= 0 && absDiff <= tolerance) {
+//		/*
+//		 * If the violation is less than a given tolerance (default = 0 ),
+//		 * updates the local primal variables and returns.
+//		 */
+//		if (tolerance >= 0 && absDiff <= tolerance) {
+//			return;
+//		}
+
+		if (absDiff >= 0){
 			return;
 		}
-
+		
 		/*
 		 * If the naive minimization didn't work, or if it's an equality
 		 * constraint, projects onto the hyperplane

@@ -31,7 +31,8 @@ class LinearConstraintOptimizer(
   val zIndices: Array[Int],
   var stepSize: Double = 1.0,
   initialZmap: Map[Int, Double],
-  coefficientMatrix: Array[Double]) extends OptimizableFunction {
+  coefficientMatrix: Array[Double],
+  val tolerance: Double = 0.0) extends OptimizableFunction {
 
   def id = Some(setId)
 
@@ -45,12 +46,19 @@ class LinearConstraintOptimizer(
     new Function1[DenseVector[Double], Double] {
       def apply(x: DenseVector[Double]) = {
         val coeffsDotX = coeffs.dot(x)
-        if (comparator == "leq" && coeffsDotX <= constant
-          || comparator == "geq" && coeffsDotX >= constant
-          || comparator == "eq" && coeffsDotX == constant) {
-          0.0
+        if (comparator == "leq" && coeffsDotX > constant
+          || comparator == "geq" && coeffsDotX < constant
+          || comparator == "eq" && coeffsDotX != constant) {
+          // If the constraint is broken, check how much.
+          val absDiff = math.abs(coeffsDotX - constant)
+          // Under a certain tolerance, ignore the violation.
+          if (tolerance >= 0 && absDiff <= tolerance) {
+            0.0
+          } else {
+            Double.MaxValue
+          }
         } else {
-          Double.MaxValue
+          0.0
         }
       }
     }
@@ -83,15 +91,15 @@ class LinearConstraintOptimizer(
   }
 
   val length: Double = {
-    val sumOfSquaredCoefficients = coefficientMatrix.map(v => v*v).sum
+    val sumOfSquaredCoefficients = coefficientMatrix.map(v => v * v).sum
     math.sqrt(sumOfSquaredCoefficients)
   }
-  
+
   val unitNormalVector: DenseVector[Double] = {
-    val unitNormal = coefficientMatrix.map(v=> v/length)
+    val unitNormal = coefficientMatrix.map(v => v / length)
     DenseVector(unitNormal)
   }
-  
+
   /**
    * Adaptation of Stephen Bach's solver.
    *
@@ -107,17 +115,22 @@ class LinearConstraintOptimizer(
     val newXIfNoLoss = z - (y / stepSize)
     val total = coeffs.dot(newXIfNoLoss)
     x = newXIfNoLoss
-    if ((comparator == "leq" && total <= constant)
-      || (comparator == "geq" && total >= constant)
-      || (comparator == "eq" && total == constant)) {
-      return
-    } else {
-      if (x.length == 1){
+    if ((comparator == "leq" && total > constant)
+      || (comparator == "geq" && total < constant)
+      || (comparator == "eq" && total != constant)) {
+      // If the constraint is broken, check how much.
+//      val absDiff = math.abs(total - constant)
+//      // Under a certain tolerance, ignore the violation.
+//      if (tolerance >= 0 && absDiff <= tolerance) {
+//        return
+//      }
+
+      if (x.length == 1) {
         x(0) = constant / coeffs(0)
         return
       }
       // Project x onto coeffsDotX == constant plane.
-      var distance = - constant/length
+      var distance = -constant / length
       distance += x.dot(unitNormalVector)
       x = x - (unitNormalVector * distance)
     }

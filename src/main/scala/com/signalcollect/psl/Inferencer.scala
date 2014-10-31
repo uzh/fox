@@ -96,7 +96,7 @@ case class InferencerConfig(
   objectiveLoggingEnabled: Boolean = false,
   maxIterations: Int = 10000, // maximum number of iterations.
   stepSize: Double = 1.0,
-  tolerance: Double = 0,
+  tolerance: Double = 1e-12, // for Double precision is 15-17 decimal places, lower after arithmetic operations.
   isBounded: Boolean = true,
   serializeMessages: Boolean = false,
   removeSymmetricConstraints: Boolean = true,

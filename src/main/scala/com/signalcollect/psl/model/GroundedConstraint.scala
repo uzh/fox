@@ -135,7 +135,7 @@ case class GroundedConstraint(
     val zIndices: Array[Int] = unboundGroundedPredicates.map(gp => gp.id).toArray
     val optimizableFunction: OptimizableFunction =
       if (breezeOptimizer) {
-        new LinearConstraintOptimizer(id, comparator, constant, zIndices, stepSize, zMap, coefficientMatrix)
+        new LinearConstraintOptimizer(id, comparator, constant, zIndices, stepSize, zMap, coefficientMatrix, tolerance)
       } else {
         Optimizer.linearConstraint(stepSize, zMap, comparator, constant, coefficientMatrix, zIndices, tolerance, id)
       }
