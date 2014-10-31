@@ -39,9 +39,32 @@ import scala.annotation.tailrec
 
 class AnimalClassification extends FlatSpec with Matchers with TestAnnouncements {
 
-  val animalClassExample = """
+  val animalClassExample2Classes = """
     class Animal: lisa, blabla
     class AnimalClass: dog, cat
+    predicate: barks(Animal)
+    predicate: meows(Animal)
+    predicate [Functional]: animalClass(Animal, AnimalClass)
+        
+    rule [weight = 1]: barks(ANIMAL) => animalClass(ANIMAL, dog)
+    rule [weight = 1]: meows(ANIMAL) => animalClass(ANIMAL, cat)
+
+    fact [truthValue = 0.1]: barks(lisa)
+    fact [truthValue = 0.2]: meows(lisa)
+      """
+
+  it should "provide a solution consistent with Matlab for two clasess" in {
+    val config = InferencerConfig(computeObjectiveValueOfSolution = true)
+    val inferenceResults = Inferencer.runInferenceFromString(animalClassExample2Classes, config = config)
+    println(inferenceResults)
+    val objectiveFunctionVal = inferenceResults.objectiveFun.get
+    println("Objective function value: " + objectiveFunctionVal)
+    objectiveFunctionVal should be(0.0 +- 1e-5)
+  }
+
+  val animalClassExample = """
+    class Animal: lisa, blabla
+    class AnimalClass: dog, cat, cow
     predicate: barks(Animal)
     predicate: meows(Animal)
     predicate: moohs(Animal)
@@ -49,14 +72,14 @@ class AnimalClassification extends FlatSpec with Matchers with TestAnnouncements
   	    
   	rule [weight = 1]: barks(ANIMAL) => animalClass(ANIMAL, dog)
     rule [weight = 1]: meows(ANIMAL) => animalClass(ANIMAL, cat)
-    //rule [weight = 1]: moohs(ANIMAL) => animalClass(ANIMAL, cow)
+    rule [weight = 1]: moohs(ANIMAL) => animalClass(ANIMAL, cow)
 
     fact [truthValue = 0.1]: barks(lisa)
     fact [truthValue = 0.2]: meows(lisa)
-    //fact [truthValue = 0.5]: moohs(lisa)
+    fact [truthValue = 0.5]: moohs(lisa)
     	"""
-  "AnimalClassification" should "provide a solution consistent with Matlab" in {
-    val config = InferencerConfig(computeObjectiveValueOfSolution = true)  
+  it should "provide a solution consistent with Matlab" in {
+    val config = InferencerConfig(computeObjectiveValueOfSolution = true)
     val inferenceResults = Inferencer.runInferenceFromString(animalClassExample, config = config)
     println(inferenceResults)
     val objectiveFunctionVal = inferenceResults.objectiveFun.get

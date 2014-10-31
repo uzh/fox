@@ -96,7 +96,8 @@ abstract class HyperplaneTerm extends ADMMObjectiveTerm {
 			 */
 			x[0] =  reasoner.z.apply(zIndices[0]) - y[0]/reasoner.stepSize;
 			x[0] -= (coeffs[0] / coeffs[1]) * ((-1 * constant / coeffs[1]) + reasoner.z.apply(zIndices[1]) - y[1]/reasoner.stepSize);
-			x[0] -= (coeffs[0] / coeffs[1]) * (reasoner.z.apply(zIndices[0]) - y[0]/reasoner.stepSize);
+			// TODO(sara): check if the following is necessary.
+			// x[0] -= (coeffs[0] / coeffs[1]) * (reasoner.z.apply(zIndices[0]) - y[0]/reasoner.stepSize);
 			x[0] /= (1 + coeffs[0] * coeffs[0] / (coeffs[1] * coeffs[1]));
 			
 			// Satisfy the constraint: coeff_0 * x_0 + coeff_1 * x_1 = constant
