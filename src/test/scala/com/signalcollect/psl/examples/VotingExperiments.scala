@@ -22,7 +22,6 @@ package com.signalcollect.psl.examples
 
 import org.scalatest.FlatSpec
 import org.scalatest.Matchers
-import com.signalcollect.TestAnnouncements
 import com.signalcollect.admm.Wolf
 import com.signalcollect.psl.Inferencer
 import com.signalcollect.psl.InferencerConfig
