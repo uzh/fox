@@ -8,7 +8,7 @@ version := "1.0-SNAPSHOT"
 
 organization := "com.signalcollect"
 
-scalaVersion := "2.11.2"
+scalaVersion := "2.11.4"
 
 /** 
  * See https://github.com/rwl/ParallelColt/issues/6 and 
