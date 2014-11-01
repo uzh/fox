@@ -54,7 +54,7 @@ class $className extends Function1[Double, Double] {
     doubled === 2.0
   }
 
-  "BreezeToolkit" should "be able to evaluate instantiated at runtime" in {
+  "BreezeToolkit" should "be able to evaluate a function instantiated at runtime" in {
     val f = BreezeToolkit.createFunction("sum(x)")
     f(DenseVector(1.0, 2.0, 3.0)) === 6.0
   }
