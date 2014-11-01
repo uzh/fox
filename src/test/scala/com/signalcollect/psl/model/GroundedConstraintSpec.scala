@@ -22,7 +22,8 @@ package com.signalcollect.psl.model
 
 import org.scalatest.FlatSpec
 import org.scalatest.Matchers
-import com.signalcollect.TestAnnouncements
+
+import com.signalcollect.util.TestAnnouncements
 
 class GroundedConstraintSpec extends FlatSpec with Matchers with TestAnnouncements {
 

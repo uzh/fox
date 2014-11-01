@@ -20,13 +20,9 @@ package com.signalcollect.admm
 
 import org.scalatest.FlatSpec
 import org.scalatest.Matchers
-import com.signalcollect.ExecutionConfiguration
-import com.signalcollect.configuration.ExecutionMode
+
 import com.signalcollect.psl.Optimizer
-import com.signalcollect.admm.graph.ConsensusVertex
-import com.signalcollect.admm.graph.SubproblemVertex
-import com.signalcollect.admm.graph.SubproblemVertex
-import com.signalcollect.TestAnnouncements
+import com.signalcollect.util.TestAnnouncements
 
 /**
  *  weight * coeffs^T * x

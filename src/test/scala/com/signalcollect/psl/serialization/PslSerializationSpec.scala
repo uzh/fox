@@ -22,8 +22,6 @@ package com.signalcollect.psl.serialization
 
 import org.scalatest.FlatSpec
 import org.scalatest.Matchers
-import com.signalcollect.TestAnnouncements
-
 import com.signalcollect.admm.Wolf
 import com.signalcollect.admm.utils.ConvergencePlotter
 import com.signalcollect.psl.Inferencer
@@ -35,8 +33,8 @@ import com.signalcollect.psl.model.GroundedPredicate
 import com.signalcollect.psl.model.GroundedRule
 import com.signalcollect.psl.model.PSLToCvxConverter
 import com.signalcollect.psl.model.PredicateInRule
-
 import scala.annotation.tailrec
+import com.signalcollect.util.TestAnnouncements
 
 class PslSerializationSpec extends FlatSpec with Matchers with TestAnnouncements {
 

@@ -24,7 +24,7 @@ import org.scalatest.FlatSpec
 import org.scalatest.Matchers
 import com.signalcollect.psl.model._
 import com.signalcollect.psl.parser._
-import com.signalcollect.TestAnnouncements
+import com.signalcollect.util.TestAnnouncements
 
 class GroundedRulePlaygroundSpec extends FlatSpec with Matchers with TestAnnouncements {
 

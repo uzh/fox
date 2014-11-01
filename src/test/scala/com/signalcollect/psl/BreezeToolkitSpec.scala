@@ -23,12 +23,11 @@ package com.signalcollect.psl
 import scala.reflect.runtime.universe
 import scala.tools.reflect.ToolBox
 
-import org.scalatest.Finders
 import org.scalatest.FlatSpec
 import org.scalatest.Matchers
 
-import com.signalcollect.TestAnnouncements
 import com.signalcollect.admm.optimizers.BreezeToolkit
+import com.signalcollect.util.TestAnnouncements
 
 import breeze.linalg.DenseVector
 import breeze.optimize.minimize

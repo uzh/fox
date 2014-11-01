@@ -24,7 +24,8 @@ import org.scalatest.Finders
 import org.scalatest.FlatSpec
 import org.scalatest.Matchers
 
-import com.signalcollect.TestAnnouncements
+import com.signalcollect.util.TestAnnouncements
+
 import com.signalcollect.psl.model.Functional
 import com.signalcollect.psl.model.Individual
 import com.signalcollect.psl.model.Symmetric

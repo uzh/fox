@@ -21,7 +21,7 @@ package com.signalcollect.psl
 import org.scalatest.FlatSpec
 import org.scalatest.Matchers
 import com.signalcollect.admm.optimizers.SquaredHingeLossOptimizer
-import com.signalcollect.TestAnnouncements
+import com.signalcollect.util.TestAnnouncements
 
 class SquaredHingeLossSpec extends FlatSpec with Matchers with TestAnnouncements {
 

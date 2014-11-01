@@ -22,20 +22,10 @@ package com.signalcollect.psl.examples
 
 import org.scalatest.FlatSpec
 import org.scalatest.Matchers
-import com.signalcollect.TestAnnouncements
 
-import com.signalcollect.admm.Wolf
 import com.signalcollect.psl.Inferencer
 import com.signalcollect.psl.InferencerConfig
-import com.signalcollect.psl.model.GroundedRule
-import com.signalcollect.psl.model.GroundedPredicate
-import com.signalcollect.psl.model.GroundedRule
-import com.signalcollect.psl.model.PredicateInRule
-import com.signalcollect.psl.model.PSLToCvxConverter
-import com.signalcollect.psl.parser.PslParser
-import com.signalcollect.psl.parser.ParsedPslFile
-
-import scala.annotation.tailrec
+import com.signalcollect.util.TestAnnouncements
 
 /**
  * Small example on abduction
