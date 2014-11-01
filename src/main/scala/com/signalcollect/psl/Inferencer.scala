@@ -21,7 +21,6 @@
 package com.signalcollect.psl
 
 import com.signalcollect.ExecutionInformation
-
 import com.signalcollect.admm.Wolf
 import com.signalcollect.admm.WolfConfig
 import com.signalcollect.admm.ProblemSolution
@@ -35,9 +34,9 @@ import com.signalcollect.psl.model.Rule
 import com.signalcollect.psl.model.GroundedPredicate
 import com.signalcollect.psl.model.GroundedRule
 import com.signalcollect.psl.model.GroundedConstraint
-
 import java.io.File
 import akka.actor.ActorRef
+import com.signalcollect.psl.model.GroundedPredicate
 
 /**
  * The main class for PSL inference.
@@ -51,6 +50,22 @@ case class InferenceResult(
   objectiveFun: Option[Double] = None,
   groundingTime: Option[Long] = None,
   parsingTime: Option[Long] = None) {
+
+  def getGp(predicate: String, individuals: String*): Option[GroundedPredicate] = {
+    val individualList = individuals.toList
+    val foundOption = idToGpMap.find {
+      case (id, gp) =>
+        gp.definition.name == predicate &&
+          gp.groundings.map(_.name) == individualList
+    }
+    foundOption.map(_._2)
+  }
+
+  def truthValue(predicate: String, individuals: String*): Option[Double] = {
+    val gpOption = getGp(predicate, individuals: _*)
+    val truthValue = gpOption.map(gp => solution.results(gp.id))
+    truthValue
+  }
 
   override def toString() = {
     var s = solution.stats.toString
@@ -68,6 +83,26 @@ case class InferenceResult(
     s
   }
 
+  def nicerTruthValue(t: Double): Double = {
+    def goodEnough(v: Double): Boolean = math.abs(v - t) <= 1e-3
+    if (goodEnough(0.0)) {
+      return 0.0
+    }
+    val fraction = 1.0 / (1.0 / t).round
+    if (goodEnough(fraction)) {
+      return fraction
+    }
+    val multipleTenths = (t * 10.0).round / 10.0
+    if (goodEnough(multipleTenths)) {
+      return multipleTenths
+    }
+    val multipleHundreds = (t * 100.0).round / 100.0
+    if (goodEnough(multipleTenths)) {
+      return multipleTenths
+    }
+    t
+  }
+
   def printSelected(predicateNames: List[String] = List.empty) = {
     var s = ""
     solution.results.foreach {
@@ -76,7 +111,7 @@ case class InferenceResult(
           val gp = idToGpMap(id)
           if (predicateNames.isEmpty || predicateNames.contains(gp.definition.name)) {
             if (!gp.truthValue.isDefined) {
-              s += s"\n$gp has truth value $truthValue"
+              s += s"\n$gp has truth value ${nicerTruthValue(truthValue)}"
             }
           }
         }
