@@ -37,7 +37,8 @@ parallelExecution in Test := false
 resolvers += "PSL third party dependencies" at "https://scm.umiacs.umd.edu/maven/lccd/content/repositories/psl-thirdparty/"
 
 libraryDependencies ++= Seq(
-  "org.scala-lang" % "scala-library" % "2.11.2"  % "compile",
+  "org.scala-lang" % "scala-library" % scalaVersion.value  % "compile",
+  "org.scala-lang" % "scala-reflect" % scalaVersion.value % "compile",
   "commons-lang" %  "commons-lang" % "2.6" % "compile",
   "edu.emory.mathcs" % "parallelcolt" % "0.9.4" % "compile",
   "edu.emory.mathcs" % "jplasma" % "1.2" % "compile",
