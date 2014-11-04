@@ -98,7 +98,8 @@ case class NonExistentConsensusVertexHandler(
         Some(new LazyConsensusVertex(
           variableId = vertexId,
           initialState = initialState,
-          isBounded = isBounded))
+          isBounded = isBounded,
+          absoluteSignallingThreshold = lazyThreshold.get))
       } else {
         Some(new ConsensusVertex(
           variableId = vertexId,

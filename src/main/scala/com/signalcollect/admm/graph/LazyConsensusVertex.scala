@@ -29,16 +29,20 @@ import com.signalcollect.MemoryEfficientDataGraphVertex
 final class LazyConsensusVertex(
   variableId: Int, // the id of the variable, which identifies it also in the subproblem nodes.
   initialState: Double, // the initial value for the consensus variable.
-  isBounded: Boolean) // shall we use bounding (cutoff below 0 and above 1)? 
+  isBounded: Boolean,
+  val absoluteSignallingThreshold: Double) // shall we use bounding (cutoff below 0 and above 1)? 
   extends ConsensusVertex(variableId, initialState, isBounded) {
   
+  @inline def changed(a: Double, b: Double): Boolean = {
+    val delta = math.abs(a - b)
+    delta > absoluteSignallingThreshold
+  }
+  
   /**
-   * Always signal after the first collect:
-   * We only get new votes if something has actually changed, so it always makes sense to tell everyone about the change.
-   * This has the advantage that a subproblem vertex that sends a signal to a consensus vertex can rely on being scheduled again.
+   * We signal only if things have changed.
    */
   override def scoreSignal = {
-    if (hasCollectedOnce) {
+    if (hasCollectedOnce && changed(consensus, lastSignalState)) {
       1.0
     } else {
       0.0

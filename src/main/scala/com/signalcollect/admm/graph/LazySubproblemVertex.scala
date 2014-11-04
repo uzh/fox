@@ -94,7 +94,7 @@ final class LazySubproblemVertex(
     }
     // If we signaled to a consensus vertex, then we're guaranteed to get woken up again.
     // If we did not signal, but the multipliers changed, then we want to schedule ourselves.
-    if (!atLeastOneSignalSent && atLeastOneMultiplierChanged) {
+    if (atLeastOneMultiplierChanged) {
       graphEditor.sendSignal(MSG.SKIP_COLLECT, id, id)
     }
     lastSignalState = state.clone
