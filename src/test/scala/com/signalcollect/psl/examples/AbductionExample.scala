@@ -167,8 +167,8 @@ class AbductionExample extends FlatSpec with Matchers with TestAnnouncements {
     // TODO: Matlab solution?
     val config = InferencerConfig(computeObjectiveValueOfSolution = true)
     val inferenceResults = Inferencer.runInferenceFromString(abdExample, config = config)
-    //println(inferenceResults)
-    val interestingPredicates = List("Text2PDF", "Tex2PDF", "Review", "CopyText", "Copy", "Image2PDF", "Plot")
+    println(inferenceResults)
+    //val interestingPredicates = List("Text2PDF", "Tex2PDF", "Review", "CopyText", "Copy", "Image2PDF", "Plot")
     //println(inferenceResults.printSelected(interestingPredicates))
     val objectiveFunctionVal = inferenceResults.objectiveFun.get
     objectiveFunctionVal should be(28.24 +- 0.1)

@@ -85,7 +85,10 @@ final class LazySubproblemVertex(
         val targetIdValue = state(i)
         val signalChanged = changed(lastSignalState(i), targetIdValue)
         if (signalChanged) {
-          atLeastOneSignalSent = true
+          // If at least one signal is sent to a variable that has not over or underflown.
+          // In this case, it is guaranteed that the consensus variable will change and 
+          // therefore answer.
+          atLeastOneSignalSent = (lastSignalState(i) != 0.0 && lastSignalState(i) != 1.0)
           graphEditor.sendSignal(targetIdValue, targetId, id)
         }
         alreadySentId += targetId
@@ -94,7 +97,7 @@ final class LazySubproblemVertex(
     }
     // If we signaled to a consensus vertex, then we're guaranteed to get woken up again.
     // If we did not signal, but the multipliers changed, then we want to schedule ourselves.
-    if (atLeastOneMultiplierChanged) {
+    if (!atLeastOneSignalSent && atLeastOneMultiplierChanged) {
       graphEditor.sendSignal(MSG.SKIP_COLLECT, id, id)
     }
     lastSignalState = state.clone
