@@ -32,17 +32,18 @@ final class LazyConsensusVertex(
   isBounded: Boolean,
   val absoluteSignallingThreshold: Double) // shall we use bounding (cutoff below 0 and above 1)? 
   extends ConsensusVertex(variableId, initialState, isBounded) {
-  
+
   @inline def changed(a: Double, b: Double): Boolean = {
     val delta = math.abs(a - b)
     delta > absoluteSignallingThreshold
   }
-  
+
   /**
-   * We signal only if things have changed.
+   * We signal if things have changed or the consensus value has not under or overflown.
    */
   override def scoreSignal = {
-    if (hasCollectedOnce && changed(consensus, lastSignalState)) {
+    if (hasCollectedOnce &&
+      (changed(consensus, lastSignalState) || (consensus != upperBound && consensus != lowerBound))) {
       1.0
     } else {
       0.0
