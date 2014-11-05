@@ -29,8 +29,7 @@ import java.io.File
 
 object SimpleBenchmark extends App {
 
-  val config = InferencerConfig( lazyThreshold = None
-  //,globalConvergenceDetection = None,
+  val config = InferencerConfig( //,globalConvergenceDetection = None,
   )
 
   // For all the files in the small-benchmarks folder, run the examples $repetition times.
@@ -38,10 +37,11 @@ object SimpleBenchmark extends App {
   val repetitions = 10
   val warmup = 5
 
-  val exampleToAvgTime: Map[String, Double] = directory.listFiles().flatMap {
+  val exampleToAvgTime: Map[String, (Double, Double)] = directory.listFiles().flatMap {
     exampleFile =>
       var i = 0
       var cumulativeTime = 0.0
+      var minTime = Double.MaxValue
       val parsedFile = PslParser.parse(exampleFile)
       while (i < warmup) {
         timedInference(parsedFile, config)
@@ -49,12 +49,14 @@ object SimpleBenchmark extends App {
       }
       i = 0
       while (i < repetitions) {
-        cumulativeTime += timedInference(parsedFile, config)
+        val currentTime = timedInference(parsedFile, config)
+        cumulativeTime += currentTime
+        minTime = math.min(currentTime, minTime)
         i = i + 1
       }
-      Map(exampleFile.getName() -> cumulativeTime / repetitions)
+      Map(exampleFile.getName() -> (cumulativeTime / repetitions, minTime))
   }.toMap
-  
+
   println(exampleToAvgTime)
 
   def timedInference(parsedFile: ParsedPslFile, config: InferencerConfig): Double = {
