@@ -24,7 +24,7 @@ import breeze.linalg.DenseVector
 import breeze.optimize.DiffFunction
 import breeze.optimize.minimize
 
-class HingeLossOptimizer(
+class LinearLossOptimizer(
   setId: Int,
   val weight: Double,
   constant: Double,
@@ -33,18 +33,14 @@ class HingeLossOptimizer(
   initialZmap: Map[Int, Double],
   coefficientMatrix: Array[Double]) extends OptimizerBase(setId, constant, zIndices, stepSize, initialZmap, coefficientMatrix) {
 
-  lazy val hingeLossFunction = {
+  lazy val linearlossFunction = {
     new DiffFunction[DenseVector[Double]] {
       def calculate(x: DenseVector[Double]) = {
         val coeffsDotX = coeffs.dot(x)
-        //weight * max(coeffs^T * x - constant, 0) + stepSize/2 * norm2(x - z + (y / stepSize))^2
-        (math.max(coeffsDotX - constant, 0) * weight + stepSize / 2 * norm2WithoutSquareRoot(x - z + y / stepSize),
+        //weight * coeffs^T * x  + stepSize/2 * norm2(x - z + (y / stepSize))^2
+        (coeffsDotX * weight + stepSize / 2 * norm2WithoutSquareRoot(x - z + y / stepSize),
           // gradient of function above.
-          if (constant < coeffsDotX) {
-            coeffs * weight + (x - z) * stepSize + y
-          } else {
-            (x - z) * stepSize + y
-          })
+          coeffs * weight + (x - z) * stepSize + y)
       }
     }
   }
@@ -53,16 +49,10 @@ class HingeLossOptimizer(
     new DiffFunction[DenseVector[Double]] {
       def calculate(x: DenseVector[Double]) = {
         val coeffsDotX = coeffs.dot(x)
-        //weight * max(coeffs^T * x - constant, 0)
-        (math.max(coeffsDotX - constant, 0) * weight,
-          // gradient of function above.
-          if (constant < coeffsDotX) {
-            // weight * [ c_0*x_0  + c_1*x_1 + ... + c_n*x_n - constant ]
-            // df/dx_0 = weight*c_0
-            coeffs * weight
-          } else {
-            DenseVector.zeros(coeffs.length)
-          })
+        // weight * coeffs^T * x
+        (coeffsDotX * weight,
+        // gradient of function above.
+         coeffs * weight)
       }
     }
   }
@@ -79,38 +69,15 @@ class HingeLossOptimizer(
    * Adaptation of Stephen Bach's solver.
    *
    * Objective term of the form
-   * weight * max(coeffs^T * x - constant, 0)
+   * weight * coeffs^T * x
    */
   def optimizeEfficient(
     consensusAssignments: Array[Double]) {
     setZ(consensusAssignments)
-//    val newXIfNoLoss = z - (y / stepSize)
-//    val total = coeffs.dot(newXIfNoLoss)
-//    x = newXIfNoLoss
-//    if (total <= constant) {
-//      return
-//    }
-//
-//    // Also consider linear loss:
-//    // argmin(weight * (coeffs^T * x - constant)+ stepSize/2 * norm2(x - z + (y / stepSize))^2)
-//    x = x - coeffs * weight / stepSize
-//    val linearLossTotal = coeffs.dot(x)
-//    if (linearLossTotal <= constant) {
-//      return
-//    }
-//
-//    // Else the solution is on the hinge.
-//    if (x.length == 1) {
-//      x(0) = constant / coeffs(0)
-//      return
-//    }
-//    // Project x onto coeffsDotX == constant plane.
-//    var distance = -constant / length
-//    distance += x.dot(unitNormalVector)
-//    x = x - (unitNormalVector * distance)
-    
-    x = minimize(hingeLossFunction, x)
+    x = z - (y / stepSize)
+    x = x - coeffs * weight / stepSize
+//    x = minimize(linearlossFunction, x)
   }
 
-  override def toString = s"HingeLossOptimizer(x=$x, y=$y, z=$z, coeffs=$coeffs, constant=$constant, zIndices=${zIndices.mkString("[", ",", "]")})"
+  override def toString = s"LinearLossOptimizer(x=$x, y=$y, z=$z, coeffs=$coeffs, constant=$constant, zIndices=${zIndices.mkString("[", ",", "]")})"
 }
