@@ -1,0 +1,11 @@
+class Person: a
+
+predicate: likes(Person, Person)
+#rule [weight = 1]: => !likes(A, B)
+rule [weight = 1]: likes(A, B) && likes(B, C) => likes(A, C)
+
+fact [truthValue = 1.0]: likes(a, b)
+fact [truthValue = 1.0]: likes(b, c)
+fact [truthValue = 1.0]: likes(c, d)
+fact [truthValue = 1.0]: likes(d, e)
+fact [truthValue = 1.0]: likes(e, f)

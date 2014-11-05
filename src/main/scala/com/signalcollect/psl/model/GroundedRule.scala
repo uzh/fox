@@ -23,7 +23,9 @@ package com.signalcollect.psl.model
 import com.signalcollect.admm.optimizers.OptimizableFunction
 import com.signalcollect.admm.optimizers.HingeLossOptimizer
 import com.signalcollect.admm.optimizers.LinearConstraintOptimizer
+import com.signalcollect.admm.optimizers.LinearLossOptimizer
 import com.signalcollect.admm.optimizers.SquaredHingeLossOptimizer
+import com.signalcollect.admm.optimizers.SquaredLossOptimizer
 import com.signalcollect.psl.Optimizer
 import com.signalcollect.util.Verifier
 
@@ -128,9 +130,21 @@ case class GroundedRule(
 
       val optimizableFunction: OptimizableFunction = definition.distanceMeasure match {
         case Linear =>
-          if (worstPossibleScenario >= 0) {
+          if (worstPossibleScenario > 0) {
             // The constant doesn't influence the minimization.
-            Optimizer.linearLoss(stepSize, zMap, definition.weight, coefficientMatrix, zIndices, id)
+            if (breezeOptimizer) {
+              new LinearLossOptimizer(
+                id,
+                weight = definition.weight,
+                constant = constant,
+                zIndices = zIndices,
+                stepSize = stepSize,
+                initialZmap = zMap,
+                coefficientMatrix = coefficientMatrix)
+            } else {
+              Optimizer.linearLoss(stepSize, zMap, definition.weight, coefficientMatrix, zIndices, id)
+            }
+
           } else {
             if (definition.weight < 0) {
               println(s"[WARNING]: Adding a concave function like: neg * max(0, coeff*x - const)")
@@ -150,11 +164,22 @@ case class GroundedRule(
           }
 
         case Squared =>
-          if (worstPossibleScenario >= 0) {
+          if (worstPossibleScenario > 0) {
             if (definition.weight < 0) {
               println(s"[WARNING]: Adding a concave function like: neg * (coeff*x - const)^2")
             }
-            Optimizer.squaredLinearLoss(stepSize, zMap, definition.weight, constant, coefficientMatrix, zIndices, id)
+            if (breezeOptimizer) {
+              new SquaredLossOptimizer(
+                id,
+                weight = definition.weight,
+                constant = constant,
+                zIndices = zIndices,
+                stepSize = stepSize,
+                initialZmap = zMap,
+                coefficientMatrix = coefficientMatrix)
+            } else {
+              Optimizer.squaredLinearLoss(stepSize, zMap, definition.weight, constant, coefficientMatrix, zIndices, id)
+            }
           } else {
             if (definition.weight < 0) {
               println(s"[WARNING]: Adding a concave function like: neg * max(0, coeff*x - const)^2")

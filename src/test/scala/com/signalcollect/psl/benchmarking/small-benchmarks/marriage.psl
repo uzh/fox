@@ -1,0 +1,7 @@
+predicate:         votes(_, _)
+predicate:         married(_, _)
+#rule [1]:  !married(A, B)
+#rule [1]:  !votes(A, B)
+rule [1]:                  votes(A, P) && married(A, B) => votes(B, P)
+fact:                  married(anna, bob)
+fact:                  votes(carl, bob)

@@ -56,7 +56,7 @@ class FriendsExample extends FlatSpec with Matchers with TestAnnouncements {
 	predicate: friends(_, _)
   // negative weights make a convex problem concave... not converging.
   // is this case it's actually a linear problem, so it works.
-  rule [weight = -1, distanceMeasure = linear]: => friends(A,B)
+  rule [weight = -1, distanceMeasure = linear]: friends(A,B)
 	fact: friends(anna, bob)
   fact: !friends(bob, carl)
 	"""
@@ -66,8 +66,7 @@ class FriendsExample extends FlatSpec with Matchers with TestAnnouncements {
     val config = InferencerConfig(computeObjectiveValueOfSolution = true)
     val inferenceResults = Inferencer.runInference(pslData, config = config)
     val objectiveFunctionVal = inferenceResults.objectiveFun.get
-
-    objectiveFunctionVal should be(0.0 +- 1e-5)
+    objectiveFunctionVal should be(-4.0 +- 1e-5)
   }
 
   // No friends except the explicitly mentioned (as std in CWA).
@@ -98,7 +97,6 @@ class FriendsExample extends FlatSpec with Matchers with TestAnnouncements {
 	  fact: friends(anna, bob)
     fact: !friends(bob, carl)
 	"""
-  //TODO(sara): The result looks good to me, but the objective function evaluates to infinity. Commenting out for now.
   "FriendsExample" should "provide a solution consistent for hardenemies, an example with negative prior and a hard rule" in {
     val pslData = PslParser.parse(hardenemies)
 
