@@ -42,6 +42,7 @@ final class LazyConsensusVertex(
    * We signal if things have changed or the consensus value has not under or overflown.
    */
   override def scoreSignal = {
+    
     if (hasCollectedOnce &&
       (changed(consensus, lastSignalState) || (consensus != upperBound && consensus != lowerBound))) {
       1.0

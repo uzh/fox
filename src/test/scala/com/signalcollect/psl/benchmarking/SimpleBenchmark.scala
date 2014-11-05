@@ -34,11 +34,12 @@ object SimpleBenchmark extends App {
 
   // For all the files in the small-benchmarks folder, run the examples $repetition times.
   val directory = new File("src/test/scala/com/signalcollect/psl/benchmarking/small-benchmarks/")
-  val repetitions = 10
-  val warmup = 5
+  val repetitions = 1
+  val warmup = 0
 
   val exampleToAvgTime: Map[String, (Double, Double)] = directory.listFiles().flatMap {
     exampleFile =>
+      println(s"Running experiments for example: ${exampleFile.getName()}")
       var i = 0
       var cumulativeTime = 0.0
       var minTime = Double.MaxValue
