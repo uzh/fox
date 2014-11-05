@@ -84,31 +84,31 @@ class HingeLossOptimizer(
   def optimizeEfficient(
     consensusAssignments: Array[Double]) {
     setZ(consensusAssignments)
-//    val newXIfNoLoss = z - (y / stepSize)
-//    val total = coeffs.dot(newXIfNoLoss)
-//    x = newXIfNoLoss
-//    if (total <= constant) {
-//      return
-//    }
-//
-//    // Also consider linear loss:
-//    // argmin(weight * (coeffs^T * x - constant)+ stepSize/2 * norm2(x - z + (y / stepSize))^2)
-//    x = x - coeffs * weight / stepSize
-//    val linearLossTotal = coeffs.dot(x)
-//    if (linearLossTotal <= constant) {
-//      return
-//    }
-//
-//    // Else the solution is on the hinge.
-//    if (x.length == 1) {
-//      x(0) = constant / coeffs(0)
-//      return
-//    }
-//    // Project x onto coeffsDotX == constant plane.
-//    var distance = -constant / length
-//    distance += x.dot(unitNormalVector)
-//    x = x - (unitNormalVector * distance)
-    
+    //    val newXIfNoLoss = z - (y / stepSize)
+    //    val total = coeffs.dot(newXIfNoLoss)
+    //    x = newXIfNoLoss
+    //    if (total <= constant) {
+    //      return
+    //    }
+    //
+    //    // Also consider linear loss:
+    //    // argmin(weight * (coeffs^T * x - constant)+ stepSize/2 * norm2(x - z + (y / stepSize))^2)
+    //    x = x - coeffs * weight / stepSize
+    //    val linearLossTotal = coeffs.dot(x)
+    //    if (linearLossTotal <= constant) {
+    //      return
+    //    }
+    //
+    //    // Else the solution is on the hinge.
+    //    if (x.length == 1) {
+    //      x(0) = constant / coeffs(0)
+    //      return
+    //    }
+    //    // Project x onto coeffsDotX == constant plane.
+    //    var distance = -constant / length
+    //    distance += x.dot(unitNormalVector)
+    //    x = x - (unitNormalVector * distance)
+
     x = minimize(hingeLossFunction, x)
   }
 

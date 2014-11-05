@@ -51,8 +51,8 @@ class LinearLossOptimizer(
         val coeffsDotX = coeffs.dot(x)
         // weight * coeffs^T * x
         (coeffsDotX * weight,
-        // gradient of function above.
-         coeffs * weight)
+          // gradient of function above.
+          coeffs * weight)
       }
     }
   }
@@ -74,9 +74,9 @@ class LinearLossOptimizer(
   def optimizeEfficient(
     consensusAssignments: Array[Double]) {
     setZ(consensusAssignments)
-    x = z - (y / stepSize)
-    x = x - coeffs * weight / stepSize
-//    x = minimize(linearlossFunction, x)
+    //    x = z - (y / stepSize)
+    //    x = x - coeffs * weight / stepSize
+    x = minimize(linearlossFunction, x)
   }
 
   override def toString = s"LinearLossOptimizer(x=$x, y=$y, z=$z, coeffs=$coeffs, constant=$constant, zIndices=${zIndices.mkString("[", ",", "]")})"
