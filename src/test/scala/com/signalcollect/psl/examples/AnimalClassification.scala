@@ -71,7 +71,6 @@ class AnimalClassification extends FlatSpec with Matchers with TestAnnouncements
     val config = InferencerConfig(computeObjectiveValueOfSolution = true)
     val inferenceResults = Inferencer.runInferenceFromString(animalClassExample, config = config)
     val objectiveFunctionVal = inferenceResults.objectiveFun.get
-    println(inferenceResults)
     objectiveFunctionVal should be(0.0 +- 1e-5)
   }
 }

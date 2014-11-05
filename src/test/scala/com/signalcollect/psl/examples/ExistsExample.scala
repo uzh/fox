@@ -34,30 +34,26 @@ import com.signalcollect.util.TestAnnouncements
 class ExistsExample extends FlatSpec with Matchers with TestAnnouncements {
  val existsExample = """
     class Person: anna, sara, philip, fred, paul
-	class Cause: accident, snow, traffic
+	  class Cause: accident, snow, traffic
     class Place: dubai, zurich, florida, middle-east
     class Time: today, tomorrow, yesterday
       
-	predicate: 	isLate(Person, Time)
+	  predicate: 	isLate(Person, Time)
    	predicate: 	causeIsLate(Person, Cause, Place,Time)
     predicate:  isWarm(Place)
     predicate:  locatedIn(Place, Place)
    	predicate: 	in(Person, Place)
-	predicate [Symmetric]: friends(Person, Person)
-    predicate: True()
+	  predicate [Symmetric]: friends(Person, Person)
     predicate: noCause(Cause,Place)
    
     // Goal:
-    //rule [weight = 1]: 	isLate(P,TIME) && in(P,PLACE) => EXISTS [C] causeIsLate(P,C,PLACE,TIME)
-    //rule [weight = 1]: 	isLate(P,TIME) => EXISTS [C,PLACE] causeIsLate(P,C,PLACE,TIME)
     rule [weight = 1]: 	isLate(P,TIME) => EXISTS [C,PLACE] causeIsLate(P,C,PLACE,TIME) || noCause(C,PLACE)
-    //rule [weight = 1]: 	isLate(P,TIME) => EXISTS [C,PLACE] causeIsLate(P,C,PLACE,TIME) || noCause(P,TIME)
    
    // Option 1: // Cannot have functional on non binary predicates.
    //rule [weight = 1]: 	isLate(P,TIME) && in(P,PLACE) => causeIsLate(P,C,PLACE,TIME)  // Wrong, all causes are true at least as much (exactly) as the person is late.   
    
    // Option 2:
-   // rule [weight = 1]: 	True() => causeIsLate(P,C,PLACE,TIME)        // All causes are true, except if you're not in that place or not late.
+   // rule [weight = 1]: 	causeIsLate(P,C,PLACE,TIME)        // All causes are true, except if you're not in that place or not late.
    // rule [weight = 1]: 	!isLate(P,TIME) => !causeIsLate(P,C,PLACE,TIME)   // Wrong, all causes have to be true if you're late in that place.
    // rule [weight = 1]: 	!in(P,PLACE) => !causeIsLate(P,C,PLACE,TIME) 
    
@@ -76,22 +72,17 @@ class ExistsExample extends FlatSpec with Matchers with TestAnnouncements {
     //rule [weight = 1]: causeIsLate(P,snow, PLACE,today) => causeIsLate(P,snow, PLACE,tomorrow)
     // rule [1]: isLate(X,TIME) => isLate(X,next(TIME))
    
-	fact [truthValue = 1.0]: isLate(sara, today)
+	  fact [truthValue = 1.0]: isLate(sara, today)
    	//fact [truthValue = 0.8]: isLate(anna, yesterday)
    	//fact [truthValue = 0.8]: friends(sara, anna)
-	fact [truthValue = 1.0]: in(sara, dubai)
+	  fact [truthValue = 1.0]: in(sara, dubai)
     fact [truthValue = 1.0]: isWarm(middle-east)
     fact [truthValue = 0.5]: locatedIn(dubai, middle-east)
-    fact: True()
 	"""
   "ExistsExample" should "provide a solution consistent with Matlab" in {
-    val pslData = PslParser.parse(existsExample)
 
     val config = InferencerConfig(computeObjectiveValueOfSolution = true)  
-    val inferenceResults = Inferencer.runInference(pslData, config=config)
-
-    val solution = inferenceResults.solution
-    val gps = inferenceResults.idToGpMap
+    val inferenceResults = Inferencer.runInferenceFromString(existsExample, config=config)
     val objectiveFunctionVal = inferenceResults.objectiveFun.get
 
     //println(inferenceResults)

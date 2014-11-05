@@ -1,0 +1,9 @@
+	  class Person: bob, sara
+	  class Party: demo
+	  predicate[PartialFunctional]: votes(Person, Party)
+	  predicate [Symmetric]: 		friends(Person, Person)
+	  rule [weight = 1]: 	votes(A,P) && friends(A,B) => votes(B,P) 
+  	fact: friends(anna, bob)
+  	fact [truthValue = 0.6]: votes(anna, demo)
+    fact [truthValue = 0.1]: votes(anna, repub)
+    individuals: carl

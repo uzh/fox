@@ -1,0 +1,14 @@
+    class Animal: lisa, blabla
+    class AnimalClass: dog, cat, cow
+    predicate: barks(Animal)
+    predicate: meows(Animal)
+    predicate: moohs(Animal)
+  	predicate [Functional]: animalClass(Animal, AnimalClass)
+  	    
+  	rule [weight = 1]: barks(ANIMAL) => animalClass(ANIMAL, dog)
+    rule [weight = 1]: meows(ANIMAL) => animalClass(ANIMAL, cat)
+    rule [weight = 1]: moohs(ANIMAL) => animalClass(ANIMAL, cow)
+
+    fact [truthValue = 0.1]: barks(lisa)
+    fact [truthValue = 0.2]: meows(lisa)
+    fact [truthValue = 0.5]: moohs(lisa)

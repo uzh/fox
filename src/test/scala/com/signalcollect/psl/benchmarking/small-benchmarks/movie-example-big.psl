@@ -1,0 +1,34 @@
+class Person: sara, philip, fred, george, tim, tom-cruise, james-stewart, harrison-ford
+class Movie: mission-impossible, rear-window, vertigo, top-gun, blade-runner, indiana-jones-and-the-last-crusade, star-wars, grease
+class Actor: james-stewart, tom-cruise, harrison-ford
+
+predicate: likes(Person, _)
+predicate: playsIn(Actor, Movie)
+
+rule [weight = 8]: likes(PERSON, MOVIE-A) && playsIn(ACTOR, MOVIE-A) && playsIn(ACTOR, MOVIE-B) => likes(PERSON, MOVIE-B)
+rule [weight = 4]: likes(PERSON, MOVIE) && playsIn(ACTOR, MOVIE) => likes(PERSON, ACTOR)
+rule [weight = 2]: likes(PERSON-A, A) && likes(PERSON-B, A) && likes(PERSON-B, B) => likes(PERSON-A, B)
+
+fact: playsIn(tom-cruise, top-gun)
+fact: playsIn(tom-cruise, mission-impossible)
+fact: playsIn(james-stewart, rear-window)
+fact: playsIn(james-stewart, vertigo)
+fact: playsIn(harrison-ford, indiana-jones-and-the-last-crusade)
+fact: playsIn(harrison-ford, blade-runner)
+fact: playsIn(harrison-ford, star-wars)
+
+fact [truthValue = 0.1]: likes(sara, tom-cruise)
+fact [truthValue = 0.9]: likes(sara, harrison-ford)
+fact [truthValue = 0.9]: likes(sara, pulp-fiction)
+fact [truthValue = 0.8]: likes(sara, star-wars)
+fact [truthValue = 0.8]: likes(sara, blade-runner)
+
+fact [truthValue = 0.9]: likes(philip, pulp-fiction)
+fact [truthValue = 1.0]: likes(philip, blade-runner)
+fact [truthValue = 1.0]: likes(philip, rear-window)
+fact [truthValue = 0.2]: likes(philip, top-gun)
+
+fact [truthValue = 1.0]: likes(george, harrison-ford)
+fact [truthValue = 1.0]: likes(george, grease)
+
+fact [truthValue = 1.0]: likes(fred, star-wars)

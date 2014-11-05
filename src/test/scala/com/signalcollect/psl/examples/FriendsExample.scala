@@ -66,7 +66,6 @@ class FriendsExample extends FlatSpec with Matchers with TestAnnouncements {
     val config = InferencerConfig(computeObjectiveValueOfSolution = true)
     val inferenceResults = Inferencer.runInference(pslData, config = config)
     val objectiveFunctionVal = inferenceResults.objectiveFun.get
-    println(inferenceResults)
     objectiveFunctionVal should be(-4.0 +- 1e-5)
   }
 
@@ -98,7 +97,6 @@ class FriendsExample extends FlatSpec with Matchers with TestAnnouncements {
 	  fact: friends(anna, bob)
     fact: !friends(bob, carl)
 	"""
-  //TODO(sara): The result looks good to me, but the objective function evaluates to infinity. Commenting out for now.
   "FriendsExample" should "provide a solution consistent for hardenemies, an example with negative prior and a hard rule" in {
     val pslData = PslParser.parse(hardenemies)
 
