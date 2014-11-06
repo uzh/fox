@@ -23,13 +23,14 @@ package com.signalcollect.psl.model
 case class Predicate(
   name: String,
   classes: List[String] = List.empty,
-  properties: Set[PredicateProperty] = Set.empty) {
+  properties: Set[PredicateProperty] = Set.empty,
+  prior: Option[Double] = None) {
   
   def arity = classes.length
   
   override def toString = {
     val propertiesString = if (properties.isEmpty) "" else " " + properties.mkString("[", ", ", "]")
     val positionPlaceholders = (1 to arity).map(_ => "_").mkString("(", ", ", ")")
-    s"relation$propertiesString: $name$positionPlaceholders"
+    s"predicate$propertiesString ${prior.getOrElse("")}: $name$positionPlaceholders"
   }
 }

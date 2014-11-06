@@ -74,6 +74,7 @@ object PslParser extends ParseHelper[ParsedPslFile] with ImplicitConversions {
   }
 
   val validRuleProperties = Set("weight", "distanceMeasure")
+  val validPredicateProperties = Set("prior")
 
   val ruleProperty: Parser[(String, String)] = {
     opt(identifier <~ "=") ~ "[a-zA-Z0-9\\-\\.]*".r ^^ {
@@ -87,6 +88,28 @@ object PslParser extends ParseHelper[ParsedPslFile] with ImplicitConversions {
         } else {
           ("weight", propertyValue)
         }
+    }
+  }
+  
+  val predicateProperty: Parser[(String, String)] = {
+    opt(identifier <~ "=") ~ "[a-zA-Z0-9\\-\\.]*".r ^^ {
+      case propertyNameOpt ~ propertyValue =>
+        if (propertyNameOpt.isDefined) {
+          val propertyName = propertyNameOpt.get
+          assert(validPredicateProperties.contains(propertyName),
+            s"$propertyName is not a valid rule property. Valid rule properties are:\n" +
+              validPredicateProperties.mkString(", "))
+          (propertyName, propertyValue)
+        } else{
+          (propertyValue, propertyValue)
+        }
+    }
+  }
+    
+  lazy val predicateProperties: Parser[Map[String,String]] = {
+    "[" ~> repsep(predicateProperty, ",") <~ "]" ^^ {
+      case properties =>
+        properties.toMap
     }
   }
 
@@ -127,19 +150,24 @@ object PslParser extends ParseHelper[ParsedPslFile] with ImplicitConversions {
     }
   }
 
-  lazy val predicateProperties: Parser[Set[PredicateProperty]] = {
-    "[" ~> repsep(identifier, ",") <~ "]" ^^ {
-      case properties =>
-        properties.map(PredicateProperty.parse(_)).toSet
-    }
-  }
-
   lazy val predicate: Parser[Predicate] = {
     "predicate" ~> opt(predicateProperties) ~ ":" ~ identifier ~ "(" ~ repsep(identifierOrDash, ",") <~ ")" ^^ {
       case properties ~ ":" ~ name ~ "(" ~ List("") =>
-        Predicate(name, properties = properties.getOrElse(Set.empty))
+         val prior = properties.flatMap(_.get("prior")).map(_.toDouble)
+         val parsedProperties: Set[PredicateProperty] = properties match{
+           case Some(p) => 
+             p.filter(_._1 != "prior").map{a => PredicateProperty.parse(a._2)}.toSet
+           case None => Set.empty
+         }
+        Predicate(name, properties = parsedProperties, prior = prior)
       case properties ~ ":" ~ name ~ "(" ~ placeholders =>
-        Predicate(name, placeholders, properties.getOrElse(Set.empty))
+         val prior = properties.flatMap(_.get("prior")).map(_.toDouble)
+         val parsedProperties: Set[PredicateProperty]= properties match{
+           case Some(p) => 
+             p.filter(_._1 != "prior").map{a => PredicateProperty.parse(a._2)}.toSet
+           case None => Set.empty
+         }
+        Predicate(name, classes = placeholders, properties = parsedProperties, prior = prior)
     }
   }
 

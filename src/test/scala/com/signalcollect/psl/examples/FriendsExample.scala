@@ -34,22 +34,29 @@ import com.signalcollect.util.TestAnnouncements
 class FriendsExample extends FlatSpec with Matchers with TestAnnouncements {
 
   val friends = """
-  rule [4]: !friends(A,B)
-	predicate: 		friends(_, _)
-    
+	predicate [prior = 0.2]: 		friends(_, _)    
   fact: !friends(bob, carl)
-  // Gives a default soft truth value of 1/(4+1) to unknown predicates.
-  // 1 + 5*friends(A,B)^2 - 2 friends(A,B) => friends(A,B) = 1/5
-  rule [1]: friends(A,B)
-    
 	fact: friends(anna, bob)
 	"""
+  val friendsOriginal = """
+  predicate :    friends(_, _)
+    
+  // Gives a default soft truth value of 1/(4+1) to unknown predicates.
+  // 1 + 5*friends(A,B)^2 - 2 friends(A,B) => friends(A,B) = 1/5
+  rule [0.01]: friends(A,B)
+  rule [0.04]: !friends(A,B)
+    
+  fact: friends(anna, bob)
+  fact: !friends(bob, carl)
+  """
+  
   "FriendsExample" should "provide a solution consistent for friends, with a default value of 0.2" in {
     val pslData = PslParser.parse(friends)
     val config = InferencerConfig(computeObjectiveValueOfSolution = true)
     val inferenceResults = Inferencer.runInference(pslData, config = config)
     val objectiveFunctionVal = inferenceResults.objectiveFun.get
-    objectiveFunctionVal should be(3.2 +- 1e-5)
+    println(inferenceResults)
+    objectiveFunctionVal should be(0.032 +- 1e-5)
   }
 
   val freenemies = """
