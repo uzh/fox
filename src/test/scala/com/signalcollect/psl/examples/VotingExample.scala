@@ -34,8 +34,8 @@ import com.signalcollect.util.TestAnnouncements
 class VotingExample extends FlatSpec with Matchers with TestAnnouncements {
 
   val votingExample = """
-	predicate: 	votes(_, _)
-	predicate: 		friends(_, _)
+	  predicate: 	votes(_, _)
+	  predicate: 		friends(_, _)
     predicate: 		enemies(_, _)
 
     rule [weight = 1]: 	votes(A,P) && friends(A,B) => votes(B,P) 
@@ -43,9 +43,9 @@ class VotingExample extends FlatSpec with Matchers with TestAnnouncements {
     rule: 	enemies(A,B) => !friends(A,B) 
     rule: 	friends(A,B) => !enemies(A,B)  
     
-	fact: friends(anna, bob)
+	  fact: friends(anna, bob)
     fact: friends(bob, anna)
-	fact [truthValue = 0.8]: votes(anna, democrats)
+	  fact [truthValue = 0.8]: votes(anna, democrats)
     fact [truthValue = 0.2]: votes(carl, repub)
     fact: enemies(carl, bob)
     fact: enemies(bob, carl)
