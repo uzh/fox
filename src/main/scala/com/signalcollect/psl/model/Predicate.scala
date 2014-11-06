@@ -23,7 +23,8 @@ package com.signalcollect.psl.model
 case class Predicate(
   name: String,
   classes: List[String] = List.empty,
-  properties: Set[PredicateProperty] = Set.empty) {
+  properties: Set[PredicateProperty] = Set.empty,
+  prior: Option[Double] = None) {
   
   def arity = classes.length
   

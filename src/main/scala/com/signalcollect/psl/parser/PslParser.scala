@@ -97,7 +97,7 @@ object PslParser extends ParseHelper[ParsedPslFile] with ImplicitConversions {
         if (propertyNameOpt.isDefined) {
           val propertyName = propertyNameOpt.get
           assert(validPredicateProperties.contains(propertyName),
-            s"$propertyName is not a valid rule property. Valid rule properties are:\n" +
+            s"$propertyName is not a valid predicate property. Valid predicate properties are:\n" +
               validPredicateProperties.mkString(", "))
           (propertyName, propertyValue)
         } else{
