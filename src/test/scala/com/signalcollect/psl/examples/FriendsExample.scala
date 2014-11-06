@@ -34,32 +34,39 @@ import com.signalcollect.util.TestAnnouncements
 class FriendsExample extends FlatSpec with Matchers with TestAnnouncements {
 
   val friends = """
-  rule [4]: !friends(A,B)
-	predicate: 		friends(_, _)
-    
+  predicate [prior = 0.2]:    friends(_, _)    
   fact: !friends(bob, carl)
+  fact: friends(anna, bob)
+  """
+  val friendsOriginal = """
+  predicate :    friends(_, _)
+    
   // Gives a default soft truth value of 1/(4+1) to unknown predicates.
   // 1 + 5*friends(A,B)^2 - 2 friends(A,B) => friends(A,B) = 1/5
-  rule [1]: friends(A,B)
+  rule [0.01]: friends(A,B)
+  rule [0.04]: !friends(A,B)
     
-	fact: friends(anna, bob)
-	"""
+  fact: friends(anna, bob)
+  fact: !friends(bob, carl)
+  """
+  
   "FriendsExample" should "provide a solution consistent for friends, with a default value of 0.2" in {
     val pslData = PslParser.parse(friends)
     val config = InferencerConfig(computeObjectiveValueOfSolution = true)
     val inferenceResults = Inferencer.runInference(pslData, config = config)
     val objectiveFunctionVal = inferenceResults.objectiveFun.get
-    objectiveFunctionVal should be(3.2 +- 1e-5)
+    println(inferenceResults)
+    objectiveFunctionVal should be(0.032 +- 1e-5)
   }
 
   val freenemies = """
-	predicate: friends(_, _)
+  predicate: friends(_, _)
   // negative weights make a convex problem concave... not converging.
   // is this case it's actually a linear problem, so it works.
   rule [weight = -1, distanceMeasure = linear]: friends(A,B)
-	fact: friends(anna, bob)
+  fact: friends(anna, bob)
   fact: !friends(bob, carl)
-	"""
+  """
   "FriendsExample" should "provide a solution consistent for freenemies, an example with negative weights" in {
     val pslData = PslParser.parse(freenemies)
 
@@ -71,11 +78,11 @@ class FriendsExample extends FlatSpec with Matchers with TestAnnouncements {
 
   // No friends except the explicitly mentioned (as std in CWA).
   val enemies = """
-	predicate: 		friends(_, _)
+  predicate:    friends(_, _)
   rule [1]: !friends(A,B)
-	fact: friends(anna, bob)
+  fact: friends(anna, bob)
   fact: !friends(bob, carl)
-	"""
+  """
   "FriendsExample" should "provide a solution consistent for enemies, an example with negative prior" in {
     val pslData = PslParser.parse(enemies)
 
@@ -89,14 +96,14 @@ class FriendsExample extends FlatSpec with Matchers with TestAnnouncements {
 
   // No friends except the explicitly mentioned (as std in CWA).
   val hardenemies = """
-	  predicate [Symmetric]: 		friends(_, _)
+    predicate [Symmetric]:    friends(_, _)
     
     rule[1]: friends(A,B)
     rule[1]: !friends(A,B)
     
-	  fact: friends(anna, bob)
+    fact: friends(anna, bob)
     fact: !friends(bob, carl)
-	"""
+  """
   "FriendsExample" should "provide a solution consistent for hardenemies, an example with negative prior and a hard rule" in {
     val pslData = PslParser.parse(hardenemies)
 

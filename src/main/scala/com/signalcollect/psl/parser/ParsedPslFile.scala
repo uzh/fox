@@ -24,6 +24,8 @@ import com.signalcollect.psl.model.Predicate
 import com.signalcollect.psl.model.PredicateInRule
 import com.signalcollect.psl.model.Rule
 import com.signalcollect.psl.model.Individual
+import com.signalcollect.psl.model.Variable
+import com.signalcollect.psl.model.Squared
 
 case class ParsedPslFile(
   classes: Map[String, Set[Individual]] = Map.empty,
@@ -33,7 +35,8 @@ case class ParsedPslFile(
   constants: Set[Individual] = Set.empty) {
 
   def individualsInFacts = factsWithPredicates.flatMap(_.indsWithClasses).distinct
-  def individualsInRules = rulesWithPredicates.flatMap(_.body.flatMap(p => p.individuals)) ++ rulesWithPredicates.flatMap(_.head.flatMap(p => p.individuals))
+  def individualsInRules = rulesWithPredicates.flatMap(_.body.flatMap(p => p.individuals)) ++
+    rulesWithPredicates.flatMap(_.head.flatMap(p => p.individuals))
 
   def individuals: List[Individual] = {
     val individualsInClasses = classes.map(_._2).flatten
@@ -67,12 +70,37 @@ case class ParsedPslFile(
     allClasses ++ Map("_" -> individuals.toSet)
   }
 
-  val rulesWithPredicates =
-    rules.map {
+  val rulesWithPredicates = {
+    val standardRulesWithPredicates = rules.map {
       rule =>
-        Rule(rule.id, rule.body.map(mergePredicateInRule(_)), rule.head.map(mergePredicateInRule(_)), rule.distanceMeasure, rule.weight, rule.existentialVars)
+        Rule(rule.id, rule.body.map(mergePredicateInRule(_)),
+          rule.head.map(mergePredicateInRule(_)), rule.distanceMeasure, rule.weight, rule.existentialVars)
     }
+    // Create rules for predicates that have prior values defined.
+    val priorRules = predicates.filter(_.prior.isDefined).flatMap {
+      predicate =>
+        var i = 0;
+        val variables = List.fill(predicate.arity) { i = i + 1; Variable("A" + i) }
+        val pInR = PredicateInRule(name = predicate.name, variableOrIndividual = variables, negated = false, predicate = Some(predicate))
+        val pInRNegated = PredicateInRule(name = predicate.name, variableOrIndividual = variables, negated = true, predicate = Some(predicate))
+        val weightTrue = 0.01
+        val rule = Rule(0, List.empty, List(pInR), Squared, weightTrue)
+        val ruleNegated = if (predicate.prior.get != 0.0) {
+          Rule(0, List.empty, List(pInRNegated), Squared, weightTrue / predicate.prior.get - weightTrue)
+        } else {
+          Rule(0, List.empty, List(pInRNegated), Squared, weightTrue)
+        }
+        if (predicate.prior.get == 0.0) {
+          List(ruleNegated)
+        } else if (predicate.prior.get == 1.0) {
+          List(rule)
+        } else {
+          List(rule, ruleNegated)
+        }
 
+    }
+    standardRulesWithPredicates ++ priorRules
+  }
   val factsWithPredicates =
     facts.map {
       fact =>
@@ -95,5 +123,3 @@ case class ParsedPslFile(
     }
   }
 }
-
-
