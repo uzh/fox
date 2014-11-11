@@ -1,4 +1,4 @@
-Wolf: A Scalable PSL Inferencing Framework [![Build Status](https://travis-ci.org/uzh/triplerush.svg?branch=master)](https://travis-ci.org/uzh/wolf/branches)
+Fox: A Scalable PSL Inferencing Framework [![Build Status](https://travis-ci.org/uzh/triplerush.svg?branch=master)](https://travis-ci.org/uzh/wolf/branches)
 =====================================================
 
 How to Compile the Project
