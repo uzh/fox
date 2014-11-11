@@ -1,4 +1,4 @@
-Fox: A Scalable PSL Inferencing Framework [![Build Status](https://travis-ci.org/uzh/triplerush.svg?branch=master)](https://travis-ci.org/uzh/wolf/branches)
+Fox: A Scalable PSL Inferencing Framework [![Build Status](https://travis-ci.org/uzh/fox.svg?branch=master)](https://travis-ci.org/uzh/fox/branches)
 =====================================================
 
 How to Compile the Project
@@ -19,14 +19,14 @@ To generate a JAR file, use the `assembly` command on the SBT prompt.
 How to try out an example
 -------------------------
 
-Run the `assembly` command according to the instructions above, then execute for example `./wolf.sh examples/movies.psl` to run the inferencer on the `movies.psl` file.
+Run the `assembly` command according to the instructions above, then execute for example `./fox.sh examples/movies.psl` to run the inferencer on the `movies.psl` file.
 
-If there is no shell available, you can also run `java -Xmx5000m -cp ./target/scala-2.11/wolf-assembly-1.0-SNAPSHOT.jar com.signalcollect.psl.CommandLinePslInferencer examples/movies.psl`.
+If there is no shell available, you can also run `java -Xmx5000m -cp ./target/scala-2.11/fox-assembly-1.0-SNAPSHOT.jar com.signalcollect.psl.CommandLinePslInferencer examples/movies.psl`.
 
 
 How to use the Domain Specific Language (DSL)
 ---------------------------------------------
-The input to the system is a description of individuals, predicates, facts and rules in a domain-specific language for PSL. In the following we describe features of the DSL; you find an example file that combines them all in the examples folder (https://github.com/uzh/wolf/blob/master/examples/feature-complete.psl).
+The input to the system is a description of individuals, predicates, facts and rules in a domain-specific language for PSL. In the following we describe features of the DSL; you find an example file that combines them all in the examples folder (https://github.com/uzh/fox/blob/master/examples/feature-complete.psl).
 
 It is possible to explicitly list individuals in a domain, and optionally assign them to a class. By convention, individuals are always lower-case names, in order to distinguish them from upper-case variables.
 
@@ -39,7 +39,7 @@ individuals:  ufo
 
 In this example, our domain consists of two individuals of class `Person = { anna, bob }`, two of class `Party = { demo, repub }`, one of class `Woman = { anna }` and one individual without any class `ufo`.
 Classes are not mutually exclusive and the same individual can have multiple classes (`anna`).
-Besides explicitly mentioned individuals, Wolf can automatically infer other individuals and their class from facts and rules.
+Besides explicitly mentioned individuals, Fox can automatically infer other individuals and their class from facts and rules.
 
 For each predicate, you can specify the classes of its arguments:
 
