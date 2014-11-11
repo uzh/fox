@@ -78,7 +78,8 @@ class FriendsExample extends FlatSpec with Matchers with TestAnnouncements {
 
   // No friends except the explicitly mentioned (as std in CWA).
   val enemies = """
-  predicate [prior = 0.0]:    friends(_, _)
+  //predicate [prior = 0.0]:    friends(_, _)
+  predicate :    friends(_, _)
   //rule [1]: !friends(A,B)
   fact: friends(anna, bob)
   fact: !friends(bob, carl)
