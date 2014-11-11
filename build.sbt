@@ -2,7 +2,7 @@ import AssemblyKeys._
 assemblySettings
 
 /** Project */
-name := "wolf"
+name := "fox"
 
 version := "1.0-SNAPSHOT"
 
