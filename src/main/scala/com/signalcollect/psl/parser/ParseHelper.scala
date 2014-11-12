@@ -53,7 +53,7 @@ abstract class ParseHelper[T] extends RegexParsers {
 
   def double: Parser[Double] = "\\-?[0-9]+\\.?[0-9]*((e|E)-?[0-9]+)?".r ^^ (_.toDouble)
 
-  def identifier: Parser[String] = "[-a-zA-Z0-9]*".r
+  def identifier: Parser[String] = "[-a-zA-Z0-9]+".r
   
   def identifierOrDash: Parser[String] = "[-a-zA-Z0-9_]*".r
 

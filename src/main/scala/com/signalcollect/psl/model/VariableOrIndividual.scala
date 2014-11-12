@@ -46,7 +46,7 @@ sealed trait VariableOrIndividual {
 
 object VariableOrIndividual {
   def apply(name: String, classTypes: Set[String] = Set.empty): VariableOrIndividual = {
-    if (name.forall(c => c.isUpper || c == '-')) {
+    if (name(0).isUpper) {
       Variable(name, classTypes)
     } else {
       Individual(name, classTypes)
