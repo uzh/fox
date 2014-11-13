@@ -94,8 +94,8 @@ case class InferenceResult(
       fraction
     } else if (goodEnough(multipleTenths)) {
       multipleTenths
-    } else if (goodEnough(multipleTenths)) {
-      return multipleTenths
+    } else if (goodEnough(multipleHundreds)) {
+      multipleHundreds
     } else {
       t
     }
