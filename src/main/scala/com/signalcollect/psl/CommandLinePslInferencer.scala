@@ -19,11 +19,11 @@ object CommandLinePslInferencer extends App {
   val mapOfArgs = tupleOfArgs.toMap
 
   val pslFile = new File(mapOfArgs.get("--filename").get)
-  val queryList = if (mapOfArgs.get("--queryList").isDefined) {
-    val argument = mapOfArgs.get("--queryList").get
-    argument.split(",").toList
-  } else {
-    List.empty
+  val queryList = mapOfArgs.get("--queryList") match {
+    case Some(query) =>
+      query.split(",").toList
+    case None =>
+      List.empty
   }
 
   val config = InferencerConfig(
