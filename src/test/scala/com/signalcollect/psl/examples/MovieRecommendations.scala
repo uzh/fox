@@ -104,8 +104,9 @@ class MovieRecommendations extends FlatSpec with Matchers with TestAnnouncements
   "MovieRecommendations" should "correctly minimize the simplified movie example" in {
     val config = InferencerConfig(computeObjectiveValueOfSolution = true)
     val inferenceResults = Inferencer.runInferenceFromString(simplifiedMovieExample, config = config)
-    val objectiveFunctionVal = inferenceResults.objectiveFun.get
-    objectiveFunctionVal should be(0.02 +- 0.02)
+    val objectiveFunctionValOption = inferenceResults.objectiveFun
+    assert(objectiveFunctionValOption.isDefined)
+    objectiveFunctionValOption.foreach(_ should be(0.02 +- 0.02))
   }
 
 }

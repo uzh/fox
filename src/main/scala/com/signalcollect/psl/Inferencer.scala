@@ -85,22 +85,20 @@ case class InferenceResult(
 
   def nicerTruthValue(t: Double): Double = {
     def goodEnough(v: Double): Boolean = math.abs(v - t) <= 1e-3
+    lazy val fraction = 1.0 / (1.0 / t).round
+    lazy val multipleTenths = (t * 10.0).round / 10.0
+    lazy val multipleHundreds = (t * 100.0).round / 100.0
     if (goodEnough(0.0)) {
-      return 0.0
+      0.0
+    } else if (goodEnough(fraction)) {
+      fraction
+    } else if (goodEnough(multipleTenths)) {
+      multipleTenths
+    } else if (goodEnough(multipleHundreds)) {
+      multipleHundreds
+    } else {
+      t
     }
-    val fraction = 1.0 / (1.0 / t).round
-    if (goodEnough(fraction)) {
-      return fraction
-    }
-    val multipleTenths = (t * 10.0).round / 10.0
-    if (goodEnough(multipleTenths)) {
-      return multipleTenths
-    }
-    val multipleHundreds = (t * 100.0).round / 100.0
-    if (goodEnough(multipleTenths)) {
-      return multipleTenths
-    }
-    t
   }
 
   def printSelected(predicateNames: List[String] = List.empty) = {
