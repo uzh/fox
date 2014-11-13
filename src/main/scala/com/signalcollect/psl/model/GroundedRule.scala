@@ -86,16 +86,14 @@ case class GroundedRule(
     filtered.toArray
   }
 
-  def groundedPredicates: List[GroundedPredicate] = {
+  def unboundGroundedPredicates: List[GroundedPredicate] = {
     // we add only the ones that have an unbound truth value, the others are taken care in the constant.
     head.filter(!_.truthValue.isDefined) ::: body.filter(!_.truthValue.isDefined)
   }
 
-  def variables: List[Int] = groundedPredicates.map(gp => gp.id).toList
-
   def createOptimizableFunction(stepSize: Double, tolerance: Double = 0.0, breezeOptimizer: Boolean = false): Option[OptimizableFunction] = {
     // Easy optimization, if all are facts, ignore.
-    if (groundedPredicates.size == 0) {
+    if (unboundGroundedPredicates.size == 0) {
       return None
     }
 
@@ -114,8 +112,8 @@ case class GroundedRule(
     }
 
     // TODO: Define zMap - currently just initialized to 0.
-    val zMap: Map[Int, Double] = groundedPredicates.map(gp => (gp.id, 0.0)).toMap
-    val zIndices: Array[Int] = groundedPredicates.map(gp => gp.id).toArray
+    val zMap: Map[Int, Double] = unboundGroundedPredicates.map(gp => (gp.id, 0.0)).toMap
+    val zIndices: Array[Int] = unboundGroundedPredicates.map(gp => gp.id).toArray
 
     if (definition.weight != Double.MaxValue) {
       // Not a hard rule.

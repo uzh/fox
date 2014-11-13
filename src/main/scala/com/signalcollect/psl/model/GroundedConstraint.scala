@@ -43,6 +43,9 @@ trait GroundedRuleOrConstraint {
       case v: GroundedConstraint => false
     }
   }
+  
+  def unboundGroundedPredicates: List[GroundedPredicate]
+  def variables: List[Int] = unboundGroundedPredicates.map(gp => gp.id).toList
 }
 
 case class GroundedConstraint(

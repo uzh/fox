@@ -59,8 +59,7 @@ object PSLToCvxConverter {
 
   def getVariables(rules: List[GroundedRule], constraints: List[GroundedConstraint]) = {
     val variables =
-      rules.map(rule => rule.groundedPredicates.map(gp => "x" + gp.id)) ++
-        constraints.map(cstr => cstr.unboundGroundedPredicates.map(gp => "x" + gp.id))
+      (rules ++ constraints).map(rule => rule.unboundGroundedPredicates.map(gp => "x" + gp.id))
     variables.flatten.toSet
   }
 
@@ -79,11 +78,11 @@ object PSLToCvxConverter {
   def toCvxFunction(rule: GroundedRule): String = {
     val constant = rule.computeConstant
     val coefficientMatrix = rule.computeCoefficientMatrix
-    if (coefficientMatrix.size < 1){
-      println("[ERROR] Coefficient matrix smaller than 1: "+ rule)
+    if (coefficientMatrix.size < 1) {
+      println("[ERROR] Coefficient matrix smaller than 1: " + rule)
       return ""
     }
-    val zIndices = rule.groundedPredicates.map(gp => "x" + gp.id).mkString("[", " ", "]")
+    val zIndices = rule.unboundGroundedPredicates.map(gp => "x" + gp.id).mkString("[", " ", "]")
     if (rule.definition.distanceMeasure == Squared) {
       // pow_pos(x, p) = max(0, x)^p
       s"${rule.definition.weight} * pow_pos(${coefficientMatrix.mkString("[", " ", "]")} * ${zIndices}' - ${constant}, 2)"
@@ -95,24 +94,24 @@ object PSLToCvxConverter {
   def toCvxConstraint(constraint: GroundedConstraint): String = {
     val constant = constraint.computeConstant
     val coefficientMatrix = constraint.computeCoefficientMatrix
-    if (coefficientMatrix.size < 1){
-      println("[ERROR] Coefficient matrix smaller than 1: "+ constraint)
+    if (coefficientMatrix.size < 1) {
+      println("[ERROR] Coefficient matrix smaller than 1: " + constraint)
       return ""
     }
     val zIndices = constraint.unboundGroundedPredicates.map(gp => "x" + gp.id).mkString("[", " ", "]")
     val comparator = constraint.computeComparator
     s"${coefficientMatrix.mkString("[", " ", "]")} * ${zIndices}' ${if (comparator == "leq") "<=" else "=="} ${constant}"
   }
-  
+
   def toCvxConstraint(function: GroundedRule): String = {
     val constant = function.computeConstant
     val coefficientMatrix = function.computeCoefficientMatrix
-    if (coefficientMatrix.size < 1){
-      println("[ERROR] Coefficient matrix smaller than 1: "+ function)
+    if (coefficientMatrix.size < 1) {
+      println("[ERROR] Coefficient matrix smaller than 1: " + function)
       return ""
     }
-    val zIndices = function.groundedPredicates.map(gp => "x" + gp.id).mkString("[", " ", "]")
+    val zIndices = function.unboundGroundedPredicates.map(gp => "x" + gp.id).mkString("[", " ", "]")
     s"${coefficientMatrix.mkString("[", " ", "]")} * ${zIndices}' <=  ${constant}"
   }
-  
+
 }
