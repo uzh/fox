@@ -114,7 +114,7 @@ object ExperimentHelper {
     val computationTime = execStats.computationTime.toUnit(TimeUnit.MILLISECONDS).toInt
     val vertices = inferenceResults.solution.stats.aggregatedWorkerStatistics.numberOfVertices
     val edges = inferenceResults.solution.stats.aggregatedWorkerStatistics.numberOfOutgoingEdges
-    val objDiff = inferenceResults.objectiveFun.get
-    s"$config.absoluteEpsilon $config.relativeEpsilon ${if (config.isBounded) 1 else 0} 0 $config.stepSize $signalSteps $computationTime $objDiff \n"
+    val objectiveFunctionValOption = inferenceResults.objectiveFun
+    assert(objectiveFunctionValOption.isDefined)
   }
 }

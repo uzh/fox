@@ -150,7 +150,8 @@ class AbductionExample extends FlatSpec with Matchers with TestAnnouncements {
     //println(inferenceResults)
     //val interestingPredicates = List("Text2PDF", "Tex2PDF", "Review", "CopyText", "Copy", "Image2PDF", "Plot")
     //println(inferenceResults.printSelected(interestingPredicates))
-    val objectiveFunctionVal = inferenceResults.objectiveFun.get
-    objectiveFunctionVal should be(9.3525 +- 0.01)
+    val objectiveFunctionValOption = inferenceResults.objectiveFun
+    assert(objectiveFunctionValOption.isDefined)
+    objectiveFunctionValOption.foreach(_ should be(9.3525 +- 0.01))
   }
 }

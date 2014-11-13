@@ -39,8 +39,9 @@ class FunctionalSpec extends FlatSpec with Matchers with TestAnnouncements {
     val truthValuePerInstance = 1.0 / numberOfInstances
     val inferenceResults = Inferencer.runInferenceFromString(one, config = config)
     inferenceResults.solution.results.foreach { case (id, truthValue) => assert(truthValue === truthValuePerInstance +- 1e-5) }
-    val objectiveFunctionVal = inferenceResults.objectiveFun.get
-    objectiveFunctionVal should be(0.0 +- 1e-5)
+    val objectiveFunctionValOption = inferenceResults.objectiveFun
+    assert(objectiveFunctionValOption.isDefined)
+    objectiveFunctionValOption.foreach(_ should be(0.0 +- 1e-5))
   }
 
   val two = """
@@ -54,8 +55,9 @@ class FunctionalSpec extends FlatSpec with Matchers with TestAnnouncements {
     val truthValuePerInstance = 1.0 / numberOfInstances
     val inferenceResults = Inferencer.runInferenceFromString(two, config = config)
     inferenceResults.solution.results.foreach { case (id, truthValue) => assert(truthValue === truthValuePerInstance +- 1e-5) }
-    val objectiveFunctionVal = inferenceResults.objectiveFun.get
-    objectiveFunctionVal should be(0.0 +- 1e-5)
+    val objectiveFunctionValOption = inferenceResults.objectiveFun
+    assert(objectiveFunctionValOption.isDefined)
+    objectiveFunctionValOption.foreach(_ should be(0.0 +- 1e-5))
   }
 
   val twoPlusEvidence = """
@@ -67,9 +69,10 @@ class FunctionalSpec extends FlatSpec with Matchers with TestAnnouncements {
 
   "Functional property" should "work correcly with two instances plus evidence" in {
     val inferenceResults = Inferencer.runInferenceFromString(twoPlusEvidence, config = config)
-    val objectiveFunctionVal = inferenceResults.objectiveFun.get
+    val objectiveFunctionValOption = inferenceResults.objectiveFun
+    assert(objectiveFunctionValOption.isDefined)
+    objectiveFunctionValOption.foreach(_ should be(0.0 +- 1e-5))
     inferenceResults.solution.results.foreach { case (id, truthValue) => assert(truthValue === 0.9 +- 1e-5) }
-    objectiveFunctionVal should be(0.0 +- 1e-5)
   }
 
   val three = """
@@ -83,8 +86,9 @@ class FunctionalSpec extends FlatSpec with Matchers with TestAnnouncements {
     val truthValuePerInstance = 1.0 / numberOfInstances
     val inferenceResults = Inferencer.runInferenceFromString(three, config = config)
     inferenceResults.solution.results.foreach { case (id, truthValue) => assert(truthValue === truthValuePerInstance +- 1e-5) }
-    val objectiveFunctionVal = inferenceResults.objectiveFun.get
-    objectiveFunctionVal should be(0.0 +- 1e-5)
+    val objectiveFunctionValOption = inferenceResults.objectiveFun
+    assert(objectiveFunctionValOption.isDefined)
+    objectiveFunctionValOption.foreach(_ should be(0.0 +- 1e-5))
   }
 
   val threePlusEvidence = """
@@ -97,9 +101,10 @@ class FunctionalSpec extends FlatSpec with Matchers with TestAnnouncements {
 
   "Functional property" should "work correcly with three instances plus evidence" in {
     val inferenceResults = Inferencer.runInferenceFromString(threePlusEvidence, config = config)
-    val objectiveFunctionVal = inferenceResults.objectiveFun.get
     inferenceResults.solution.results.foreach { case (id, truthValue) => assert(truthValue === 0.7 +- 1e-5) }
-    objectiveFunctionVal should be(0.0 +- 1e-5)
+    val objectiveFunctionValOption = inferenceResults.objectiveFun
+    assert(objectiveFunctionValOption.isDefined)
+    objectiveFunctionValOption.foreach(_ should be(0.0 +- 1e-5))
   }
 
   val ten = """
@@ -113,8 +118,9 @@ class FunctionalSpec extends FlatSpec with Matchers with TestAnnouncements {
     val truthValuePerInstance = 1.0 / numberOfInstances
     val inferenceResults = Inferencer.runInferenceFromString(ten, config = config)
     inferenceResults.solution.results.foreach { case (id, truthValue) => assert(truthValue === truthValuePerInstance +- 1e-5) }
-    val objectiveFunctionVal = inferenceResults.objectiveFun.get
-    objectiveFunctionVal should be(0.0 +- 1e-5)
+    val objectiveFunctionValOption = inferenceResults.objectiveFun
+    assert(objectiveFunctionValOption.isDefined)
+    objectiveFunctionValOption.foreach(_ should be(0.0 +- 1e-5))
   }
 
   val tenPlusEvidence = """
@@ -128,9 +134,10 @@ class FunctionalSpec extends FlatSpec with Matchers with TestAnnouncements {
   "Functional property" should "work correcly with ten instances plus evidence" in {
     val truthPerRemaining = 0.7 / 8
     val inferenceResults = Inferencer.runInferenceFromString(tenPlusEvidence, config = config)
-    val objectiveFunctionVal = inferenceResults.objectiveFun.get
     inferenceResults.solution.results.foreach { case (id, truthValue) => assert(truthValue === truthPerRemaining +- 1e-5) }
-    objectiveFunctionVal should be(0.0 +- 1e-5)
+    val objectiveFunctionValOption = inferenceResults.objectiveFun
+    assert(objectiveFunctionValOption.isDefined)
+    objectiveFunctionValOption.foreach(_ should be(0.0 +- 1e-5))
   }
 
 }
