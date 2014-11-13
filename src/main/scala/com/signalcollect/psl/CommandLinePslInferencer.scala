@@ -5,13 +5,26 @@ import com.signalcollect.psl.model.GroundedPredicate
 
 object CommandLinePslInferencer extends App {
 
-  assert(args.size > 0, "The path to a PSL file has to be passed as an argument.")
-  val pslFile = new File(args(0))
+  val usage = """
+    Usage: fox filename [--abseps num] [--releps num] 
+  """
+
+  if (args.length == 0) {
+    println(usage)
+    System.exit(-1)
+  }
+  val arglist = args.toList
+  val it = arglist.iterator
+  val tupleOfArgs = it.zip(it).toList
+  val mapOfArgs = tupleOfArgs.toMap
+
+  val pslFile = new File(mapOfArgs.get("--filename").get)
+  val config = InferencerConfig(
+    absoluteEpsilon = mapOfArgs.get("--abseps").getOrElse("1e-8").toDouble,
+    relativeEpsilon = mapOfArgs.get("--releps").getOrElse("1e-3").toDouble)
   val inferenceResults = Inferencer.runInferenceFromFile(
     pslFile = pslFile,
-    config = InferencerConfig(
-      absoluteEpsilon = 1e-5,
-      relativeEpsilon = 1e-3))
+    config = config)
   val inferences = inferenceResults.solution.results
   val gps = inferenceResults.idToGpMap
   def reportInference(gpId: Int, truthValue: Double) {
