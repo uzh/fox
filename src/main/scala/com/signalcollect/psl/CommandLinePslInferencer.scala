@@ -6,10 +6,10 @@ import com.signalcollect.psl.model.GroundedPredicate
 object CommandLinePslInferencer extends App {
 
   val usage = """
-    Usage: fox filename [--abseps num] [--releps num] 
+    Usage: fox filename [--absEps num] [--relEps num] [--queryList "pred1, pred2"]
   """
 
-  if (args.length == 0) {
+  if (args.length <= 1) {
     println(usage)
     System.exit(-1)
   }
@@ -19,24 +19,21 @@ object CommandLinePslInferencer extends App {
   val mapOfArgs = tupleOfArgs.toMap
 
   val pslFile = new File(mapOfArgs.get("--filename").get)
+  val queryList = if (mapOfArgs.get("--queryList").isDefined) {
+    val argument = mapOfArgs.get("--queryList").get
+    argument.split(",").toList
+  } else {
+    List.empty
+  }
+
   val config = InferencerConfig(
-    absoluteEpsilon = mapOfArgs.get("--abseps").getOrElse("1e-8").toDouble,
-    relativeEpsilon = mapOfArgs.get("--releps").getOrElse("1e-3").toDouble)
+    absoluteEpsilon = mapOfArgs.get("--absEps").getOrElse("1e-8").toDouble,
+    relativeEpsilon = mapOfArgs.get("--relEps").getOrElse("1e-3").toDouble)
   val inferenceResults = Inferencer.runInferenceFromFile(
     pslFile = pslFile,
     config = config)
-  val inferences = inferenceResults.solution.results
-  val gps = inferenceResults.idToGpMap
-  def reportInference(gpId: Int, truthValue: Double) {
-    if (truthValue > 0) {
-      val gp = gps(gpId)
-      if (!gp.truthValue.isDefined) {
-        println(s"$gp has truth value $truthValue")
-      }
-    }
-  }
-  inferences.foreach(reportInference)
 
+  println(inferenceResults.printSelected(queryList))
   System.exit(0)
 
 }
