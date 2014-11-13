@@ -1,4 +1,4 @@
-Fox: A Scalable PSL Inferencing Framework [![Build Status](https://travis-ci.org/uzh/fox.svg?branch=master)](https://travis-ci.org/uzh/fox/branches)
+Fox: A Scalable PSL Inferencing Framework [![Build Status](https://travis-ci.org/uzh/fox.svg?branch=master)](https://travis-ci.org/uzh/fox/branches) [![Codacy Badge](https://www.codacy.com/project/badge/31c2972e3ae440e4ba80d7cd55759bc0)](https://www.codacy.com/public/uzh/fox)
 =====================================================
 
 How to Compile the Project
