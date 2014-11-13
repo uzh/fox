@@ -108,9 +108,7 @@ case class InferenceResult(
         if (truthValue > 0) {
           val gp = idToGpMap(id)
           if (predicateNames.isEmpty || predicateNames.contains(gp.definition.name)) {
-            if (!gp.truthValue.isDefined) {
-              s += s"\n$gp has truth value ${nicerTruthValue(truthValue)}"
-            }
+            s += s"\n$gp has truth value ${nicerTruthValue(truthValue)}"
           }
         }
     }
