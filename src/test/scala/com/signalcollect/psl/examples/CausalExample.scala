@@ -98,7 +98,7 @@ fact [0]: causes(y,w)  //ok
 
 
 """
-/*
+  /*
  * GroundedPredicate 164: causes[ ] (x, x) : [0.0, 0.0]
  * GroundedPredicate 59: causes[ ] (x, y) : [0.9984497725066939, 0.9984360437109558]
  * GroundedPredicate 48: causes[ ] (x, u) : [0.0, 5.63596217807545E-4]
@@ -121,8 +121,7 @@ GroundedPredicate 86: causes[ ] (w, w) : [0.0, 0.0]
 GroundedPredicate 40: causes[ ] (w, u) : [0.0050777510230964815, 0.9976288302377336]
 
  */
-  
-  
+
   //fact: indep(w, u)
   ////fact: indep( u, w) 
   //fact [0]: indep(w, y)
@@ -191,10 +190,12 @@ GroundedPredicate 40: causes[ ] (w, u) : [0.0050777510230964815, 0.9976288302377
   //fact [0]: causes(y,w)
   //fact [0]: causes(y,u)
 
-  it should "provide a solution consistent for hardenemies, an example with negative prior and a hard rule" in {
+  it should "provide a solution consistent for the causal example" in {
     val config = InferencerConfig(computeObjectiveValueOfSolution = true)
+    val inferenceResults = Inferencer.runInferenceFromString(causal, config = config)
     val results = MinimaExplorer.exploreFromString(causal, config)
-    for (result <- results){
+    println(inferenceResults)
+    for (result <- results) {
       println(s"${result._1}: [${result._2}, ${result._3}]")
     }
   }
