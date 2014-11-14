@@ -194,7 +194,13 @@ GroundedPredicate 40: causes[ ] (w, u) : [0.0050777510230964815, 0.9976288302377
     val config = InferencerConfig(computeObjectiveValueOfSolution = true, lazyThreshold = None)
     val results = MinimaExplorer.exploreFromString(causal, config, List("cond-indep"))
     for (result <- results) {
-      println(s"${result._1}: ${result._2} [${result._3}, ${result._4}]")
+      if (result._3 == 0 && result._4 == 0) {
+        println(s"${result._1}: false")
+      } else if (result._3 == 1 && result._4 == 1) {
+        println(s"${result._1}: true")
+      } else {
+        println(s"${result._1}: unknown")
+      }
     }
   }
 }

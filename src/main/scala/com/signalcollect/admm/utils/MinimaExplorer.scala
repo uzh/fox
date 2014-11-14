@@ -38,21 +38,22 @@ import com.signalcollect.admm.optimizers.SquaredHingeLossOptimizer
 import com.signalcollect.admm.optimizers.SquaredLossOptimizer
 import com.signalcollect.admm.optimizers.OptimizerBase
 
+
 /**
  * Explores the multiple minima based on one solution.
  * At the moment as a proof of concept changes one variable at a time.
  */
 object MinimaExplorer {
 
-  def exploreFromString(example: String, config: InferencerConfig = InferencerConfig(),
-    groundedPredicateNames: List[String] = List.empty): List[(String, Double, Double, Double)] = {
-    val pslData = PslParser.parse(example)
-    // This is the same as the inferencer, we copy it so we don't have to recreate the functions.
-    val (groundedRules, groundedConstraints, idToGpMap) = Grounding.ground(pslData, config.isBounded, config.removeSymmetricConstraints)
-    val functions = groundedRules.flatMap(_.createOptimizableFunction(config.stepSize, config.tolerance, config.breezeOptimizer))
-    val constraints = groundedConstraints.flatMap(_.createOptimizableFunction(config.stepSize, config.tolerance, config.breezeOptimizer))
-    val functionsAndConstraints = functions ++ constraints
-    println(s"Problem converted to consensus optimization with ${functions.size} functions and ${constraints.size} constraints that are not trivially true.")
+  def roundUpDouble(value: Double, exponent: Int = 3) = {
+    ((math.pow(10, exponent) * value).round / math.pow(10, exponent).toDouble)
+  }
+
+  def roundUpWithCutoff(value: Double, exponent: Int = 3) = {
+    if (value >= 0.9) { 1.0 } else if (value <= 0.1) { 0.0 } else { roundUpDouble(value, exponent) }
+  }
+
+  def divideFunctionsAndConstraints(functionsAndConstraints: List[OptimizableFunction]) = {
     val optimizerBaseFunctions = functionsAndConstraints.flatMap {
       f =>
         f match {
@@ -71,9 +72,18 @@ object MinimaExplorer {
           case _ => None
         }
     }
-    val totalZindices = optimizerBaseFunctions.flatMap(_.zIndices).toSet.toArray
-    println(s"Number of optimizer base functions: ${optimizerBaseFunctions.size}, number of constraints: ${hardFunctions.size}")
+    //println(s"Number of optimizer base functions: ${optimizerBaseFunctions.size}, number of constraints: ${hardFunctions.size}")
+    (optimizerBaseFunctions, hardFunctions)
+  }
 
+  def exploreFromString(example: String, config: InferencerConfig = InferencerConfig(),
+    groundedPredicateNames: List[String] = List.empty): List[(String, Double, Double, Double)] = {
+    val pslData = PslParser.parse(example)
+    // This is the same as the inferencer, we copy it so we don't have to recreate the functions.
+    val (groundedRules, groundedConstraints, idToGpMap) = Grounding.ground(pslData, config.isBounded, config.removeSymmetricConstraints)
+    val functions = groundedRules.flatMap(_.createOptimizableFunction(config.stepSize, config.tolerance, config.breezeOptimizer))
+    val constraints = groundedConstraints.flatMap(_.createOptimizableFunction(config.stepSize, config.tolerance, config.breezeOptimizer))
+    val functionsAndConstraints = functions ++ constraints
     val solution = Wolf.solveProblem(
       functionsAndConstraints,
       None,
@@ -82,27 +92,30 @@ object MinimaExplorer {
     val objectiveFunctionVal: Double = functionsAndConstraints.foldLeft(0.0) {
       case (sum, nextFunction) => sum + nextFunction.evaluateAt(solution.results)
     }
+    //
+    //    println(s"First inference completed, objective value: $objectiveFunctionVal")
+    //    println(solution.stats)
 
-    println(s"First inference completed, objective value: $objectiveFunctionVal")
-    println(solution.stats)
+    val naivePredicateBounds = NaiveMinimaExplorer.exploreResultsNaive(groundedRules, groundedConstraints, solution.results)
 
+    val (optimizerBaseFunctions, hardFunctions) = divideFunctionsAndConstraints(functionsAndConstraints)
+    val totalZindices = optimizerBaseFunctions.flatMap(_.zIndices).toSet.toArray
     var id = functions.size + constraints.size
 
-    // Keep the objective function with the objective function val as a hard constraint.
-    val newConstraint = new ConvexConstraintOptimizer(
-      id,
-      objectiveFunctionVal,
-      totalZindices,
-      config.stepSize,
-      totalZindices.map(t => (t, 0.0)).toMap,
-      optimizerBaseFunctions,
-      config.tolerance)
-
     val newConstraints = hardFunctions ++ {
-      if (optimizerBaseFunctions.size > 0) { List(newConstraint) } else { List.empty }
+      if (optimizerBaseFunctions.size > 0) {
+        // Keep the objective function with the objective function val as a hard constraint.
+        val newConstraint = new ConvexConstraintOptimizer(
+          { id = id + 1; id },
+          objectiveFunctionVal,
+          totalZindices,
+          config.stepSize,
+          totalZindices.map(t => (t, 0.0)).toMap,
+          optimizerBaseFunctions,
+          config.tolerance)
+        List(newConstraint)
+      } else { List.empty }
     }
-
-    val stricterConfig = InferencerConfig(lazyThreshold = None, absoluteEpsilon = 1e-5, relativeEpsilon = 1e-5)
 
     val groundedPredicatesToTest = if (groundedPredicateNames.isEmpty) {
       idToGpMap.filter(!_._2.truthValue.isDefined)
@@ -113,61 +126,203 @@ object MinimaExplorer {
     // For each grounded predicate create two problems, one with the min x and one with the min -x
     val result = groundedPredicatesToTest.map {
       case (zIndex, gp) =>
-        val minNewFunction = new HingeLossOptimizer(
-          { id = id + 1; id },
-          1.0,
-          0.0,
-          Array(zIndex),
-          config.stepSize,
-          Map(zIndex -> 0.0),
-          Array(1.0))
+        val (naivePredicateMinBound, naivePredicateMaxBound) = naivePredicateBounds.getOrElse(zIndex, (Double.MaxValue, Double.MinValue))
+        if (naivePredicateMinBound == 0.0 && naivePredicateMaxBound == 1.0) {
+          (gp.toString, solution.results.get(zIndex), 0.0, 1.0)
+        } else {
 
-        val minSolution = Wolf.solveProblem(
-          newConstraints ++ List(minNewFunction),
-          None,
-          stricterConfig.getWolfConfig)
+          val minNewFunction = new SquaredHingeLossOptimizer(
+            { id = id + 1; id },
+            1.0,
+            0.0,
+            Array(zIndex),
+            config.stepSize,
+            Map(zIndex -> 0.0),
+            Array(1.0))
 
-        //        println(minSolution.stats)
-        //        val minObjVal: Double = (newConstraints ++ List(minNewFunction)).foldLeft(0.0) {
-        //          case (sum, nextFunction) => sum + nextFunction.evaluateAt(solution.results)
-        //        }
-        //        println(minObjVal)
-        //
-        //        minSolution.results.foreach {
-        //          case (id, truthValue) =>
-        //            val gp = idToGpMap(id)
-        //            println(s"\n$gp has truth value $truthValue")
-        //        }
+          val minSolution = Wolf.solveProblem(
+            newConstraints ++ List(minNewFunction),
+            None,
+            config.getWolfConfig)
 
-        val maxNewFunction = new HingeLossOptimizer(
-          { id = id + 1; id },
-          1.0,
-          -1.0,
-          Array(zIndex),
-          config.stepSize,
-          Map(zIndex -> 0.0),
-          Array(-1.0))
+          //        println(minSolution.stats)
+          //        val minObjVal: Double = (newConstraints ++ List(minNewFunction)).foldLeft(0.0) {
+          //          case (sum, nextFunction) => sum + nextFunction.evaluateAt(solution.results)
+          //        }
+          //        println(minObjVal)
+          //
+          //        minSolution.results.foreach {
+          //          case (id, truthValue) =>
+          //            val gp = idToGpMap(id)
+          //            println(s"\n$gp has truth value $truthValue")
+          //        }
 
-        val maxSolution = Wolf.solveProblem(
-          newConstraints ++ List(maxNewFunction),
-          None,
-          stricterConfig.getWolfConfig)
+          val maxNewFunction = new SquaredHingeLossOptimizer(
+            { id = id + 1; id },
+            1.0,
+            -1.0,
+            Array(zIndex),
+            config.stepSize,
+            Map(zIndex -> 0.0),
+            Array(-1.0))
 
-        println(maxSolution.stats)
-        val maxObjVal: Double = (newConstraints ++ List(maxNewFunction)).foldLeft(0.0) {
-          case (sum, nextFunction) => sum + nextFunction.evaluateAt(solution.results)
+          val maxSolution = Wolf.solveProblem(
+            newConstraints ++ List(maxNewFunction),
+            None,
+            config.getWolfConfig)
+
+          //        println(maxSolution.stats)
+          //        val maxObjVal: Double = (newConstraints ++ List(maxNewFunction)).foldLeft(0.0) {
+          //          case (sum, nextFunction) => sum + nextFunction.evaluateAt(solution.results)
+          //        }
+          //        println(maxObjVal)
+          //
+          //        maxSolution.results.foreach {
+          //          case (id, truthValue) =>
+          //            val gp = idToGpMap(id)
+          //            println(s"\n$gp has truth value $truthValue")
+          //        }
+          val minValue = math.min(naivePredicateMinBound, minSolution.results.get(zIndex))
+          val maxValue = math.max(naivePredicateMaxBound, maxSolution.results.get(zIndex))
+
+          val boundedMaxValue = roundUpWithCutoff(maxValue)
+          val boundedMinValue = roundUpWithCutoff(minValue)
+
+          (gp.toString, roundUpDouble(solution.results.get(zIndex)), boundedMinValue, boundedMaxValue)
+          //(gp.toString, solution.results.get(zIndex), minValue, maxValue)
         }
-        println(maxObjVal)
-
-        maxSolution.results.foreach {
-          case (id, truthValue) =>
-            val gp = idToGpMap(id)
-            println(s"\n$gp has truth value $truthValue")
-        }
-
-        (gp.toString, solution.results.get(zIndex), minSolution.results.get(zIndex), maxSolution.results.get(zIndex))
 
     }
     result.toList
+  }
+}
+
+object NaiveMinimaExplorer {
+  def evaluateSingleFunction(function: Option[OptimizableFunction], variableBindings: Map[Int, Double],
+    perturbedVariableBindings: Map[Int, Double] = Map.empty): Double = {
+    function match {
+      case Some(nextF) =>
+        val variables = nextF.idToIndexMappings
+        val x = variables.map {
+          v =>
+            perturbedVariableBindings.get(v).getOrElse(variableBindings(v))
+        }
+        nextF.evaluateAtEfficient(x)
+      case None => 0.0
+    }
+  }
+
+  def evaluatePerturbation(groundedPredicatesToFunctions: Map[Int, (List[GroundedRule], Double)],
+    groundedPredicatesToConstraints: Map[Int, (List[GroundedConstraint], Double)],
+    variableBindings: Map[Int, Double], perturbedValue: Double): Set[Int] = {
+    val candidateVariablesForFunctions = groundedPredicatesToFunctions.flatMap {
+      case (v, (listOfGroundedRules, totalContribution)) =>
+        if (variableBindings(v) != perturbedValue) {
+          // For that int change to 0.
+          val newContribution = listOfGroundedRules.foldLeft(0.0) {
+            case (aggr, nextRule) =>
+              val perturbedVariableBindings = Map(v -> perturbedValue)
+              aggr + evaluateSingleFunction(nextRule.createOptimizableFunction(1.0), variableBindings, perturbedVariableBindings)
+          }
+          if (newContribution <= totalContribution) {
+            Some(v)
+          } else {
+            None
+          }
+        } else { None }
+    }.toSet
+
+    val candidateVariablesForConstraints = groundedPredicatesToConstraints.flatMap {
+      case (v, (listOfGroundedConstraints, totalViolation)) =>
+        if (variableBindings(v) != perturbedValue) {
+          // For that int change to 0.
+          val newViolation = listOfGroundedConstraints.foldLeft(0.0) {
+            case (aggr, nextConstraint) =>
+              val perturbedVariableBindings = Map(v -> perturbedValue)
+              aggr + evaluateSingleFunction(nextConstraint.createOptimizableFunction(1.0, -1), variableBindings, perturbedVariableBindings)
+          }
+          if (newViolation <= totalViolation) {
+            Some(v)
+          } else {
+            None
+          }
+        } else { None }
+    }.toSet
+    val results = candidateVariablesForFunctions.intersect(candidateVariablesForConstraints)
+    //println("Candidate variables to change to value: " + perturbedValue + " : " + results)
+    results
+  }
+
+  def evaluatePerturbationRecursively(groundedPredicatesToFunctions: Map[Int, (List[GroundedRule], Double)],
+    groundedPredicatesToConstraints: Map[Int, (List[GroundedConstraint], Double)],
+    variableBindings: Map[Int, Double], perturbedValue: Double, accumulatedIndexes: Set[Int] = Set.empty): Set[Int] = {
+    val candidateIndexes = evaluatePerturbation(groundedPredicatesToFunctions, groundedPredicatesToConstraints, variableBindings, perturbedValue)
+    if (candidateIndexes.size == 0) {
+      accumulatedIndexes
+    } else {
+      val perturbedBindings = candidateIndexes.map(i => (i, perturbedValue))
+      evaluatePerturbationRecursively(groundedPredicatesToFunctions, groundedPredicatesToConstraints,
+        variableBindings ++ perturbedBindings, perturbedValue, accumulatedIndexes ++ candidateIndexes)
+    }
+  }
+
+  def exploreResultsNaive(groundedRules: List[GroundedRule], groundedConstraints: List[GroundedConstraint],
+    varBindings: IntDoubleHashMap) = {
+    // Create a map for each predicate with the related functions, constraints and their value at the given point.
+    // TODO: this is the most naive way possible, optimize.
+    val variableBindings = varBindings.toScalaMap
+
+    var groundedPredicatesToFunctions = Map[Int, (List[GroundedRule], Double)]()
+    var groundedPredicatesToConstraints = Map[Int, (List[GroundedConstraint], Double)]()
+
+    groundedRules.foreach {
+      groundedRule =>
+        val contributionOfGroundedRule = evaluateSingleFunction(groundedRule.createOptimizableFunction(1.0),
+          variableBindings)
+        groundedRule.variables.map {
+          v =>
+            groundedPredicatesToFunctions.get(v) match {
+              case Some((listOfGroundedRules, totalContribution)) =>
+                groundedPredicatesToFunctions += (v -> (listOfGroundedRules ++ List(groundedRule), totalContribution + contributionOfGroundedRule))
+              case None =>
+                groundedPredicatesToFunctions += (v -> (List(groundedRule), contributionOfGroundedRule))
+            }
+        }
+    }
+
+    groundedConstraints.foreach {
+      groundedConstraint =>
+        val violationOfGroundedConstraint = evaluateSingleFunction(groundedConstraint.createOptimizableFunction(1.0, -1),
+          variableBindings)
+        groundedConstraint.variables.map {
+          v =>
+            groundedPredicatesToConstraints.get(v) match {
+              case Some((listOfGroundedConstraints, totalViolation)) =>
+                groundedPredicatesToConstraints += (v -> (listOfGroundedConstraints ++ List(groundedConstraint), totalViolation + violationOfGroundedConstraint))
+              case None =>
+                groundedPredicatesToConstraints += (v -> (List(groundedConstraint), violationOfGroundedConstraint))
+
+            }
+        }
+    }
+
+    // Perturbate the evaluation of the functions, one variable at a time.
+    // Keep only variables that don't break the constraints more and don't increase the value of the function.
+    // Most naive way possible, check only 0 and 1.
+    // TODO: proper bounds.
+    val bounds0 = evaluatePerturbationRecursively(groundedPredicatesToFunctions, groundedPredicatesToConstraints, variableBindings, 0) ++
+      evaluatePerturbationRecursively(groundedPredicatesToFunctions, groundedPredicatesToConstraints, variableBindings, 0.1)
+    val bounds1 = evaluatePerturbationRecursively(groundedPredicatesToFunctions, groundedPredicatesToConstraints, variableBindings, 1) ++
+      evaluatePerturbationRecursively(groundedPredicatesToFunctions, groundedPredicatesToConstraints, variableBindings, 0.9)
+
+    val bounds0and1 = bounds0.intersect(bounds1)
+    val bounds0only = bounds0.diff(bounds1)
+    val bounds1only = bounds1.diff(bounds0)
+
+    val results = bounds0and1.flatMap { i => Map(i -> (0.0, 1.0)) }.toMap ++
+      bounds0only.flatMap { i => Map(i -> (0.0, variableBindings(i))) }.toMap ++
+      bounds1only.flatMap { i => Map(i -> (variableBindings(i), 1.0)) }.toMap
+
+    results
   }
 }
