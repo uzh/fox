@@ -38,7 +38,7 @@ object CommandLinePslInferencer extends App {
     println(inferenceResults.printSelected(queryList))
   } else {
     val results = MinimaExplorer.exploreFromFile(pslFile, config, queryList)
-    if (!mapOfArgs.get("--threeValuedLogic").isDefined) {
+    if (mapOfArgs.get("--threeValuedLogic").isDefined) {
       for (result <- results) {
         if (result._3 == 0 && result._4 == 0) {
           println(s"${result._1}: false")
