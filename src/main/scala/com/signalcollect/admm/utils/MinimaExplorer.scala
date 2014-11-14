@@ -22,14 +22,7 @@ package com.signalcollect.admm.utils;
 
 import java.io.File
 import com.signalcollect.util.IntDoubleHashMap
-import com.signalcollect.psl.model.GroundedConstraint
-import com.signalcollect.psl.model.GroundedRule
 import com.signalcollect.admm.optimizers.OptimizableFunction
-import com.signalcollect.admm.Wolf
-import com.signalcollect.psl.Grounding
-import com.signalcollect.psl.Inferencer
-import com.signalcollect.psl.InferencerConfig
-import com.signalcollect.psl.parser.PslParser
 import com.signalcollect.admm.optimizers.ConvexConstraintOptimizer
 import com.signalcollect.admm.optimizers.LinearLossOptimizer
 import com.signalcollect.admm.optimizers.LinearConstraintOptimizer
@@ -37,7 +30,14 @@ import com.signalcollect.admm.optimizers.HingeLossOptimizer
 import com.signalcollect.admm.optimizers.SquaredHingeLossOptimizer
 import com.signalcollect.admm.optimizers.SquaredLossOptimizer
 import com.signalcollect.admm.optimizers.OptimizerBase
-
+import com.signalcollect.admm.Wolf
+import com.signalcollect.psl.Grounding
+import com.signalcollect.psl.Inferencer
+import com.signalcollect.psl.InferencerConfig
+import com.signalcollect.psl.parser.PslParser
+import com.signalcollect.psl.parser.ParsedPslFile
+import com.signalcollect.psl.model.GroundedConstraint
+import com.signalcollect.psl.model.GroundedRule
 
 /**
  * Explores the multiple minima based on one solution.
@@ -50,7 +50,7 @@ object MinimaExplorer {
   }
 
   def roundUpWithCutoff(value: Double, exponent: Int = 3) = {
-    if (value >= 0.9) { 1.0 } else if (value <= 0.1) { 0.0 } else { roundUpDouble(value, exponent) }
+    if (value >= 0.85) { 1.0 } else if (value <= 0.15) { 0.0 } else { roundUpDouble(value, exponent) }
   }
 
   def divideFunctionsAndConstraints(functionsAndConstraints: List[OptimizableFunction]) = {
@@ -79,6 +79,17 @@ object MinimaExplorer {
   def exploreFromString(example: String, config: InferencerConfig = InferencerConfig(),
     groundedPredicateNames: List[String] = List.empty): List[(String, Double, Double, Double)] = {
     val pslData = PslParser.parse(example)
+    runExploration(pslData, config, groundedPredicateNames)
+  }
+
+  def exploreFromFile(example: File, config: InferencerConfig = InferencerConfig(),
+    groundedPredicateNames: List[String] = List.empty): List[(String, Double, Double, Double)] = {
+    val pslData = PslParser.parse(example)
+    runExploration(pslData, config, groundedPredicateNames)
+  }
+
+  def runExploration(pslData: ParsedPslFile, config: InferencerConfig = InferencerConfig(),
+    groundedPredicateNames: List[String] = List.empty): List[(String, Double, Double, Double)] = {
     // This is the same as the inferencer, we copy it so we don't have to recreate the functions.
     val (groundedRules, groundedConstraints, idToGpMap) = Grounding.ground(pslData, config.isBounded, config.removeSymmetricConstraints)
     val functions = groundedRules.flatMap(_.createOptimizableFunction(config.stepSize, config.tolerance, config.breezeOptimizer))
@@ -311,8 +322,10 @@ object NaiveMinimaExplorer {
     // Most naive way possible, check only 0 and 1.
     // TODO: proper bounds.
     val bounds0 = evaluatePerturbationRecursively(groundedPredicatesToFunctions, groundedPredicatesToConstraints, variableBindings, 0) ++
+      evaluatePerturbationRecursively(groundedPredicatesToFunctions, groundedPredicatesToConstraints, variableBindings, 0.01) ++
       evaluatePerturbationRecursively(groundedPredicatesToFunctions, groundedPredicatesToConstraints, variableBindings, 0.1)
     val bounds1 = evaluatePerturbationRecursively(groundedPredicatesToFunctions, groundedPredicatesToConstraints, variableBindings, 1) ++
+      evaluatePerturbationRecursively(groundedPredicatesToFunctions, groundedPredicatesToConstraints, variableBindings, 0.99) ++
       evaluatePerturbationRecursively(groundedPredicatesToFunctions, groundedPredicatesToConstraints, variableBindings, 0.9)
 
     val bounds0and1 = bounds0.intersect(bounds1)
