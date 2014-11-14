@@ -35,6 +35,7 @@ import com.signalcollect.admm.optimizers.LinearLossOptimizer
 import com.signalcollect.admm.optimizers.LinearConstraintOptimizer
 import com.signalcollect.admm.optimizers.HingeLossOptimizer
 import com.signalcollect.admm.optimizers.SquaredHingeLossOptimizer
+import com.signalcollect.admm.optimizers.SquaredLossOptimizer
 import com.signalcollect.admm.optimizers.OptimizerBase
 
 /**
@@ -43,7 +44,8 @@ import com.signalcollect.admm.optimizers.OptimizerBase
  */
 object MinimaExplorer {
 
-  def exploreFromString(example: String, config: InferencerConfig): List[(String, Double, Double)] = {
+  def exploreFromString(example: String, config: InferencerConfig = InferencerConfig(),
+    groundedPredicateNames: List[String] = List.empty): List[(String, Double, Double, Double)] = {
     val pslData = PslParser.parse(example)
     // This is the same as the inferencer, we copy it so we don't have to recreate the functions.
     val (groundedRules, groundedConstraints, idToGpMap) = Grounding.ground(pslData, config.isBounded, config.removeSymmetricConstraints)
@@ -51,23 +53,13 @@ object MinimaExplorer {
     val constraints = groundedConstraints.flatMap(_.createOptimizableFunction(config.stepSize, config.tolerance, config.breezeOptimizer))
     val functionsAndConstraints = functions ++ constraints
     println(s"Problem converted to consensus optimization with ${functions.size} functions and ${constraints.size} constraints that are not trivially true.")
-
-    val solution = Wolf.solveProblem(
-      functionsAndConstraints,
-      None,
-      config.getWolfConfig)
-
-    val objectiveFunctionVal: Double = functionsAndConstraints.foldLeft(0.0) {
-      case (sum, nextFunction) => sum + nextFunction.evaluateAt(solution.results)
-    }
-
-    println(s"First inference completed, objective value: $objectiveFunctionVal")
-
     val optimizerBaseFunctions = functionsAndConstraints.flatMap {
       f =>
         f match {
           case h: HingeLossOptimizer => Some(h)
           case s: SquaredHingeLossOptimizer => Some(s)
+          case l: LinearLossOptimizer => Some(l)
+          case q: SquaredLossOptimizer => Some(q)
           case _ => None
         }
     }
@@ -79,8 +71,20 @@ object MinimaExplorer {
           case _ => None
         }
     }
-
     val totalZindices = optimizerBaseFunctions.flatMap(_.zIndices).toSet.toArray
+    println(s"Number of optimizer base functions: ${optimizerBaseFunctions.size}, number of constraints: ${hardFunctions.size}")
+
+    val solution = Wolf.solveProblem(
+      functionsAndConstraints,
+      None,
+      config.getWolfConfig)
+
+    val objectiveFunctionVal: Double = functionsAndConstraints.foldLeft(0.0) {
+      case (sum, nextFunction) => sum + nextFunction.evaluateAt(solution.results)
+    }
+
+    println(s"First inference completed, objective value: $objectiveFunctionVal")
+    println(solution.stats)
 
     var id = functions.size + constraints.size
 
@@ -94,12 +98,22 @@ object MinimaExplorer {
       optimizerBaseFunctions,
       config.tolerance)
 
-    val newConstraints = hardFunctions ++ List(newConstraint)
+    val newConstraints = hardFunctions ++ {
+      if (optimizerBaseFunctions.size > 0) { List(newConstraint) } else { List.empty }
+    }
+
+    val stricterConfig = InferencerConfig(lazyThreshold = None, absoluteEpsilon = 1e-5, relativeEpsilon = 1e-5)
+
+    val groundedPredicatesToTest = if (groundedPredicateNames.isEmpty) {
+      idToGpMap.filter(!_._2.truthValue.isDefined)
+    } else {
+      idToGpMap.filter(!_._2.truthValue.isDefined) filter (gp => groundedPredicateNames.exists(gp._2.toString.contains(_)))
+    }
 
     // For each grounded predicate create two problems, one with the min x and one with the min -x
-    val result = idToGpMap.map {
+    val result = groundedPredicatesToTest.map {
       case (zIndex, gp) =>
-        val minNewFunction = new LinearLossOptimizer(
+        val minNewFunction = new HingeLossOptimizer(
           { id = id + 1; id },
           1.0,
           0.0,
@@ -111,12 +125,24 @@ object MinimaExplorer {
         val minSolution = Wolf.solveProblem(
           newConstraints ++ List(minNewFunction),
           None,
-          config.getWolfConfig).results.get(zIndex)
+          stricterConfig.getWolfConfig)
 
-        val maxNewFunction = new LinearLossOptimizer(
+        //        println(minSolution.stats)
+        //        val minObjVal: Double = (newConstraints ++ List(minNewFunction)).foldLeft(0.0) {
+        //          case (sum, nextFunction) => sum + nextFunction.evaluateAt(solution.results)
+        //        }
+        //        println(minObjVal)
+        //
+        //        minSolution.results.foreach {
+        //          case (id, truthValue) =>
+        //            val gp = idToGpMap(id)
+        //            println(s"\n$gp has truth value $truthValue")
+        //        }
+
+        val maxNewFunction = new HingeLossOptimizer(
           { id = id + 1; id },
           1.0,
-          0.0,
+          -1.0,
           Array(zIndex),
           config.stepSize,
           Map(zIndex -> 0.0),
@@ -125,11 +151,22 @@ object MinimaExplorer {
         val maxSolution = Wolf.solveProblem(
           newConstraints ++ List(maxNewFunction),
           None,
-          config.getWolfConfig).results.get(zIndex)
+          stricterConfig.getWolfConfig)
 
-        val minValue = math.min(minSolution, maxSolution)
-        val maxValue = math.max(minSolution, maxSolution)
-        (gp.toString, minValue, maxValue)
+        println(maxSolution.stats)
+        val maxObjVal: Double = (newConstraints ++ List(maxNewFunction)).foldLeft(0.0) {
+          case (sum, nextFunction) => sum + nextFunction.evaluateAt(solution.results)
+        }
+        println(maxObjVal)
+
+        maxSolution.results.foreach {
+          case (id, truthValue) =>
+            val gp = idToGpMap(id)
+            println(s"\n$gp has truth value $truthValue")
+        }
+
+        (gp.toString, solution.results.get(zIndex), minSolution.results.get(zIndex), maxSolution.results.get(zIndex))
+
     }
     result.toList
   }

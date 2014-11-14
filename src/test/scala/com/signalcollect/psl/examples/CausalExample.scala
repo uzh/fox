@@ -191,12 +191,10 @@ GroundedPredicate 40: causes[ ] (w, u) : [0.0050777510230964815, 0.9976288302377
   //fact [0]: causes(y,u)
 
   it should "provide a solution consistent for the causal example" in {
-    val config = InferencerConfig(computeObjectiveValueOfSolution = true)
-    val inferenceResults = Inferencer.runInferenceFromString(causal, config = config)
-    val results = MinimaExplorer.exploreFromString(causal, config)
-    println(inferenceResults)
+    val config = InferencerConfig(computeObjectiveValueOfSolution = true, lazyThreshold = None)
+    val results = MinimaExplorer.exploreFromString(causal, config, List("cond-indep"))
     for (result <- results) {
-      println(s"${result._1}: [${result._2}, ${result._3}]")
+      println(s"${result._1}: ${result._2} [${result._3}, ${result._4}]")
     }
   }
 }

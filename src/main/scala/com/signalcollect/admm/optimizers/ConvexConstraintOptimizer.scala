@@ -35,14 +35,15 @@ class ConvexConstraintOptimizer(
   val tolerance: Double = 0.0) extends OptimizerBase(setId, constant, zIndices, stepSize, initialZmap, Array(0)) {
 
   val zIndicesPerFunction = basicFunctions.flatMap { f =>
-    Map(f -> zIndices.zipWithIndex.filter(_._1 == f.zIndices).map(_._2))
+    val zIndicesF = zIndices.zipWithIndex.flatMap { idIndex => if (f.zIndices.toList.contains(idIndex._1)) { Some(idIndex._2) } else { None } }
+    Map(f.id -> zIndicesF)
   }.toMap
 
   def basicFunction = {
     new Function1[DenseVector[Double], Double] {
       def apply(x: DenseVector[Double]) = {
         val total = basicFunctions.map { f =>
-          val xInF = zIndicesPerFunction.get(f).get.map(x.valueAt(_))
+          val xInF = zIndicesPerFunction.get(f.id).get.map(x.valueAt(_))
           f.evaluateAtEfficient(xInF)
         }.sum
         if (total > constant) {
@@ -73,7 +74,7 @@ class ConvexConstraintOptimizer(
     setZ(consensusAssignments)
     val newXIfNoLoss = z - (y / stepSize)
     val total = basicFunctions.map { f =>
-      val xInF = zIndicesPerFunction.get(f).get.map(x.valueAt(_))
+      val xInF = zIndicesPerFunction.get(f.id).get.map(newXIfNoLoss.valueAt(_))
       f.evaluateAtEfficient(xInF)
     }.sum
     x = newXIfNoLoss
@@ -82,13 +83,12 @@ class ConvexConstraintOptimizer(
       // Project x onto total <= constant region.
       // Try to do successive projections (naive alternating projection).
       basicFunctions.map { f =>
-        val xInF = DenseVector(zIndicesPerFunction.get(f).get.map(x.valueAt(_)))
+        val xInF = DenseVector(zIndicesPerFunction.get(f.id).get.map(x.valueAt(_)))
         var distance = -constant / f.length
         distance += xInF.dot(f.unitNormalVector)
         val newX = xInF - (f.unitNormalVector * distance)
-        zIndicesPerFunction.get(f).get.zipWithIndex.map { case (i, j) => x.update(j, newX(i)) }
+        zIndicesPerFunction.get(f.id).get.zipWithIndex.map { case (i, j) => x.update(i, newX(j)) }
       }
-
     }
   }
 

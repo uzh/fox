@@ -31,6 +31,6 @@ case class Predicate(
  override def toString = {
     val propertiesString = if (properties.isEmpty) "" else " " + properties.mkString("[", ", ", "]")
     val positionPlaceholders = (1 to arity).map(_ => "_").mkString("(", ", ", ")")
-    s"predicate$propertiesString ${prior.getOrElse("")}: $name$positionPlaceholders"
+    s"relation$propertiesString ${prior.getOrElse("")}: $name$positionPlaceholders"
   }
 }
