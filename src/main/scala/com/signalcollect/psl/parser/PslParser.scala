@@ -59,7 +59,7 @@ import com.signalcollect.psl.model.VariableOrIndividual
 object PslParser extends ParseHelper[ParsedPslFile] with ImplicitConversions {
 
   lexical.delimiters ++= List(
-    "(", ")", "&&", "||", "=>", "=", "!", ",", ":", "_")
+    "(", ")", "&", "|", "=>", "=", "!", ",", ":", "_")
   protected override val whiteSpace = """(\s|//.*|#.*|(?m)/\*(\*(?!/)|[^*])*\*/)+""".r
 
   def defaultParser = pslFile
@@ -125,7 +125,7 @@ object PslParser extends ParseHelper[ParsedPslFile] with ImplicitConversions {
   val hardRuleWeight = Double.MaxValue
 
   lazy val rule: Parser[Rule] = {
-    "rule" ~> opt(ruleProperties) ~ ":" ~ opt(repsep(predicateInRule, "&&") ~ "=>") ~ opt(existentialClause) ~ repsep(predicateInRule, "||") ^^ {
+    "rule" ~> opt(ruleProperties) ~ ":" ~ opt(repsep(predicateInRule, "&" ~ opt("&")) ~ "=>") ~ opt(existentialClause) ~ repsep(predicateInRule, "|" ~ opt("|")) ^^ {
       case properties ~ ":" ~ bodyClause ~ existClause ~ headClause =>
         // If the properties map contains a 'distanceMeasure' property,
         val distanceMeasure = properties.flatMap(_.get("distanceMeasure")).
