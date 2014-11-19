@@ -2,11 +2,12 @@ package com.signalcollect.psl
 
 import java.io.File
 import com.signalcollect.psl.model.GroundedPredicate
+import com.signalcollect.admm.utils.MinimaExplorer
 
 object CommandLinePslInferencer extends App {
 
   val usage = """
-    Usage: fox filename [--absEps num] [--relEps num] [--queryList "pred1, pred2"]
+    Usage: fox filename [--absEps num] [--relEps num] [--queryList "pred1, pred2"] [--multipleMinima true] [--threeValuedLogic true]
   """
 
   if (args.length <= 1) {
@@ -29,11 +30,31 @@ object CommandLinePslInferencer extends App {
   val config = InferencerConfig(
     absoluteEpsilon = mapOfArgs.get("--absEps").getOrElse("1e-8").toDouble,
     relativeEpsilon = mapOfArgs.get("--relEps").getOrElse("1e-3").toDouble)
-  val inferenceResults = Inferencer.runInferenceFromFile(
-    pslFile = pslFile,
-    config = config)
 
-  println(inferenceResults.printSelected(queryList))
+  if (!mapOfArgs.get("--multipleMinima").isDefined) {
+    val inferenceResults = Inferencer.runInferenceFromFile(
+      pslFile = pslFile,
+      config = config)
+    println(inferenceResults.printSelected(queryList))
+  } else {
+    val results = MinimaExplorer.exploreFromFile(pslFile, config, queryList)
+    if (mapOfArgs.get("--threeValuedLogic").isDefined) {
+      for (result <- results) {
+        if (result._3 == 0 && result._4 == 0) {
+          println(s"${result._1}: false")
+        } else if (result._3 == 1 && result._4 == 1) {
+          println(s"${result._1}: true")
+        } else {
+          println(s"${result._1}: unknown")
+        }
+      }
+    } else {
+      for (result <- results) {
+        println(s"${result._1}: ${result._2} [${result._3}, ${result._4}]")
+      }
+    }
+  }
+
   System.exit(0)
 
 }

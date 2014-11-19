@@ -206,7 +206,7 @@ case class GroundedRule(
       // We can rewrite this by adding a constraint: coeff*x - constant <= 0, or coeff*x <= constant
       val optimizableFunction: OptimizableFunction =
         if (breezeOptimizer) {
-          new LinearConstraintOptimizer(id, "leq", constant, zIndices, stepSize, zMap, coefficientMatrix)
+          new LinearConstraintOptimizer(id, "leq", constant, zIndices, stepSize, zMap, coefficientMatrix, tolerance)
         } else {
           Optimizer.linearConstraint(stepSize, zMap, "leq", constant, coefficientMatrix, zIndices, tolerance, id)
         }
