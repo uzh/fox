@@ -27,7 +27,6 @@ import com.signalcollect.psl.Inferencer
 import com.signalcollect.psl.InferencerConfig
 import com.signalcollect.psl.parser.PslParser
 import com.signalcollect.util.TestAnnouncements
-import com.signalcollect.admm.utils.MinimaExplorer
 
 class SetExample extends FlatSpec with Matchers with TestAnnouncements {
 
