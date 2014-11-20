@@ -35,6 +35,9 @@ object Grounding {
     val allPossibleSetsAndIndividuals = generateAllPossibleSetsAsIndividuals(pslData.rulesWithPredicates, pslData.individualsByClass)
     val groundedPredicates = createGroundedPredicates(pslData.rulesWithPredicates, pslData.predicates, pslData.facts, allPossibleSetsAndIndividuals, removeSymmetricConstraints)
     val idToGpMap = groundedPredicates.values.map(gp => (gp.id, gp)).toMap
+    // TODO(sara) : reverse order grounded constraints and rules and fix the ids.
+    // Then we can use some of the constraints (e.g. symmetric with only one unbound grounded predicate) to assign
+    // values to the grounded predicates before passing them to the rules.
     val groundedRules = createGroundedRules(pslData.rulesWithPredicates, groundedPredicates, allPossibleSetsAndIndividuals)
     val groundedConstraints = createGroundedConstraints(pslData.predicates, groundedPredicates, allPossibleSetsAndIndividuals,
       groundedRules.size, pslData.rulesWithPredicates.size, removeSymmetricConstraints)
@@ -63,13 +66,13 @@ object Grounding {
       // For each variable try all the individuals that are in the intersection of the classes it has.
       val allMappings = variables.map {
         variable =>
-          (variable.name,
+          (variable.value,
             if (variable.classTypes.isEmpty) {
-              individuals(PslClass("_")).map(v => Individual(v.name))
+              individuals(PslClass("_")).map(v => Individual(v.value))
             } else {
               val sets = variable.classTypes.map(individuals(_)).toList
               val intersection = sets.foldLeft(sets(0))(_ & _)
-              intersection.map(v => Individual(v.name))
+              intersection.map(v => Individual(v.value))
             })
       }.toMap
 
@@ -146,8 +149,8 @@ object Grounding {
           }.toSet
         }.toSet
     }.toSet
-    
-    if (setClasses.isEmpty){
+
+    if (setClasses.isEmpty) {
       return individuals
     }
 
@@ -188,14 +191,15 @@ object Grounding {
           bindings.flatMap {
             binding =>
               val bodyContribution = rule.body.map(p => (p, p.varsOrIndsWithClasses.map {
-                case v: Variable => binding(v.name)
+                case v: Variable => binding(v.value)
                 case i: Individual => Individual(i.value)
               }))
               val headContribution = rule.head.map(p => (p, p.varsOrIndsWithClasses.map {
-                case v: Variable => binding(v.name)
+                case v: Variable => binding(v.value)
                 case i: Individual => Individual(i.value)
               }))
-              bodyContribution ++ headContribution
+              val totalContribution = bodyContribution ++ headContribution
+              totalContribution
           }
       }.toSet
 
@@ -307,7 +311,12 @@ object Grounding {
               rule.head.map {
                 // For each predicate in rule in the head, substitute the affected variables with this binding.
                 pInR =>
-                  val newVars = pInR.variableOrIndividual.map { v => if (existBinding.contains(v.name)) existBinding(v.name) else v }
+                  val newVars = pInR.variableOrIndividual.map {
+                    v =>
+                      if (existBinding.contains(v.value)) {
+                        existBinding(v.value)
+                      } else { v }
+                  }
                   PredicateInRule(pInR.name, newVars, pInR.negated, pInR.predicate)
               }
           }.distinct
@@ -321,7 +330,6 @@ object Grounding {
           binding =>
             val groundedBody = newRule.body.map(getGroundedPredicate(groundedPredicates, _, binding)).flatten
             val groundedHead = newRule.head.map(getGroundedPredicate(groundedPredicates, _, binding)).flatten
-            // TODO: change also the rule by adding new predicates in rule...
             val unboundGroundedPredicates = groundedHead.filter(!_.truthValue.isDefined) ::: groundedBody.filter(!_.truthValue.isDefined)
             if (unboundGroundedPredicates.size > 0) {
               Some(GroundedRule({ id += 1; id }, newRule, groundedBody, groundedHead))
@@ -425,9 +433,25 @@ object Grounding {
    */
   def getGroundedPredicate(groundedPredicates: Map[(String, List[Individual]), GroundedPredicate],
     p: PredicateInRule, binding: Map[String, Individual]): Option[GroundedPredicate] = {
-    val key = (p.name, p.varsOrIndsWithClasses.map {
-      case v: Variable => binding(v.name)
-      case i: Individual => Individual(i.name)
+    // If the variables is a set of variables, union their bindings.
+    val key = (p.name, p.allVarsOrIndsWithClasses.map {
+      case v: Variable =>
+        if (!v.set) {
+          binding(v.value)
+        } else {
+          val unionOfBindings = v.varsOrIndividualsInSet.flatMap { a =>
+            binding.get(a)
+          }.filter(_.value != "")
+          val notSets = unionOfBindings.filter(!_.set).map(_.toString)
+          val sets = unionOfBindings.filter(_.set).flatMap(_.varsOrIndividualsInSet)
+          val result = (sets ++ notSets).toList.sorted
+          if (result.size > 1) {
+            Individual(result.toSet.toString())
+          } else {
+            Individual(result(0))
+          }
+        }
+      case i: Individual => Individual(i.value)
     })
     getGroundedPredicate(groundedPredicates, key)
   }

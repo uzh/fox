@@ -34,10 +34,12 @@ class SetExample extends FlatSpec with Matchers with TestAnnouncements {
 predicate : causes(Set[Variable], Set[Variable])
 
 //rule: !causes(X, X)
-rule: causes(x ,Y) => causes(Y,x)
-//rule: causes(X,Y)  && causes(Y,Z) => causes(X,Z)
+rule: causes(X ,Y) => causes(Y,X)
+rule: causes(X,Y)  && causes(X,Z) => causes(X,{Y,Z})
 
-fact: causes(x, {z, y})
+class Variable: x,y,z
+
+fact: causes({x, z}, y)
 //fact[0.3]: !causes(y, {w, u})
 //fact[0.7]: !causes({x, y} , u)
   """
