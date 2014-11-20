@@ -189,11 +189,11 @@ object Grounding {
             binding =>
               val bodyContribution = rule.body.map(p => (p, p.varsOrIndsWithClasses.map {
                 case v: Variable => binding(v.name)
-                case i: Individual => Individual(i.name)
+                case i: Individual => Individual(i.value)
               }))
               val headContribution = rule.head.map(p => (p, p.varsOrIndsWithClasses.map {
                 case v: Variable => binding(v.name)
-                case i: Individual => Individual(i.name)
+                case i: Individual => Individual(i.value)
               }))
               bodyContribution ++ headContribution
           }
@@ -231,7 +231,7 @@ object Grounding {
     val truthValues = {
       for {
         fact <- facts
-      } yield ((fact.name, fact.groundingsAsSingleIndividuals.map(_.toString)), fact.truthValue)
+      } yield ((fact.name, fact.groundingsAsSingleIndividuals.map(_.value)), fact.truthValue)
     }.toMap
 
     // Create the grounded predicates by merging the truth values.
@@ -241,7 +241,7 @@ object Grounding {
     val groundedPredicates = groundedPredicatesKeys.map {
       case (pInR, grounding) =>
         val gp = GroundedPredicate({ id += 1; id }, pInR.predicate.get, grounding,
-          truthValues.getOrElse((pInR.name, grounding.map(_.toString)), None))
+          truthValues.getOrElse((pInR.name, grounding.map(_.value)), None))
         ((pInR.name, grounding), gp)
     }.toMap
 
@@ -249,7 +249,7 @@ object Grounding {
     val groundedConstraintPredicates = groundedConstraintPredicatesKeys.map {
       case (pr, grounding) =>
         val gp = GroundedPredicate({ id += 1; id }, pr, grounding,
-          truthValues.getOrElse((pr.name, grounding.map(_.toString)), None))
+          truthValues.getOrElse((pr.name, grounding.map(_.value)), None))
         ((pr.name, grounding), gp)
     }.toMap
 

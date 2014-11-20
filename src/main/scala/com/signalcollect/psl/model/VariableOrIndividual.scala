@@ -60,6 +60,8 @@ case class Individual(name: String, classTypes: Set[PslClass] = Set.empty) exten
 
   val set = name.startsWith("Set(") && individualsInSet.size > 1
 
+  val value = this.toString
+
   def isDisjoint(that: Individual) =
     if (set) {
       if (!that.set) {
