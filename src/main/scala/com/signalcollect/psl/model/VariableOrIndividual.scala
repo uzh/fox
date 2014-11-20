@@ -22,7 +22,7 @@ package com.signalcollect.psl.model
 
 sealed trait VariableOrIndividual {
   def name: String
-  def classTypes: Set[String]
+  def classTypes: Set[PslClass]
   def isVariable: Boolean = {
     this match {
       case i: Individual => false
@@ -35,7 +35,7 @@ sealed trait VariableOrIndividual {
       case v: Variable => false
     }
   }
-  override def toString = if (!classTypes.isEmpty) { name + ":" + classTypes.mkString(",")} else {name}
+  override def toString = if (!classTypes.isEmpty) { name + ":" + classTypes.mkString(",") } else { name }
   override def equals(that: Any) = {
     that match {
       case v: VariableOrIndividual => v.name == name
@@ -45,7 +45,7 @@ sealed trait VariableOrIndividual {
 }
 
 object VariableOrIndividual {
-  def apply(name: String, classTypes: Set[String] = Set.empty): VariableOrIndividual = {
+  def apply(name: String, classTypes: Set[PslClass] = Set.empty): VariableOrIndividual = {
     if (name(0).isUpper) {
       Variable(name, classTypes)
     } else {
@@ -54,6 +54,39 @@ object VariableOrIndividual {
   }
 }
 
-case class Individual(name: String, classTypes: Set[String] = Set.empty) extends VariableOrIndividual
+case class Individual(name: String, classTypes: Set[PslClass] = Set.empty) extends VariableOrIndividual {
+  val individualsInSet =
+    name.stripPrefix("Set(").stripSuffix(")").split(",").map(_.trim()).toSet
 
-case class Variable(name: String, classTypes: Set[String] = Set.empty) extends VariableOrIndividual
+  val set = name.startsWith("Set(") && individualsInSet.size > 1
+
+  def isDisjoint(that: Individual) =
+    if (set) {
+      if (!that.set) {
+        !individualsInSet.contains(that.toString)
+      } else {
+        !individualsInSet.exists(that.individualsInSet.contains(_))
+      }
+    } else {
+      if (!that.set) {
+        name != that.name
+      } else {
+        !that.individualsInSet.contains(this.toString)
+      }
+    }
+  override def equals(that: Any) = {
+    that match {
+      case v: Individual => v.toString == this.toString
+      case _ => false
+    }
+  }
+
+  override def toString = {
+    if (set) { name } else if (!name.startsWith("Set(")) { name } else { individualsInSet.head }
+
+  }
+
+}
+
+case class Variable(name: String, classTypes: Set[PslClass] = Set.empty) extends VariableOrIndividual
+

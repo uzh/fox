@@ -27,6 +27,7 @@ import scala.util.parsing.input.CharArrayReader
 import com.signalcollect.psl.model.DistanceMeasure
 import com.signalcollect.psl.model.Individual
 import com.signalcollect.psl.model.Predicate
+import com.signalcollect.psl.model.PslClass
 import com.signalcollect.psl.model.PredicateInRule
 import com.signalcollect.psl.model.PredicateProperty
 import com.signalcollect.psl.model.Rule
@@ -58,8 +59,7 @@ import com.signalcollect.psl.model.VariableOrIndividual
  */
 object PslParser extends ParseHelper[ParsedPslFile] with ImplicitConversions {
 
-  lexical.delimiters ++= List(
-    "(", ")", "&", "|", "=>", "=", "!", ",", ":", "_")
+  lexical.delimiters ++= List("(", ")", "&", "|", "=>", "=", "!", ",", ":", "_")
   protected override val whiteSpace = """(\s|//.*|#.*|(?m)/\*(\*(?!/)|[^*])*\*/)+""".r
 
   def defaultParser = pslFile
@@ -151,15 +151,7 @@ object PslParser extends ParseHelper[ParsedPslFile] with ImplicitConversions {
   }
 
   lazy val predicate: Parser[Predicate] = {
-    "predicate" ~> opt(predicateProperties) ~ ":" ~ identifier ~ "(" ~ repsep(identifierOrDash, ",") <~ ")" ^^ {
-      case properties ~ ":" ~ name ~ "(" ~ List("") =>
-         val prior = properties.flatMap(_.get("prior")).map(_.toDouble)
-         val parsedProperties: Set[PredicateProperty] = properties match{
-           case Some(p) => 
-             p.filter(_._1 != "prior").map{a => PredicateProperty.parse(a._2)}.toSet
-           case None => Set.empty
-         }
-        Predicate(name, properties = parsedProperties, prior = prior)
+    "predicate" ~> opt(predicateProperties) ~ ":" ~ identifier ~ "(" ~ predicateClasses <~ ")" ^^ {
       case properties ~ ":" ~ name ~ "(" ~ placeholders =>
          val prior = properties.flatMap(_.get("prior")).map(_.toDouble)
          val parsedProperties: Set[PredicateProperty]= properties match{
@@ -167,10 +159,19 @@ object PslParser extends ParseHelper[ParsedPslFile] with ImplicitConversions {
              p.filter(_._1 != "prior").map{a => PredicateProperty.parse(a._2)}.toSet
            case None => Set.empty
          }
-        Predicate(name, classes = placeholders, properties = parsedProperties, prior = prior)
+        Predicate(name, classes = placeholders.map(PslClass(_)), properties = parsedProperties, prior = prior)
     }
   }
 
+  lazy val predicateClasses: Parser[List[String]]= {
+    repsep(identifierOrDashOrSquareBracket, ",") ^^ {
+      case List("") =>
+        List.empty
+      case placeholders =>
+        placeholders
+    }
+  }
+   
   lazy val truthValue: Parser[Double] = {
     "[" ~> opt("truthValue" ~> "=") ~> double <~ "]" ^^ {
       case truthValue => truthValue
@@ -178,20 +179,41 @@ object PslParser extends ParseHelper[ParsedPslFile] with ImplicitConversions {
   }
 
   lazy val fact: Parser[Fact] = {
-    "fact" ~> opt(truthValue) ~ ":" ~ opt("!") ~ identifier ~ "(" ~ repsep(identifier, ",") <~ ")" ^^ {
-      case truthValue ~ ":" ~ negation ~ predicateName ~ "(" ~ List("") =>
-        val factTruth = if (!negation.isDefined) { truthValue.getOrElse(1.0) } else 1 - truthValue.getOrElse(1.0)
-        Fact(predicateName, List.empty, Some(factTruth))
+    "fact" ~> opt(truthValue) ~ ":" ~ opt("!") ~ identifier ~ "(" ~ individualsInFact <~ ")" ^^ {
       case truthValue ~ ":" ~ negation ~ predicateName ~ "(" ~ variableGroundings =>
-        for (individual <- variableGroundings) {
-          assert(individual.forall(c => !c.isUpper),
-            s"Individuals that appear in facts have to be all lowercase, $individual contains at least one uppercase character.")
-        }
         val factTruth = if (!negation.isDefined) { truthValue.getOrElse(1.0) } else 1 - truthValue.getOrElse(1.0)
-        Fact(predicateName, variableGroundings.map(Individual(_)), Some(factTruth))
+        Fact(predicateName, variableGroundings, Some(factTruth))
     }
   }
 
+  lazy val individualsInFact: Parser[List[Set[Individual]]] = {
+    repsep(individualsInSet|individualsNotInSet, ",") ^^ {
+      case List(List("")) =>
+        List.empty
+      case variableGroundings =>
+        for (individuals <- variableGroundings) {
+          for (individual <- individuals) {
+            assert(individual.forall(c => !c.isUpper),
+              s"Individuals that appear in facts have to be all lowercase, $individual contains at least one uppercase character.")
+          }
+        }
+        variableGroundings.map( i => i.map(Individual(_)))
+    }
+  }
+  
+  lazy val individualsNotInSet: Parser[Set[String]] = {
+    identifierOrDash ^^ {
+      case indNonInSet =>
+        Set(indNonInSet)
+    }
+  }
+  lazy val individualsInSet : Parser[Set[String]] = {
+    ("{"|"[") ~> repsep(identifier, ",")  <~ ("}"|"]") ^^ {
+       case indInSet =>
+         indInSet.toSet
+    } 
+  }
+    
   lazy val pslFile: Parser[ParsedPslFile] = {
     rep(pslLine) ^^ {
       case lines =>
@@ -199,7 +221,7 @@ object PslParser extends ParseHelper[ParsedPslFile] with ImplicitConversions {
        val rules = lines.flatMap{ case f: Rule => Some(f) case _ => None}   
        val facts = lines.flatMap{ case f: Fact => Some(f) case _ => None}
        val inds = lines.flatMap{ case f: Set[Individual] => Some(f) case _ => None}
-       val classes = lines.flatMap{ case f: (String, Set[Individual]) => Some(f) case _ => None}
+       val classes = lines.flatMap{ case f: (PslClass, Set[Individual]) => Some(f) case _ => None}
        
        if (inds.length == 0 ){
          ParsedPslFile(classes.toMap, predicates, rules, facts)
@@ -229,16 +251,16 @@ object PslParser extends ParseHelper[ParsedPslFile] with ImplicitConversions {
     }
   }
   
-  lazy val classType: Parser[(String, Set[Individual])] = {
+  lazy val classType: Parser[(PslClass, Set[Individual])] = {
     "class" ~> identifier ~ opt(":") ~ repsep(identifier, ",") ^^ {
       case classType ~ colon ~ List("")  =>
-        (classType, Set.empty)
+        (PslClass(classType), Set.empty)
       case classType ~ colon ~ individuals =>
         for (ind <- individuals){
             assert(ind.forall(c => !c.isUpper),
             s"Individuals that appear in facts have to be all lowercase, and $ind contains at least one uppercase character.")
         }
-        (classType, individuals.map(Individual(_, Set(classType))).toSet)
+        (PslClass(classType), individuals.map(Individual(_, Set(PslClass(classType)))).toSet)
     }
   }
 }

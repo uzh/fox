@@ -92,13 +92,13 @@ class PslParserSpec extends FlatSpec with Matchers with TestAnnouncements {
     parsed.facts.size should equal(2)
     parsed.facts(0).name should equal("votes")
     parsed.facts(0).truthValue should equal (Some(1.0))
-    parsed.facts(0).variableGroundings(0).name should equal("anna")
-    parsed.facts(0).variableGroundings(1).name should equal("republicans")
+    parsed.facts(0).variableGroundings(0).head.name should equal("anna")
+    parsed.facts(0).variableGroundings(1).head.name should equal("republicans")
 
     parsed.facts(1).name should equal("votes")
     parsed.facts(1).truthValue should equal(Some(0.5))
-    parsed.facts(1).variableGroundings(0).name should equal("anna")
-    parsed.facts(1).variableGroundings(1).name should equal("democrats")
+    parsed.facts(1).variableGroundings(0).head.name should equal("anna")
+    parsed.facts(1).variableGroundings(1).head.name should equal("democrats")
 
   }
 
@@ -172,13 +172,13 @@ class PslParserSpec extends FlatSpec with Matchers with TestAnnouncements {
     parsed.facts.size should equal(2)
     parsed.facts(0).name should equal("votes")
     parsed.facts(0).truthValue should equal (Some(1.0))
-    parsed.facts(0).variableGroundings(0).name should equal("anna")
-    parsed.facts(0).variableGroundings(1).name should equal("republicans")
+    parsed.facts(0).variableGroundings(0).head.name should equal("anna")
+    parsed.facts(0).variableGroundings(1).head.name should equal("republicans")
 
     parsed.facts(1).name should equal("votes")
     parsed.facts(1).truthValue should equal(Some(0.5))
-    parsed.facts(1).variableGroundings(0).name should equal("anna")
-    parsed.facts(1).variableGroundings(1).name should equal("democrats")
+    parsed.facts(1).variableGroundings(0).head.name should equal("anna")
+    parsed.facts(1).variableGroundings(1).head.name should equal("democrats")
 
   }
 
@@ -212,8 +212,8 @@ class PslParserSpec extends FlatSpec with Matchers with TestAnnouncements {
     parsed.facts.size should equal(1)
     parsed.facts(0).name should equal("votes")
     parsed.facts(0).truthValue should equal(Some(0.5))
-    parsed.facts(0).variableGroundings(0).name should equal("anna")
-    parsed.facts(0).variableGroundings(1).name should equal("democrats")
+    parsed.facts(0).variableGroundings(0).head.name should equal("anna")
+    parsed.facts(0).variableGroundings(1).head.name should equal("democrats")
   }
   
 }

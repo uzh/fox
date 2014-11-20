@@ -22,15 +22,32 @@ package com.signalcollect.psl.model
 
 case class Predicate(
   name: String,
-  classes: List[String] = List.empty,
+  classes: List[PslClass] = List.empty,
   properties: Set[PredicateProperty] = Set.empty,
   prior: Option[Double] = None) {
-  
+
   def arity = classes.length
-  
- override def toString = {
+
+  override def toString = {
     val propertiesString = if (properties.isEmpty) "" else " " + properties.mkString("[", ", ", "]")
     val positionPlaceholders = (1 to arity).map(_ => "_").mkString("(", ", ", ")")
-    s"predicate$propertiesString ${prior.getOrElse("")}: $name$positionPlaceholders"
+    s"relation$propertiesString ${prior.getOrElse("")}: $name$positionPlaceholders"
+  }
+}
+
+case class PslClass(
+  id: String) {
+  override def toString = {
+    if (set) { s"Set[${name}]" } else { name }
+  }
+
+  val set = id.startsWith("Set[")
+  val name = id.stripPrefix("Set[").stripSuffix("]")
+
+  override def equals(that: Any) = {
+    that match {
+      case v: PslClass => (v.id == id)
+      case _ => false
+    }
   }
 }

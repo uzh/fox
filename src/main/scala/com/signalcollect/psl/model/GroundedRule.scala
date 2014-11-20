@@ -145,7 +145,7 @@ case class GroundedRule(
 
           } else {
             if (definition.weight < 0) {
-              println(s"[WARNING]: Adding a concave function like: neg * max(0, coeff*x - const)")
+              println(s"[WARNING]: Adding a concave function like: neg * max(0, coeff*x - const): $this")
             }
             if (breezeOptimizer) {
               new HingeLossOptimizer(
@@ -164,7 +164,7 @@ case class GroundedRule(
         case Squared =>
           if (worstPossibleScenario > 0) {
             if (definition.weight < 0) {
-              println(s"[WARNING]: Adding a concave function like: neg * (coeff*x - const)^2")
+              println(s"[WARNING]: Adding a concave function like: neg * (coeff*x - const)^2: $this")
             }
             if (breezeOptimizer) {
               new SquaredLossOptimizer(
@@ -180,7 +180,7 @@ case class GroundedRule(
             }
           } else {
             if (definition.weight < 0) {
-              println(s"[WARNING]: Adding a concave function like: neg * max(0, coeff*x - const)^2")
+              println(s"[WARNING]: Adding a concave function like: neg * max(0, coeff*x - const)^2: $this")
             }
             if (breezeOptimizer) {
               new SquaredHingeLossOptimizer(
@@ -206,7 +206,7 @@ case class GroundedRule(
       // We can rewrite this by adding a constraint: coeff*x - constant <= 0, or coeff*x <= constant
       val optimizableFunction: OptimizableFunction =
         if (breezeOptimizer) {
-          new LinearConstraintOptimizer(id, "leq", constant, zIndices, stepSize, zMap, coefficientMatrix)
+          new LinearConstraintOptimizer(id, "leq", constant, zIndices, stepSize, zMap, coefficientMatrix, tolerance)
         } else {
           Optimizer.linearConstraint(stepSize, zMap, "leq", constant, coefficientMatrix, zIndices, tolerance, id)
         }

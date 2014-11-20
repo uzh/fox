@@ -26,8 +26,8 @@ case class Rule(
   body: List[PredicateInRule], // implied conjunction
   head: List[PredicateInRule], // implied disjunction
   distanceMeasure: DistanceMeasure,
-  weight: Double, 
-  existentialVars: Set[String] = Set.empty){
+  weight: Double,
+  existentialVars: Set[String] = Set.empty) {
   override def toString = {
     val conditionsString = body.mkString(" && ")
     val implicationsString = head.mkString(" || ")
@@ -53,6 +53,8 @@ case class Rule(
     }
     mergedVars
   }
+
+  def allPredicatesInRule = body ++ head
 }
 
 case class PredicateInRule(
@@ -62,29 +64,29 @@ case class PredicateInRule(
   predicate: Option[Predicate] = None) {
 
   val varsOrIndsWithClasses = {
-    predicate match{
+    predicate match {
       case Some(p) => {
-        p.classes.zipWithIndex.map{
-          case ("_", i) => 
+        p.classes.zipWithIndex.map {
+          case (classType, i) if classType.name == "_" =>
             variableOrIndividual(i)
-          case (classType, i) => 
-            VariableOrIndividual(variableOrIndividual(i).name, Set(classType))
+          case (classType, i) =>
+            VariableOrIndividual(variableOrIndividual(i).toString, Set(classType))
         }
       }
       case None => variableOrIndividual
     }
   }
-  
+
   val variables = varsOrIndsWithClasses.map {
-      case v: Variable => Some(v)
-      case _ => None
-    }.flatten
+    case v: Variable => Some(v)
+    case _ => None
+  }.flatten
 
   val individuals = varsOrIndsWithClasses.map {
-      case i: Individual => Some(i)
-      case _ => None
-    }.flatten
-    
+    case i: Individual => Some(i)
+    case _ => None
+  }.flatten
+
   override def toString = s"${if (negated) "!" else ""}$name${varsOrIndsWithClasses.mkString("(", ", ", ")")}"
 }
 

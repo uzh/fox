@@ -28,6 +28,6 @@ case class GroundedPredicate(
   truthValue: Option[Double]) {
 
   override def toString() = {
-    s"GroundedPredicate $id: ${definition.name}${definition.properties.mkString("[ ", ", ", "]")} ${groundings.mkString("(", ", ", ")")} ${if (truthValue.isDefined) truthValue.get else ""}"
+    s"GroundedPredicate $id: ${definition.name}${definition.properties.mkString("[ ", ", ", "]")} ${groundings.mkString("(", ", ", ")")}"
   }
 }

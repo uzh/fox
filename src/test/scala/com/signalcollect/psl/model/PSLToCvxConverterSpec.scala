@@ -31,31 +31,31 @@ class PSLToCvxConverterSpec extends FlatSpec with Matchers with TestAnnouncement
   val bob = Individual("bob")
   val demo = Individual("democrats")
   val repub = Individual("republicans")
-  
-  "PSLToCvxConverter" should " correctly convert a small example" in {  
+
+  "PSLToCvxConverter" should " correctly convert a small example" in {
     val predicateInRule1 = new PredicateInRule("votes", List(Variable("A"), Variable("P")))
     val predicateInRule2 = new PredicateInRule("friends", List(Variable("A"), Variable("B")))
     val predicateInRule3 = new PredicateInRule("votes", List(Variable("B"), Variable("P")))
-    
-    val rule = new Rule(1,List[PredicateInRule] (predicateInRule1, predicateInRule2), List[PredicateInRule] (predicateInRule3), Linear, 0.7)
-    
+
+    val rule = new Rule(1, List[PredicateInRule](predicateInRule1, predicateInRule2), List[PredicateInRule](predicateInRule3), Linear, 0.7)
+
     // Create the grounded predicates for the grounded rule: [0.7] votes(anna,democrats) and friend(anna,bob) => votes(bob,democrats)
-    val predicate1 = new Predicate("votes", List("_", "_"))
+    val predicate1 = new Predicate("votes", List(PslClass("_"), PslClass("_")))
     val groundedPredicate1 = new GroundedPredicate(1, predicate1, List(anna, demo), Some(0.3))
-    
-    val predicate2 = new Predicate("friends", List("_", "_"))
+
+    val predicate2 = new Predicate("friends", List(PslClass("_"), PslClass("_")))
     val groundedPredicate2 = new GroundedPredicate(2, predicate2, List(anna, bob), Some(0.9))
-    
-    val predicate3 = new Predicate("votes", List("_", "_"))
+
+    val predicate3 = new Predicate("votes", List(PslClass("_"), PslClass("_")))
     val groundedPredicate3 = new GroundedPredicate(3, predicate3, List(bob, demo), None)
-        
-    val groundedrule = new GroundedRule(1, rule, List[GroundedPredicate] (groundedPredicate1, groundedPredicate2), List[GroundedPredicate] (groundedPredicate3))
+
+    val groundedrule = new GroundedRule(1, rule, List[GroundedPredicate](groundedPredicate1, groundedPredicate2), List[GroundedPredicate](groundedPredicate3))
 
     // The result should be:
     // 0.7 * max{0, votes(anna,democrats) + friend(anna,bob) - 1 - votes(bob,democrats)} = 
     // 0.7 * max{0, 0.3 + 0.9 - 1 - votes(bob,democrats)} =
     // 0.7 * max{0, [-1] votes(bob,democrats) - (-0.2)} =
-    PSLToCvxConverter.toCvxFunction(groundedrule) should be ("0.7 * max (0, [-1.0] * [x3]' - -0.19999999999999996)")
+    PSLToCvxConverter.toCvxFunction(groundedrule) should be("0.7 * max (0, [-1.0] * [x3]' - -0.19999999999999996)")
   }
 
 }
