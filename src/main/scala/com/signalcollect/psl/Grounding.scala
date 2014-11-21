@@ -35,12 +35,11 @@ object Grounding {
     val allPossibleSetsAndIndividuals = generateAllPossibleSetsAsIndividuals(pslData.rulesWithPredicates, pslData.individualsByClass)
     val groundedPredicates = createGroundedPredicates(pslData.rulesWithPredicates, pslData.predicates, pslData.facts, allPossibleSetsAndIndividuals, removeSymmetricConstraints)
     val idToGpMap = groundedPredicates.values.map(gp => (gp.id, gp)).toMap
-    // TODO(sara) : reverse order grounded constraints and rules and fix the ids.
-    // Then we can use some of the constraints (e.g. symmetric with only one unbound grounded predicate) to assign
+    // TODO(sara) : use some of the constraints (e.g. symmetric with only one unbound grounded predicate) to assign
     // values to the grounded predicates before passing them to the rules.
-    val groundedRules = createGroundedRules(pslData.rulesWithPredicates, groundedPredicates, allPossibleSetsAndIndividuals)
     val groundedConstraints = createGroundedConstraints(pslData.predicates, groundedPredicates, allPossibleSetsAndIndividuals,
-      groundedRules.size, pslData.rulesWithPredicates.size, removeSymmetricConstraints)
+      pslData.rulesWithPredicates.size, removeSymmetricConstraints)
+    val groundedRules = createGroundedRules(pslData.rulesWithPredicates, groundedPredicates, allPossibleSetsAndIndividuals, groundedConstraints.size)
     if (!isBounded) {
       val bounds = createGroundedConstraintBounds(groundedPredicates, groundedRules.size + groundedConstraints.size, groundedRules.size + groundedConstraints.size)
       (groundedRules, groundedConstraints ++ bounds, idToGpMap)
@@ -298,8 +297,8 @@ object Grounding {
    * We do it in a second time, so we can have a unique id for each grounded predicate.
    */
   def createGroundedRules(rules: List[Rule], groundedPredicates: Map[(String, List[Individual]), GroundedPredicate],
-    individuals: Map[PslClass, Set[Individual]]): List[GroundedRule] = {
-    var id = 0
+    individuals: Map[PslClass, Set[Individual]], startingId: Int = 0): List[GroundedRule] = {
+    var id = startingId
     rules.flatMap {
       rule =>
         // Existentially quantified vars.
@@ -348,8 +347,8 @@ object Grounding {
    * We do it in a second time, so we can have a unique id for each grounded predicate.
    */
   def createGroundedConstraints(predicates: List[Predicate], groundedPredicates: Map[(String, List[Individual]), GroundedPredicate],
-    individuals: Map[PslClass, Set[Individual]], startingId: Int = 0, startingConstraintId: Int = 0,
-    removeSymmetricConstraints: Boolean = false): List[GroundedConstraint] = {
+    individuals: Map[PslClass, Set[Individual]], startingConstraintId: Int = 0,
+    removeSymmetricConstraints: Boolean = false, startingId: Int = 0): List[GroundedConstraint] = {
     // The id of the grounded constraint.
     var id = startingId
     // The ruleId is the id for each predicate property we are making into a constraint.
