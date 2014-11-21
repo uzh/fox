@@ -60,6 +60,9 @@ object Grounding {
    *
    */
   def generateBindings(variables: List[Variable], individuals: Map[PslClass, Set[Individual]]): List[Map[String, Individual]] = {
+    //    val variables = variablesAndSetsOfVariables.filter(!_.set)
+    //    val setsOfVariables = variablesAndSetsOfVariables.filter(_.set)
+
     if (variables.size < 1) {
       List.empty
     } else {
@@ -93,14 +96,16 @@ object Grounding {
       // Example: A-> anna, B-> cannot be anna.
       // This may be not what the user expects, so we may want to make it configurable.
       val prunedList = foldedList.flatMap { mapping =>
-        if (mapping.values.toSet.size < mapping.keys.size) {
+        // The empty set is disjoint by definition from anything, even itself.
+        val ignoreEmptySet = mapping.filter(_._2.value != "")
+        if (ignoreEmptySet.values.toSet.size < ignoreEmptySet.keys.size) {
           None
         } else {
           // Check if there is any variables which is not disjoint from the others.
-          val skip = mapping.values.exists(a => mapping.values.exists { b =>
+          val notPairwiseDisjoint = ignoreEmptySet.values.exists(a => ignoreEmptySet.values.exists { b =>
             a != b && !b.isDisjoint(a)
           })
-          if (skip) {
+          if (notPairwiseDisjoint) {
             None
           } else {
             Some(mapping)
@@ -428,6 +433,22 @@ object Grounding {
     bounds.toList
   }
 
+  def getIndividualAsUnionOfBindings(v: Variable, binding: Map[String, Individual]): Individual = {
+    val unionOfBindings = v.varsOrIndividualsInSet.flatMap { a =>
+      binding.get(a)
+    }.filter(_.value != "")
+    val notSets = unionOfBindings.filter(!_.set).map(_.toString)
+    val sets = unionOfBindings.filter(_.set).flatMap(_.varsOrIndividualsInSet)
+    val result = (sets ++ notSets).toList.sorted
+    if (result.size > 1) {
+      Individual(result.toSet.toString())
+    } else if (result.size == 1) {
+      Individual(result(0))
+    } else {
+      Individual("")
+    }
+  }
+
   /**
    * Helper class for retrieving the right grounded predicate from the map.
    */
@@ -439,17 +460,7 @@ object Grounding {
         if (!v.set) {
           binding(v.value)
         } else {
-          val unionOfBindings = v.varsOrIndividualsInSet.flatMap { a =>
-            binding.get(a)
-          }.filter(_.value != "")
-          val notSets = unionOfBindings.filter(!_.set).map(_.toString)
-          val sets = unionOfBindings.filter(_.set).flatMap(_.varsOrIndividualsInSet)
-          val result = (sets ++ notSets).toList.sorted
-          if (result.size > 1) {
-            Individual(result.toSet.toString())
-          } else {
-            Individual(result(0))
-          }
+          getIndividualAsUnionOfBindings(v, binding)
         }
       case i: Individual => Individual(i.value)
     })

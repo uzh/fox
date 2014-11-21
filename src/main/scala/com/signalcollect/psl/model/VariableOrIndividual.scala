@@ -30,7 +30,7 @@ sealed trait VariableOrIndividual {
   val set = name.startsWith("Set(") && varsOrIndividualsInSet.size > 1
 
   val value = this.toString
-  
+
   def isVariable: Boolean = {
     this match {
       case i: Individual => false
