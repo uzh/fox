@@ -60,9 +60,6 @@ object Grounding {
    *
    */
   def generateBindings(variables: List[Variable], individuals: Map[PslClass, Set[Individual]]): List[Map[String, Individual]] = {
-    //    val variables = variablesAndSetsOfVariables.filter(!_.set)
-    //    val setsOfVariables = variablesAndSetsOfVariables.filter(_.set)
-
     if (variables.size < 1) {
       List.empty
     } else {
