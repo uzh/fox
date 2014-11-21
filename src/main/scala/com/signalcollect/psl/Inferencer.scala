@@ -103,14 +103,24 @@ case class InferenceResult(
 
   def printSelected(predicateNames: List[String] = List.empty) = {
     var s = ""
-    solution.results.foreach {
+    // Sort the output in alphabetical order.
+    val listGpToTruthValue = solution.results.toScalaMap.flatMap {
       case (id, truthValue) =>
         if (truthValue > 0) {
           val gp = idToGpMap(id)
           if (predicateNames.isEmpty || predicateNames.contains(gp.definition.name)) {
-            s += s"\n$gp has truth value ${nicerTruthValue(truthValue)}"
-          }
-        }
+            Some(Map(gp -> truthValue))
+          } else { None }
+        } else { None }
+    }.flatten.toList
+
+    val sortedListGpToTruthValue = listGpToTruthValue.sortBy(f => 
+      // (predicate name, groundings in alphabetical order)
+      (f._1.definition.name, f._1.groundings.toString))
+
+    sortedListGpToTruthValue.foreach {
+      case (gp, truthValue) =>
+        s += s"\n$gp has truth value ${nicerTruthValue(truthValue)}"
     }
     s
   }
