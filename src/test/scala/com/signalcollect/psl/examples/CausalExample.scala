@@ -174,6 +174,6 @@ GroundedPredicate 119: causes[ ] (u, y)  has truth value 0.46
     val config = InferencerConfig(computeObjectiveValueOfSolution = true)
     val inferenceResults = Inferencer.runInference(pslData, config = config)
     val objectiveFunctionValOption = inferenceResults.objectiveFun
-    println(inferenceResults.printSelected(List("causes")))
+    // println(inferenceResults.printSelected(List("causes")))
   }
 }

@@ -34,30 +34,30 @@ import com.signalcollect.util.TestAnnouncements
 class VotingExample extends FlatSpec with Matchers with TestAnnouncements {
 
   val votingExample = """
-	  predicate: 	votes(_, _)
+	  predicate : votes(Person, Party)
 	  predicate: 		friends(_, _)
     predicate: 		enemies(_, _)
 
+    class Person: anna, bob, carl
+    class Party: demo, repub
+
     rule [weight = 1]: 	votes(A,P) && friends(A,B) => votes(B,P) 
-    rule [weight = 1]: 	votes(A,P) && enemies(A,B) => !votes(B,P) 
-    rule: 	enemies(A,B) => !friends(A,B) 
-    rule: 	friends(A,B) => !enemies(A,B)  
+    //rule [weight = 1]: 	votes(A,P) && enemies(A,B) => !votes(B,P) 
+    rule [2]: 	enemies(A,B) => !friends(A,B) 
+    rule [3]: 	friends(A,B) => !enemies(A,B)  
     
-	  fact: friends(anna, bob)
-    fact: friends(bob, anna)
-	  fact [truthValue = 0.8]: votes(anna, democrats)
+	  fact [0.9]: friends(anna, bob)
+    fact [0.9]: friends(bob, anna)
+	  fact [truthValue = 0.8]: votes(anna, demo)
     fact [truthValue = 0.2]: votes(carl, repub)
-    fact: enemies(carl, bob)
-    fact: enemies(bob, carl)
+    fact [0.99]: enemies(carl, bob)
+    fact [0.99]: enemies(bob, carl)
 	"""
   "VotingExample" should "provide a solution consistent with Matlab" in {
     val pslData = PslParser.parse(votingExample)
-
     val config = InferencerConfig(computeObjectiveValueOfSolution = true)
     val inferenceResults = Inferencer.runInference(pslData, config = config)
-
-    val solution = inferenceResults.solution
-    val gps = inferenceResults.idToGpMap
+    println(inferenceResults)
     val objectiveFunctionValOption = inferenceResults.objectiveFun
     assert(objectiveFunctionValOption.isDefined)
     objectiveFunctionValOption.foreach(_ should be(0.0 +- 5e-5))
