@@ -57,7 +57,6 @@ class VotingExample extends FlatSpec with Matchers with TestAnnouncements {
     val pslData = PslParser.parse(votingExample)
     val config = InferencerConfig(computeObjectiveValueOfSolution = true)
     val inferenceResults = Inferencer.runInference(pslData, config = config)
-    println(inferenceResults)
     val objectiveFunctionValOption = inferenceResults.objectiveFun
     assert(objectiveFunctionValOption.isDefined)
     objectiveFunctionValOption.foreach(_ should be(0.0 +- 5e-5))

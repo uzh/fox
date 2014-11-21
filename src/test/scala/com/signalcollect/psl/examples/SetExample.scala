@@ -48,6 +48,5 @@ fact: causes(x, z)
   it should "provide a solution consistent for the set example" in {
     val config = InferencerConfig(computeObjectiveValueOfSolution = true, lazyThreshold = None)
     val results = Inferencer.runInferenceFromString(causal, config = config)
-    println(results)
   }
 }
