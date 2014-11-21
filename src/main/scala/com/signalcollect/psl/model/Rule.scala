@@ -26,8 +26,8 @@ case class Rule(
   body: List[PredicateInRule], // implied conjunction
   head: List[PredicateInRule], // implied disjunction
   distanceMeasure: DistanceMeasure,
-  weight: Double, 
-  existentialVars: Set[String] = Set.empty){
+  weight: Double,
+  existentialVars: Set[String] = Set.empty) {
   override def toString = {
     val conditionsString = body.mkString(" && ")
     val implicationsString = head.mkString(" || ")
@@ -40,19 +40,31 @@ case class Rule(
     s"rule$properties: $conditionsString => $implicationsString"
   }
 
-  val variables: List[Variable] = {
+  val allVariables: List[Variable] = {
     val bodyVars = body.flatMap(_.variables)
     val headVars = head.flatMap(_.variables)
     val allVars = bodyVars ++ headVars
-    val allVarsNames = allVars.map(v => v.name).distinct
+    val allVarsNames = allVars.map(v => v.value).distinct
     val mergedVars = allVarsNames.map {
       name =>
-        val varsToMerge = allVars.filter(_.name == name)
+        val varsToMerge = allVars.filter(_.value == name)
         val classTypes = varsToMerge.map(v => v.classTypes).flatten.toSet
         Variable(name, classTypes)
     }
     mergedVars
   }
+
+  val variables = allVariables.filter(!_.set)
+  val setVariables = allVariables.filter(_.set)
+
+  val partialGroundingNames: List[String] = {
+    val bodyInd = body.flatMap(_.individuals)
+    val headInd = head.flatMap(_.individuals)
+    val allInds = bodyInd ++ headInd
+    allInds.map(v => v.value).distinct
+  }
+
+  def allPredicatesInRule = body ++ head
 }
 
 case class PredicateInRule(
@@ -61,30 +73,34 @@ case class PredicateInRule(
   negated: Boolean = false,
   predicate: Option[Predicate] = None) {
 
-  val varsOrIndsWithClasses = {
-    predicate match{
+  val allVarsOrIndsWithClasses = {
+    predicate match {
       case Some(p) => {
-        p.classes.zipWithIndex.map{
-          case ("_", i) => 
+        p.classes.zipWithIndex.map {
+          case (classType, i) if classType.name == "_" =>
             variableOrIndividual(i)
-          case (classType, i) => 
-            VariableOrIndividual(variableOrIndividual(i).name, Set(classType))
+          case (classType, i) =>
+            VariableOrIndividual(variableOrIndividual(i).toString, Set(classType))
         }
       }
       case None => variableOrIndividual
     }
   }
-  
+
+  val varsOrIndsWithClasses = allVarsOrIndsWithClasses.filter(!_.set)
+    
+  val setVarsOrIndsWithClasses = allVarsOrIndsWithClasses.filter(_.set)
+
   val variables = varsOrIndsWithClasses.map {
-      case v: Variable => Some(v)
-      case _ => None
-    }.flatten
+    case v: Variable => Some(v)
+    case _ => None
+  }.flatten
 
   val individuals = varsOrIndsWithClasses.map {
-      case i: Individual => Some(i)
-      case _ => None
-    }.flatten
-    
+    case i: Individual => Some(i)
+    case _ => None
+  }.flatten
+
   override def toString = s"${if (negated) "!" else ""}$name${varsOrIndsWithClasses.mkString("(", ", ", ")")}"
 }
 

@@ -85,7 +85,7 @@ case class NonExistentConsensusVertexHandler(
   initialState: Double, // Initial value for the consensus variable.
   isBounded: Boolean, // Use bounding (cutoff below 0 and above 1).
   lazyThreshold: Option[Double]) // Only continue if a value changed by more than the threshold.
- extends EdgeAddedToNonExistentVertexHandler[Int, Double] {
+  extends EdgeAddedToNonExistentVertexHandler[Int, Double] {
   def handleImpossibleEdgeAddition(edge: Edge[Int], vertexId: Int): Option[Vertex[Int, _, Int, Double]] = {
     if (asynchronous) {
       if (lazyThreshold.isDefined) throw new Exception("Asynchronous inferencing cannot be combined with lazy inferencing.")
@@ -196,6 +196,10 @@ object Wolf {
         withKryoRegistrations(List(
           "com.signalcollect.admm.ObjectiveValueAggregator$",
           "com.signalcollect.admm.optimizers.SquaredHingeLossOptimizer",
+          "com.signalcollect.admm.optimizers.HingeLossOptimizer",
+          "com.signalcollect.admm.optimizers.LinearLossOptimizer",
+          "com.signalcollect.admm.optimizers.SquaredLossOptimizer",
+          "com.signalcollect.admm.optimizers.LinearConstraintOptimizer",
           "breeze.linalg.DenseVector$mcD$sp",
           "com.signalcollect.util.IntDoubleHashMap",
           "com.signalcollect.psl.PslOptimizerWrapper",

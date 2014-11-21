@@ -32,7 +32,7 @@ import com.signalcollect.util.TestAnnouncements
  * Small example that exploits the functional and symmetric constraints.
  */
 class ExistsExample extends FlatSpec with Matchers with TestAnnouncements {
- val existsExample = """
+  val existsExample = """
     class Person: anna, sara, philip, fred, paul
 	  class Cause: accident, snow, traffic
     class Place: dubai, zurich, florida, middle-east
@@ -79,15 +79,12 @@ class ExistsExample extends FlatSpec with Matchers with TestAnnouncements {
     fact [truthValue = 1.0]: isWarm(middle-east)
     fact [truthValue = 0.5]: locatedIn(dubai, middle-east)
 	"""
+
   "ExistsExample" should "provide a solution consistent with Matlab" in {
-
-    val config = InferencerConfig(computeObjectiveValueOfSolution = true)  
-    val inferenceResults = Inferencer.runInferenceFromString(existsExample, config=config)
-    val objectiveFunctionVal = inferenceResults.objectiveFun.get
-
-    //println(inferenceResults)
-    //println("Objective function value: " + objectiveFunctionVal)
-
-    objectiveFunctionVal should be(0.0 +- 5e-4) 
+    val config = InferencerConfig(computeObjectiveValueOfSolution = true)
+    val inferenceResults = Inferencer.runInferenceFromString(existsExample, config = config)
+    val objectiveFunctionValOption = inferenceResults.objectiveFun
+    assert(objectiveFunctionValOption.isDefined)
+    objectiveFunctionValOption.foreach(_ should be(0.0 +- 5e-4))
   }
- }
+}

@@ -86,16 +86,14 @@ case class GroundedRule(
     filtered.toArray
   }
 
-  def groundedPredicates: List[GroundedPredicate] = {
+  def unboundGroundedPredicates: List[GroundedPredicate] = {
     // we add only the ones that have an unbound truth value, the others are taken care in the constant.
     head.filter(!_.truthValue.isDefined) ::: body.filter(!_.truthValue.isDefined)
   }
 
-  def variables: List[Int] = groundedPredicates.map(gp => gp.id).toList
-
   def createOptimizableFunction(stepSize: Double, tolerance: Double = 0.0, breezeOptimizer: Boolean = false): Option[OptimizableFunction] = {
     // Easy optimization, if all are facts, ignore.
-    if (groundedPredicates.size == 0) {
+    if (unboundGroundedPredicates.size == 0) {
       return None
     }
 
@@ -114,8 +112,8 @@ case class GroundedRule(
     }
 
     // TODO: Define zMap - currently just initialized to 0.
-    val zMap: Map[Int, Double] = groundedPredicates.map(gp => (gp.id, 0.0)).toMap
-    val zIndices: Array[Int] = groundedPredicates.map(gp => gp.id).toArray
+    val zMap: Map[Int, Double] = unboundGroundedPredicates.map(gp => (gp.id, 0.0)).toMap
+    val zIndices: Array[Int] = unboundGroundedPredicates.map(gp => gp.id).toArray
 
     if (definition.weight != Double.MaxValue) {
       // Not a hard rule.
@@ -147,7 +145,7 @@ case class GroundedRule(
 
           } else {
             if (definition.weight < 0) {
-              println(s"[WARNING]: Adding a concave function like: neg * max(0, coeff*x - const)")
+              println(s"[WARNING]: Adding a concave function like: neg * max(0, coeff*x - const): $this")
             }
             if (breezeOptimizer) {
               new HingeLossOptimizer(
@@ -166,7 +164,7 @@ case class GroundedRule(
         case Squared =>
           if (worstPossibleScenario > 0) {
             if (definition.weight < 0) {
-              println(s"[WARNING]: Adding a concave function like: neg * (coeff*x - const)^2")
+              println(s"[WARNING]: Adding a concave function like: neg * (coeff*x - const)^2: $this")
             }
             if (breezeOptimizer) {
               new SquaredLossOptimizer(
@@ -182,7 +180,7 @@ case class GroundedRule(
             }
           } else {
             if (definition.weight < 0) {
-              println(s"[WARNING]: Adding a concave function like: neg * max(0, coeff*x - const)^2")
+              println(s"[WARNING]: Adding a concave function like: neg * max(0, coeff*x - const)^2: $this")
             }
             if (breezeOptimizer) {
               new SquaredHingeLossOptimizer(
@@ -208,7 +206,7 @@ case class GroundedRule(
       // We can rewrite this by adding a constraint: coeff*x - constant <= 0, or coeff*x <= constant
       val optimizableFunction: OptimizableFunction =
         if (breezeOptimizer) {
-          new LinearConstraintOptimizer(id, "leq", constant, zIndices, stepSize, zMap, coefficientMatrix)
+          new LinearConstraintOptimizer(id, "leq", constant, zIndices, stepSize, zMap, coefficientMatrix, tolerance)
         } else {
           Optimizer.linearConstraint(stepSize, zMap, "leq", constant, coefficientMatrix, zIndices, tolerance, id)
         }

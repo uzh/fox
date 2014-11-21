@@ -69,7 +69,7 @@ case class InferenceResult(
 
   override def toString() = {
     var s = solution.stats.toString
-    s += printSelected()
+    s += printSelectedResultsAndFacts()
     objectiveFun match {
       case Some(x) =>
         s += s"\nObjective function value: $x"
@@ -85,36 +85,67 @@ case class InferenceResult(
 
   def nicerTruthValue(t: Double): Double = {
     def goodEnough(v: Double): Boolean = math.abs(v - t) <= 1e-3
+    lazy val fraction = 1.0 / (1.0 / t).round
+    lazy val multipleTenths = (t * 10.0).round / 10.0
+    lazy val multipleHundreds = (t * 100.0).round / 100.0
     if (goodEnough(0.0)) {
-      return 0.0
+      0.0
+    } else if (goodEnough(fraction)) {
+      fraction
+    } else if (goodEnough(multipleTenths)) {
+      multipleTenths
+    } else if (goodEnough(multipleHundreds)) {
+      multipleHundreds
+    } else {
+      t
     }
-    val fraction = 1.0 / (1.0 / t).round
-    if (goodEnough(fraction)) {
-      return fraction
-    }
-    val multipleTenths = (t * 10.0).round / 10.0
-    if (goodEnough(multipleTenths)) {
-      return multipleTenths
-    }
-    val multipleHundreds = (t * 100.0).round / 100.0
-    if (goodEnough(multipleTenths)) {
-      return multipleTenths
-    }
-    t
   }
 
   def printSelected(predicateNames: List[String] = List.empty) = {
     var s = ""
-    solution.results.foreach {
+    // Sort the output in alphabetical order.
+    val listGpToTruthValue = solution.results.toScalaMap.flatMap {
       case (id, truthValue) =>
         if (truthValue > 0) {
           val gp = idToGpMap(id)
           if (predicateNames.isEmpty || predicateNames.contains(gp.definition.name)) {
-            if (!gp.truthValue.isDefined) {
-              s += s"\n$gp has truth value ${nicerTruthValue(truthValue)}"
-            }
-          }
-        }
+            Some(Map(gp -> truthValue))
+          } else { None }
+        } else { None }
+    }.flatten.toList
+
+    val sortedListGpToTruthValue = listGpToTruthValue.sortBy(f =>
+      // (predicate name, groundings in alphabetical order)
+      (f._1.definition.name, f._1.groundings.toString))
+
+    sortedListGpToTruthValue.foreach {
+      case (gp, truthValue) =>
+        s += s"\n$gp has truth value ${nicerTruthValue(truthValue)}"
+    }
+    s
+  }
+
+  // TODO(sara): currently prints also input facts. Consider removing them.
+  def printSelectedResultsAndFacts(predicateNames: List[String] = List.empty) = {
+    var s = ""
+    // Sort the output in alphabetical order.
+    val listGpToTruthValue = idToGpMap.flatMap {
+      case (id, gp) =>
+        if (predicateNames.isEmpty || predicateNames.contains(gp.definition.name)) {
+          val truthValue = gp.truthValue.getOrElse(solution.results.get(id))
+          if (truthValue > 0) {
+            Some(Map(gp -> truthValue))
+          } else { None }
+        } else { None }
+    }.flatten.toList
+
+    val sortedListGpToTruthValue = listGpToTruthValue.sortBy(f =>
+      // (predicate name, groundings in alphabetical order)
+      (f._1.definition.name, f._1.groundings.toString))
+
+    sortedListGpToTruthValue.foreach {
+      case (gp, truthValue) =>
+        s += s"\n$gp has truth value ${nicerTruthValue(truthValue)}"
     }
     s
   }

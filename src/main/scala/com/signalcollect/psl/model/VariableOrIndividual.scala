@@ -22,7 +22,15 @@ package com.signalcollect.psl.model
 
 sealed trait VariableOrIndividual {
   def name: String
-  def classTypes: Set[String]
+  def classTypes: Set[PslClass]
+
+  val varsOrIndividualsInSet =
+    name.stripPrefix("Set(").stripSuffix(")").split(",").map(_.trim()).toSet
+
+  val set = name.startsWith("Set(") && varsOrIndividualsInSet.size > 1
+
+  val value = this.toString
+
   def isVariable: Boolean = {
     this match {
       case i: Individual => false
@@ -35,18 +43,21 @@ sealed trait VariableOrIndividual {
       case v: Variable => false
     }
   }
-  override def toString = if (!classTypes.isEmpty) { name + ":" + classTypes.mkString(",")} else {name}
+  override def toString = {
+    if (set) { name } else if (!name.startsWith("Set(")) { name } else { varsOrIndividualsInSet.head }
+
+  }
   override def equals(that: Any) = {
     that match {
-      case v: VariableOrIndividual => v.name == name
+      case v: VariableOrIndividual => v.value == value
       case _ => false
     }
   }
 }
 
 object VariableOrIndividual {
-  def apply(name: String, classTypes: Set[String] = Set.empty): VariableOrIndividual = {
-    if (name.forall(c => c.isUpper || c == '-')) {
+  def apply(name: String, classTypes: Set[PslClass] = Set.empty): VariableOrIndividual = {
+    if (name.stripPrefix("Set(")(0).isUpper) {
       Variable(name, classTypes)
     } else {
       Individual(name, classTypes)
@@ -54,6 +65,22 @@ object VariableOrIndividual {
   }
 }
 
-case class Individual(name: String, classTypes: Set[String] = Set.empty) extends VariableOrIndividual
+case class Individual(name: String, classTypes: Set[PslClass] = Set.empty) extends VariableOrIndividual {
 
-case class Variable(name: String, classTypes: Set[String] = Set.empty) extends VariableOrIndividual
+  def isDisjoint(that: Individual) =
+    if (set) {
+      if (!that.set) {
+        !varsOrIndividualsInSet.contains(that.toString)
+      } else {
+        !varsOrIndividualsInSet.exists(that.varsOrIndividualsInSet.contains(_))
+      }
+    } else {
+      if (!that.set) {
+        name != that.name
+      } else {
+        !that.varsOrIndividualsInSet.contains(this.toString)
+      }
+    }
+}
+
+case class Variable(name: String, classTypes: Set[PslClass] = Set.empty) extends VariableOrIndividual
