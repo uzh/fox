@@ -40,18 +40,28 @@ case class Rule(
     s"rule$properties: $conditionsString => $implicationsString"
   }
 
-  val variables: List[Variable] = {
+  val allVariables: List[Variable] = {
     val bodyVars = body.flatMap(_.variables)
     val headVars = head.flatMap(_.variables)
     val allVars = bodyVars ++ headVars
-    val allVarsNames = allVars.map(v => v.name).distinct
+    val allVarsNames = allVars.map(v => v.value).distinct
     val mergedVars = allVarsNames.map {
       name =>
-        val varsToMerge = allVars.filter(_.name == name)
+        val varsToMerge = allVars.filter(_.value == name)
         val classTypes = varsToMerge.map(v => v.classTypes).flatten.toSet
         Variable(name, classTypes)
     }
     mergedVars
+  }
+
+  val variables = allVariables.filter(!_.set)
+  val setVariables = allVariables.filter(_.set)
+
+  val partialGroundingNames: List[String] = {
+    val bodyInd = body.flatMap(_.individuals)
+    val headInd = head.flatMap(_.individuals)
+    val allInds = bodyInd ++ headInd
+    allInds.map(v => v.value).distinct
   }
 
   def allPredicatesInRule = body ++ head
@@ -63,7 +73,7 @@ case class PredicateInRule(
   negated: Boolean = false,
   predicate: Option[Predicate] = None) {
 
-  val varsOrIndsWithClasses = {
+  val allVarsOrIndsWithClasses = {
     predicate match {
       case Some(p) => {
         p.classes.zipWithIndex.map {
@@ -76,6 +86,10 @@ case class PredicateInRule(
       case None => variableOrIndividual
     }
   }
+
+  val varsOrIndsWithClasses = allVarsOrIndsWithClasses.filter(!_.set)
+    
+  val setVarsOrIndsWithClasses = allVarsOrIndsWithClasses.filter(_.set)
 
   val variables = varsOrIndsWithClasses.map {
     case v: Variable => Some(v)

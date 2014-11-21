@@ -67,9 +67,9 @@ object PslParser extends ParseHelper[ParsedPslFile] with ImplicitConversions {
   var ruleId = 0
 
   lazy val predicateInRule: Parser[PredicateInRule] = {
-    opt("!") ~ identifier ~ "(" ~ repsep(identifier, ",") <~ ")" ^^ {
+    opt("!") ~ identifier ~ "(" ~ repsep(varOrIndividualsInSet|varOrIndividualsNotInSet, ",") <~ ")" ^^ {
       case negation ~ predicateName ~ "(" ~ variablesOrIndividuals =>
-        PredicateInRule(predicateName, variablesOrIndividuals.map(VariableOrIndividual(_)), negation.isDefined)
+        PredicateInRule(predicateName, variablesOrIndividuals.map(v => VariableOrIndividual(v.toString)), negation.isDefined)
     }
   }
 
@@ -187,7 +187,7 @@ object PslParser extends ParseHelper[ParsedPslFile] with ImplicitConversions {
   }
 
   lazy val individualsInFact: Parser[List[Set[Individual]]] = {
-    repsep(individualsInSet|individualsNotInSet, ",") ^^ {
+    repsep(varOrIndividualsInSet|varOrIndividualsNotInSet, ",") ^^ {
       case List(List("")) =>
         List.empty
       case variableGroundings =>
@@ -201,13 +201,13 @@ object PslParser extends ParseHelper[ParsedPslFile] with ImplicitConversions {
     }
   }
   
-  lazy val individualsNotInSet: Parser[Set[String]] = {
+  lazy val varOrIndividualsNotInSet: Parser[Set[String]] = {
     identifierOrDash ^^ {
       case indNonInSet =>
         Set(indNonInSet)
     }
   }
-  lazy val individualsInSet : Parser[Set[String]] = {
+  lazy val varOrIndividualsInSet : Parser[Set[String]] = {
     ("{"|"[") ~> repsep(identifier, ",")  <~ ("}"|"]") ^^ {
        case indInSet =>
          indInSet.toSet

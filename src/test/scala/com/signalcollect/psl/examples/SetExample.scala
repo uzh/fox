@@ -27,7 +27,6 @@ import com.signalcollect.psl.Inferencer
 import com.signalcollect.psl.InferencerConfig
 import com.signalcollect.psl.parser.PslParser
 import com.signalcollect.util.TestAnnouncements
-import com.signalcollect.admm.utils.MinimaExplorer
 
 class SetExample extends FlatSpec with Matchers with TestAnnouncements {
 
@@ -35,10 +34,13 @@ class SetExample extends FlatSpec with Matchers with TestAnnouncements {
 predicate : causes(Set[Variable], Set[Variable])
 
 //rule: !causes(X, X)
-rule: causes(x ,Y) => causes(Y,x)
-//rule: causes(X,Y)  && causes(Y,Z) => causes(X,Z)
+//rule: causes(X ,Y) => causes(Y,X)
+rule: causes(X,Y)  && causes(X,Z) => causes(X,{Y,Z})
 
-fact: causes(x, {z, y})
+class Variable: x,y,z
+
+fact: causes(x, y)
+fact: causes(x, z)
 //fact[0.3]: !causes(y, {w, u})
 //fact[0.7]: !causes({x, y} , u)
   """
@@ -46,6 +48,5 @@ fact: causes(x, {z, y})
   it should "provide a solution consistent for the set example" in {
     val config = InferencerConfig(computeObjectiveValueOfSolution = true, lazyThreshold = None)
     val results = Inferencer.runInferenceFromString(causal, config = config)
-    println(results)
   }
 }

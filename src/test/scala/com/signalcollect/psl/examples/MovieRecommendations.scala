@@ -80,27 +80,6 @@ class MovieRecommendations extends FlatSpec with Matchers with TestAnnouncements
 	fact [truthValue = 0.7]: likes(philip, grease)
 	"""
 
-  val simplifiedMovieExampleExperimental = """
-	predicate: likes(_, _)
-	predicate: playsIn(_, _)
-	    
-	rule [weight = 0.5, distanceMeasure = experimentalSquared]: likes(PERSON, MOVIE) && playsIn(ACTOR, MOVIE) => likes(PERSON, ACTOR)
-	rule [weight = 0.3, distanceMeasure = experimentalSquared]: likes(PERSON, MOVIE-A) && playsIn(ACTOR, MOVIE-A) && playsIn(ACTOR, MOVIE-B) => likes(PERSON, MOVIE-B)
-	rule [weight = 0.5, distanceMeasure = experimentalSquared]: likes(PERSON-A, A) && likes(PERSON-B, A) && likes(PERSON-B, B) => likes(PERSON-A, B)
-	
-	fact: playsIn(john-travolta, pulp-fiction)
-	fact: playsIn(john-travolta, grease)
-	
-	fact [truthValue = 0.7]: likes(sara, john-travolta)
-	
-	fact [truthValue = 0.9]: likes(sara, pulp-fiction)
-	fact [truthValue = 0.8]: likes(sara, star-wars)
-	
-	fact [truthValue = 0.9]: likes(philip, pulp-fiction)
-	fact [truthValue = 0.8]: likes(philip, john-travolta)
-	fact [truthValue = 0.7]: likes(philip, grease)
-	"""
-
   "MovieRecommendations" should "correctly minimize the simplified movie example" in {
     val config = InferencerConfig(computeObjectiveValueOfSolution = true)
     val inferenceResults = Inferencer.runInferenceFromString(simplifiedMovieExample, config = config)
