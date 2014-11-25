@@ -3,23 +3,33 @@ Fox: Scalable PSL Inferencing [![Build Status](https://travis-ci.org/uzh/fox.svg
 
 How to Compile the Project
 --------------------------
-Ensure Java 8 is available on the system, verify with `java -version` on the command line.
-
-Ensure that the https://github.com/uzh/signal-collect project is placed in the same root folder as this project. 
+Ensure Java 7 (or higher) is available on the system, verify with `java -version` on the command line.
 
 Install SBT: http://www.scala-sbt.org/release/docs/Getting-Started/Setup.html
 
-Go to the project folder and start SBT on the command line.
+From the project folder, run:
+```
+git clone git://github.com/uzh/signal-collect.git ../signal-collect
+````
 
-To generate an Eclipse project, use the `eclipse` command on the SBT prompt.
+To generate the JAR file, run:
+```
+sbt assembly
+```
 
-To generate a JAR file, use the `assembly` command on the SBT prompt.
-
+To generate an Eclipse project, run:
+```
+sbt eclipse
+```
 
 How to try out an example
 -------------------------
 
-Run the `assembly` command according to the instructions above, then execute for example `./fox.sh examples/movies.psl` to run the inferencer on the `movies.psl` file.
+Run the `assembly` command according to the instructions above, then execute:
+```
+./fox.sh examples/movies.psl
+```
+to run the inferencer on the `movies.psl` file.
 
 If there is no shell available, you can also run `java -Xmx5000m -cp ./target/scala-2.11/fox-assembly-1.0-SNAPSHOT.jar com.signalcollect.psl.CommandLinePslInferencer examples/movies.psl`.
 
