@@ -29,9 +29,11 @@ import com.signalcollect.MemoryEfficientDataGraphVertex
 final class LazyConsensusVertex(
   variableId: Int, // the id of the variable, which identifies it also in the subproblem nodes.
   initialState: Double, // the initial value for the consensus variable.
-  isBounded: Boolean) // shall we use bounding (cutoff below 0 and above 1)? 
-  extends ConsensusVertex(variableId, initialState, isBounded) {
-  
+  isBounded: Boolean, // shall we use bounding (cutoff below 0 and above 1)? 
+  lowerBound: Double = 0.0, // each consensus variable can only assume values in the range [lowerBound, upperBound].
+  upperBound: Double = 1.0)
+  extends ConsensusVertex(variableId, initialState, isBounded, lowerBound, upperBound) {
+
   /**
    * Always signal after the first collect:
    * We only get new votes if something has actually changed, so it always makes sense to tell everyone about the change.
