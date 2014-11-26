@@ -274,6 +274,7 @@ object Wolf {
     }
     for (consensusId <- f.idToIndexMappings) {
       subproblem.addEdge(new DummyEdge(consensusId), graph)
+      //println(s"Add edge $subId ($f) to $consensusId")
       graph.addEdge(consensusId, new DummyEdge(subId))
     }
     graph.addVertex(subproblem)
