@@ -237,7 +237,6 @@ object Inferencer {
       case (id, p) => (id, (p.lowerBound, p.upperBound))
     }
     println(s"Problem converted to consensus optimization with ${functions.size} functions and ${constraints.size} constraints that are not trivially true; ${boundsForConsensusVariables.size} grounded predicates have non trivial bounds.")
-println(boundsForConsensusVariables)
     
     val solution = Wolf.solveProblem(
       functionsAndConstraints,
