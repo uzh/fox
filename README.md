@@ -7,7 +7,13 @@ Ensure Java 7 (or higher) is available on the system, verify with `java -version
 
 Install SBT: http://www.scala-sbt.org/release/docs/Getting-Started/Setup.html
 
-From the project folder, run:
+Check out the project:
+```
+git clone git://github.com/uzh/fox.git fox
+cd fox
+````
+
+Run this from inside the fox *project folder* to ensure the Signal/Collect dependency is present and in the right place:
 ```
 git clone git://github.com/uzh/signal-collect.git ../signal-collect
 ````
