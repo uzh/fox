@@ -73,10 +73,11 @@ case class NonExistentConsensusVertexHandlerFactory(
   asynchronous: Boolean, // If the execution is asynchronous.
   initialState: Double, // Initial value for the consensus variable.
   isBounded: Boolean, // Use bounding (cutoff below 0 and above 1).
-  lazyThreshold: Option[Double]) // Only send values that have changed.
+  lazyThreshold: Option[Double], // Only send values that have changed.
+  boundsOnConsensusVars: Map[Int, (Double, Double)] = Map.empty) // Push trivial bounds inside the nodes.
   extends EdgeAddedToNonExistentVertexHandlerFactory[Int, Double] {
   def createInstance: EdgeAddedToNonExistentVertexHandler[Int, Double] =
-    new NonExistentConsensusVertexHandler(asynchronous, initialState, isBounded, lazyThreshold)
+    new NonExistentConsensusVertexHandler(asynchronous, initialState, isBounded, lazyThreshold, boundsOnConsensusVars)
   override def toString = "NoneExistentConsensusVertexFactory"
 }
 
@@ -84,26 +85,35 @@ case class NonExistentConsensusVertexHandler(
   asynchronous: Boolean, // If the execution is asynchronous.
   initialState: Double, // Initial value for the consensus variable.
   isBounded: Boolean, // Use bounding (cutoff below 0 and above 1).
-  lazyThreshold: Option[Double]) // Only continue if a value changed by more than the threshold.
+  lazyThreshold: Option[Double], // Only continue if a value changed by more than the threshold.
+  boundsOnConsensusVars: Map[Int, (Double, Double)] = Map.empty) // Push trivial bounds inside the nodes.
   extends EdgeAddedToNonExistentVertexHandler[Int, Double] {
   def handleImpossibleEdgeAddition(edge: Edge[Int], vertexId: Int): Option[Vertex[Int, _, Int, Double]] = {
+    val (lowerBound, upperBound) =
+      boundsOnConsensusVars.getOrElse(vertexId, (0.0, 1.0))
     if (asynchronous) {
       if (lazyThreshold.isDefined) throw new Exception("Asynchronous inferencing cannot be combined with lazy inferencing.")
       Some(new AsyncConsensusVertex(
         variableId = vertexId,
         initialState = initialState,
-        isBounded = isBounded))
+        isBounded = isBounded,
+        lowerBound,
+        upperBound))
     } else {
       if (lazyThreshold.isDefined) {
         Some(new LazyConsensusVertex(
           variableId = vertexId,
           initialState = initialState,
-          isBounded = isBounded))
+          isBounded = isBounded,
+          lowerBound,
+          upperBound))
       } else {
         Some(new ConsensusVertex(
           variableId = vertexId,
           initialState = initialState,
-          isBounded = isBounded))
+          isBounded = isBounded,
+          lowerBound,
+          upperBound))
       }
     }
   }
@@ -114,9 +124,10 @@ object Wolf {
   def solveProblem(
     functions: Traversable[OptimizableFunction],
     nodeActors: Option[Array[ActorRef]] = None,
-    config: WolfConfig): ProblemSolution = {
+    config: WolfConfig,
+    boundsOnConsensusVars: Map[Int, (Double, Double)] = Map.empty): ProblemSolution = {
     val (graph, graphLoadingTime) = Timer.time {
-      createGraph(functions, nodeActors, config, config.serializeMessages)
+      createGraph(functions, nodeActors, config, config.serializeMessages, boundsOnConsensusVars)
     }
     println(s"ADMM graph creation completed in $graphLoadingTime ms.")
     try {
@@ -173,14 +184,16 @@ object Wolf {
     functions: Traversable[OptimizableFunction],
     nodeActors: Option[Array[ActorRef]] = None,
     config: WolfConfig,
-    serializeMessages: Boolean = false): Graph[Int, Double] = {
+    serializeMessages: Boolean = false,
+    boundsOnConsensusVars: Map[Int, (Double, Double)] = Map.empty): Graph[Int, Double] = {
     //println(s"Creating the ADMM graph ...")
     // Use node actors with graph builder, if they have been passed.
     val consensusHandlerFactory = new NonExistentConsensusVertexHandlerFactory(
       asynchronous = config.asynchronous, // If the execution is asynchronous.
       initialState = 0.0, // Initial value for the consensus variable.
       isBounded = config.isBounded, // Use bounding (cutoff below 0 and above 1) .
-      lazyThreshold = config.lazyThreshold) // Only send values that have changed.
+      lazyThreshold = config.lazyThreshold, // Only send values that have changed.
+      boundsOnConsensusVars)
     val graphBuilder = {
       nodeActors.map(new GraphBuilder[Int, Double]().withPreallocatedNodes(_)).
         getOrElse(new GraphBuilder[Int, Double]()).

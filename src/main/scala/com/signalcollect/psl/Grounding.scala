@@ -417,46 +417,36 @@ object Grounding {
           val constant = constraint.computeConstant
           val coefficient = constraint.computeCoefficientMatrix(0)
           val gP = constraint.unboundGroundedPredicates(0)
+          // Rewind the id.
+          id = id - 1
           if (coefficient != 0.0) {
             if (property == Functional) {
               // If the constraint is functional (an equality) we can try to assign the value to the
               // grounded predicate if there is only one numerical value it has to be equal to.
               // println(s"Updated $gP with ${constant/coefficient}.")
 
-              // Rewind the id.
-              id = id - 1
-
               (None, Some(GroundedPredicate(gP.id, gP.definition, gP.groundings, Some(constant / coefficient))))
             } else {
               // println(s"Bound $gP with ${constant/coefficient}.")
               // If the constraint is partial functional (a lesser than or equal), we can exclude certain trivial cases
               // and push them in the bounds.
-              val potentialLowerBound = constant / coefficient
-              val newLowerBound = math.min(potentialLowerBound, 1.0)
-              if (newLowerBound < 0.0) {
+              val potentialUpperBound = constant / coefficient
+              val newUpperBound = math.min(potentialUpperBound, gP.upperBound)
+              if (newUpperBound < 0.0) {
                 println("[Warning]: There is a constraint which expects the value of a predicate to be lower than 0, we ignore it. ")
-                // Rewind the id.
-                id = id - 1
                 (None, None)
-              } else if (newLowerBound == 0.0) {
-                // Rewind the id.
-                id = id - 1
+              } else if (newUpperBound == 0.0) {
                 // Assign truth value to 0.0.
                 (None, Some(GroundedPredicate(gP.id, gP.definition, gP.groundings, Some(0.0))))
               } else {
                 if (isBounded) {
-                  // TODO(sara): at the moment we don't propagate the bounds to Wolf.
-                  (Some(constraint), Some(GroundedPredicate(gP.id, gP.definition, gP.groundings, gP.truthValue, newLowerBound)))
+                  (None, Some(GroundedPredicate(gP.id, gP.definition, gP.groundings, gP.truthValue, gP.lowerBound, newUpperBound)))
                 } else {
-                  // Rewind the id.
-                  id = id - 1
-                  (None, Some(GroundedPredicate(gP.id, gP.definition, gP.groundings, gP.truthValue, newLowerBound)))
+                  (None, Some(GroundedPredicate(gP.id, gP.definition, gP.groundings, gP.truthValue, gP.lowerBound, newUpperBound)))
                 }
               }
             }
           } else {
-            // Rewind the id.
-            id = id - 1
             println("[Warning]: There is a constraint with one unbound predicate and a coefficient matrix with a 0, we ignore it.")
             (None, None)
           }

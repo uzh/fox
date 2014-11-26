@@ -233,12 +233,17 @@ object Inferencer {
     val functions = groundedRules.flatMap(_.createOptimizableFunction(config.stepSize, config.tolerance, config.breezeOptimizer))
     val constraints = groundedConstraints.flatMap(_.createOptimizableFunction(config.stepSize, config.tolerance, config.breezeOptimizer))
     val functionsAndConstraints = functions ++ constraints
-    println(s"Problem converted to consensus optimization with ${functions.size} functions and ${constraints.size} constraints that are not trivially true.")
-
+    val boundsForConsensusVariables = idToGpMap.filter(p => p._2.lowerBound != 0.0 || p._2.upperBound != 1.0).map {
+      case (id, p) => (id, (p.lowerBound, p.upperBound))
+    }
+    println(s"Problem converted to consensus optimization with ${functions.size} functions and ${constraints.size} constraints that are not trivially true; ${boundsForConsensusVariables.size} grounded predicates have non trivial bounds.")
+println(boundsForConsensusVariables)
+    
     val solution = Wolf.solveProblem(
       functionsAndConstraints,
       nodeActors,
-      config.getWolfConfig)
+      config.getWolfConfig,
+      boundsForConsensusVariables)
     //println(s"Problem solved, getting back results.")
 
     if (config.computeObjectiveValueOfSolution) {
