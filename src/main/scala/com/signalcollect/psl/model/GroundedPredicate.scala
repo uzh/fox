@@ -25,7 +25,9 @@ case class GroundedPredicate(
   id: Int,
   definition: Predicate,
   groundings: List[Individual],
-  truthValue: Option[Double]) {
+  truthValue: Option[Double],
+  lowerBound: Double = 0.0,
+  upperBound: Double = 1.0) {
 
   override def toString() = {
     s"GroundedPredicate $id: ${definition.name}${definition.properties.mkString("[ ", ", ", "]")} ${groundings.mkString("(", ", ", ")")}"

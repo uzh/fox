@@ -348,7 +348,7 @@ object Grounding {
    */
   def createGroundedConstraints(predicates: List[Predicate], groundedPredicates: Map[(String, List[Individual]), GroundedPredicate],
     individuals: Map[PslClass, Set[Individual]], startingConstraintId: Int = 0,
-    removeSymmetricConstraints: Boolean = false, startingId: Int = 0): (List[GroundedConstraint], Map[(String, List[Individual]), GroundedPredicate]) = {
+    removeSymmetricConstraints: Boolean = false, isBounded: Boolean = true, startingId: Int = 0): (List[GroundedConstraint], Map[(String, List[Individual]), GroundedPredicate]) = {
     // The id of the grounded constraint.
     var id = startingId
     // The ruleId is the id for each predicate property we are making into a constraint.
@@ -372,7 +372,7 @@ object Grounding {
                   (id - 1, List.empty, Map.empty)
                 }
               case Functional | PartialFunctional | _ =>
-                createFunctionalConstraints(id, { ruleId += 1; ruleId }, property, predicate, currentGroundedPredicates, individuals)
+                createFunctionalConstraints(id, { ruleId += 1; ruleId }, property, predicate, currentGroundedPredicates, individuals, isBounded)
             }
             currentGroundedPredicates = currentGroundedPredicates ++ newGps
             id = nextId + 1
@@ -387,7 +387,7 @@ object Grounding {
    */
   def createFunctionalConstraints(startingId: Int, ruleId: Int, property: PredicateProperty, predicate: Predicate,
     groundedPredicates: Map[(String, List[Individual]), GroundedPredicate],
-    individuals: Map[PslClass, Set[Individual]]): (Int, List[GroundedConstraint], Map[(String, List[Individual]), GroundedPredicate]) = {
+    individuals: Map[PslClass, Set[Individual]], isBounded: Boolean): (Int, List[GroundedConstraint], Map[(String, List[Individual]), GroundedPredicate]) = {
 
     // Functional means that the first individual is the same in all the grounded predicates of the same constraint.
     var id = startingId
@@ -409,32 +409,54 @@ object Grounding {
         GroundedConstraint({ id += 1; id }, ruleId, property, groundedPredicatesWithA)
     }
 
-    val usefulConstraints = if (property == Functional) {
-      constraints.filter(_.computeCoefficientMatrix.size > 1)
-    } else {
-      constraints.filter(_.computeCoefficientMatrix.size > 0)
-    }
-
-    if (property == Functional) {
-      val assignableConstraints = constraints.filter(_.computeCoefficientMatrix.size == 1)
-      val assignedGroundedPredicates: List[GroundedPredicate] = assignableConstraints.flatMap {
-        assignableConstraint =>
-          val constant = assignableConstraint.computeConstant
-          val coefficient = assignableConstraint.computeCoefficientMatrix(0)
-          val gP = assignableConstraint.unboundGroundedPredicates(0)
-          if (coefficient != 0) {
+    val usefulConstraints = constraints.filter(_.computeCoefficientMatrix.size > 1)
+    val assignableConstraints = constraints.filter(_.computeCoefficientMatrix.size == 1)
+    val assignedGroundedPredicates: List[GroundedPredicate] = assignableConstraints.flatMap {
+      assignableConstraint =>
+        val constant = assignableConstraint.computeConstant
+        val coefficient = assignableConstraint.computeCoefficientMatrix(0)
+        val gP = assignableConstraint.unboundGroundedPredicates(0)
+        if (coefficient != 0) {
+          if (property == Functional) {
+            // If the constraint is functional (an equality) we can try to assign the value to the
+            // grounded predicate if there is only one numerical value it has to be equal to.
             // println(s"Updated $gP with ${constant/coefficient}.")
             Some(GroundedPredicate(gP.id, gP.definition, gP.groundings, Some(constant / coefficient)))
           } else {
-            println("[Warning]: There is a constraint with one unbound predicate and a coefficient matrix with a 0.")
-            None
+            // println(s"Bound $gP with ${constant/coefficient}.")
+            // If the constraint is partial functional (a lesser than or equal), we can exclude certain trivial cases
+            // and push them in the bounds.
+            val potentialLowerBound = constant / coefficient
+            val newLowerBound = math.min(potentialLowerBound, 1.0)
+            if (newLowerBound < 0.0) {
+              println("[Warning]: There is a constraint which expects the value of a predicate to be lower than 0, we ignore it. ")
+              None
+            } else if (newLowerBound == 0.0) {
+              Some(GroundedPredicate(gP.id, gP.definition, gP.groundings, Some(0.0)))
+            } else {
+              Some(GroundedPredicate(gP.id, gP.definition, gP.groundings, gP.truthValue, newLowerBound))
+            }
           }
-      }
-      val reassignedMapOfGps = assignedGroundedPredicates.flatMap(p => Map((p.definition.name, p.groundings) -> p)).toMap
+
+        } else {
+          println("[Warning]: There is a constraint with one unbound predicate and a coefficient matrix with a 0.")
+          None
+        }
+    }
+    val reassignedMapOfGps = assignedGroundedPredicates.flatMap(p => Map((p.definition.name, p.groundings) -> p)).toMap
+
+    // TODO(sara): at the moment we don't propagate the bounds to Wolf.
+    if (property == Functional) {
       (id, usefulConstraints, reassignedMapOfGps)
     } else {
-      (id, usefulConstraints, Map.empty)
+      if (isBounded) {
+        (id, usefulConstraints ++ assignableConstraints, reassignedMapOfGps)
+      } else {
+        (id, usefulConstraints, reassignedMapOfGps)
+      }
+
     }
+
   }
 
   def createGroundedConstraintBounds(groundedPredicates: Map[(String, List[Individual]), GroundedPredicate],
@@ -449,9 +471,11 @@ object Grounding {
     // Keep the grounded predicates that have no truth value (for the others the constraints are useless). 
     val bounds = unboundedGroundedPredicates.map {
       gp =>
-        val leq1 = GroundedConstraint({ id += 1; id }, { ruleId += 1; ruleId }, LessOrEqual, List(gp), Array(1.0), 1.0)
-        val geq0 = GroundedConstraint({ id += 1; id }, { ruleId }, GreaterOrEqual, List(gp), Array(1.0), 0.0)
-        List(leq1, geq0)
+        val newLowerBound = math.max(0, math.min(gp.lowerBound, 1.0))
+        val newUpperBound = math.max(0, math.min(gp.upperBound, 1.0))
+        val leqUpperBound = GroundedConstraint({ id += 1; id }, { ruleId += 1; ruleId }, LessOrEqual, List(gp), Array(1.0), newUpperBound)
+        val geqLowerBound = GroundedConstraint({ id += 1; id }, { ruleId }, GreaterOrEqual, List(gp), Array(1.0), newLowerBound)
+        List(leqUpperBound, geqLowerBound)
     }.flatten
     bounds.toList
   }
