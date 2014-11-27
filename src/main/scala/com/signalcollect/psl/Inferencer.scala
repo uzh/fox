@@ -25,6 +25,7 @@ import com.signalcollect.admm.Wolf
 import com.signalcollect.admm.WolfConfig
 import com.signalcollect.admm.ProblemSolution
 import com.signalcollect.admm.utils.Timer
+import com.signalcollect.admm.optimizers.OptimizableFunction
 import com.signalcollect.psl.parser.ParsedPslFile
 import com.signalcollect.psl.parser.PslParser
 import com.signalcollect.psl.parser.Fact
@@ -49,7 +50,8 @@ case class InferenceResult(
   idToGpMap: Map[Int, GroundedPredicate],
   objectiveFun: Option[Double] = None,
   groundingTime: Option[Long] = None,
-  parsingTime: Option[Long] = None) {
+  parsingTime: Option[Long] = None,
+  functionCreationTime: Option[Long] = None) {
 
   def getGp(predicate: String, individuals: String*): Option[GroundedPredicate] = {
     val individualList = individuals.toList
@@ -166,7 +168,7 @@ case class InferencerConfig(
   isBounded: Boolean = true,
   serializeMessages: Boolean = false,
   removeSymmetricConstraints: Boolean = true,
-  pushBoundsInNodes: Boolean = true, 
+  pushBoundsInNodes: Boolean = true,
   eagerSignalCollectConvergenceDetection: Boolean = true,
   heartbeatIntervalInMs: Int = 0) {
 
@@ -222,38 +224,44 @@ object Inferencer {
     config: InferencerConfig = InferencerConfig()): InferenceResult = {
     println(s"Running inferences for ${pslData.individuals.size} individuals ... ${if (pslData.individuals.size <= 10) pslData.individuals else "too many to list"}")
     // Ground the rules with the individuals.
-    val (groundingResult, groundingTime) = Timer.time {
+    val ((groundedRules, groundedConstraints, idToGpMap), groundingTime) = Timer.time {
       Grounding.ground(pslData, config.isBounded, config.removeSymmetricConstraints, config.pushBoundsInNodes)
     }
-    val (groundedRules, groundedConstraints, idToGpMap) = groundingResult
     println(s"Grounding completed in $groundingTime ms: ${groundedRules.size} grounded rules, ${groundedConstraints.size} constraints and ${idToGpMap.keys.size} grounded predicates.")
     solveInferenceProblem(groundedRules, groundedConstraints, idToGpMap, groundingTime, nodeActors, config)
   }
 
-  def solveInferenceProblem(groundedRules: Iterable[GroundedRule], groundedConstraints: Iterable[GroundedConstraint], idToGpMap: Map[Int, GroundedPredicate], groundingTime: Long, nodeActors: Option[Array[ActorRef]] = None, config: InferencerConfig = InferencerConfig()) = {
+  def recreateFunctions(groundedRules: Iterable[GroundedRule], groundedConstraints: Iterable[GroundedConstraint], idToGpMap: Map[Int, GroundedPredicate], config: InferencerConfig = InferencerConfig()): (Iterable[OptimizableFunction], Map[Int, (Double, Double)]) = {
     val functions = groundedRules.flatMap(_.createOptimizableFunction(config.stepSize, config.tolerance, config.breezeOptimizer))
     val constraints = groundedConstraints.flatMap(_.createOptimizableFunction(config.stepSize, config.tolerance, config.breezeOptimizer))
-    val functionsAndConstraints = functions ++ constraints
-    val boundsForConsensusVariables = idToGpMap.filter(p => p._2.lowerBound != 0.0 || p._2.upperBound != 1.0).map {
-      case (id, p) => (id, (p.lowerBound, p.upperBound))
+    val boundsForConsensusVariables: Map[Int, (Double, Double)] = if (config.pushBoundsInNodes && config.isBounded) {
+      idToGpMap.filter(p => p._2.lowerBound != 0.0 || p._2.upperBound != 1.0).map {
+        case (id, p) => (id, (p.lowerBound, p.upperBound))
+      }
+    } else {
+      Map.empty
     }
-    println(s"Problem converted to consensus optimization with ${functions.size} functions and ${constraints.size} constraints that are not trivially true; ${boundsForConsensusVariables.size} grounded predicates have non trivial bounds.")
-    
+    println(s"Problem converted to consensus optimization with ${functions.size} functions and ${constraints.size} constraints.")
+    (functions ++ constraints, boundsForConsensusVariables)
+  }
+
+  def solveInferenceProblem(groundedRules: Iterable[GroundedRule], groundedConstraints: Iterable[GroundedConstraint], idToGpMap: Map[Int, GroundedPredicate], groundingTime: Long, nodeActors: Option[Array[ActorRef]] = None, config: InferencerConfig = InferencerConfig()) = {
+    val ((functionsAndConstraints, boundsForConsensusVariables), functionCreationTime) = Timer.time { recreateFunctions(groundedRules, groundedConstraints, idToGpMap, config) }
+
     val solution = Wolf.solveProblem(
       functionsAndConstraints,
       nodeActors,
       config.getWolfConfig,
       boundsForConsensusVariables)
-    //println(s"Problem solved, getting back results.")
 
     if (config.computeObjectiveValueOfSolution) {
       val objectiveFunctionVal = functionsAndConstraints.foldLeft(0.0) {
         case (sum, nextFunction) => sum + nextFunction.evaluateAt(solution.results)
       }
       //println("Computed the objective function.")
-      InferenceResult(solution, idToGpMap, Some(objectiveFunctionVal), Some(groundingTime))
+      InferenceResult(solution, idToGpMap, Some(objectiveFunctionVal), Some(groundingTime), functionCreationTime = Some(functionCreationTime))
     } else {
-      InferenceResult(solution, idToGpMap)
+      InferenceResult(solution, idToGpMap, groundingTime = Some(groundingTime), functionCreationTime = Some(functionCreationTime))
     }
   }
 }
