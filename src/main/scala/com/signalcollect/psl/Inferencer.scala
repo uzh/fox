@@ -166,6 +166,7 @@ case class InferencerConfig(
   isBounded: Boolean = true,
   serializeMessages: Boolean = false,
   removeSymmetricConstraints: Boolean = true,
+  pushBoundsInNodes: Boolean = true, 
   eagerSignalCollectConvergenceDetection: Boolean = true,
   heartbeatIntervalInMs: Int = 0) {
 
@@ -222,7 +223,7 @@ object Inferencer {
     println(s"Running inferences for ${pslData.individuals.size} individuals ... ${if (pslData.individuals.size <= 10) pslData.individuals else "too many to list"}")
     // Ground the rules with the individuals.
     val (groundingResult, groundingTime) = Timer.time {
-      Grounding.ground(pslData, config.isBounded, config.removeSymmetricConstraints)
+      Grounding.ground(pslData, config.isBounded, config.removeSymmetricConstraints, config.pushBoundsInNodes)
     }
     val (groundedRules, groundedConstraints, idToGpMap) = groundingResult
     println(s"Grounding completed in $groundingTime ms: ${groundedRules.size} grounded rules, ${groundedConstraints.size} constraints and ${idToGpMap.keys.size} grounded predicates.")
