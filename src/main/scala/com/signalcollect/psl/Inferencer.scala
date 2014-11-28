@@ -160,7 +160,7 @@ case class InferencerConfig(
   globalConvergenceDetection: Option[Int] = Some(100), // Run convergence detection every 100 S/C steps.
   absoluteEpsilon: Double = 1e-8,
   relativeEpsilon: Double = 1e-3,
-  computeObjectiveValueOfSolution: Boolean = true,
+  computeObjectiveValueOfSolution: Boolean = false,
   objectiveLoggingEnabled: Boolean = false,
   maxIterations: Int = 10000, // maximum number of iterations.
   stepSize: Double = 1.0,

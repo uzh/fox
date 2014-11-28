@@ -53,7 +53,9 @@ case class ProblemSolution(
   stats: ExecutionInformation[Int, Double],
   results: IntDoubleHashMap,
   convergence: Option[AbstractGlobalAdmmConvergenceDetection] = None,
-  graphLoadingTime: Long) // in case we have local convergence this is None.
+  graphLoadingTime: Long,
+  inferenceTime: Long,
+  resultAggregationTime: Long) // in case we have local convergence this is None.
 
 case class WolfConfig(
   asynchronous: Boolean,
@@ -135,24 +137,26 @@ object Wolf {
       val executionConfig = ExecutionConfiguration[Int, Double]().
         withExecutionMode(if (config.asynchronous) ExecutionMode.OptimizedAsynchronous else ExecutionMode.Synchronous).
         withStepsLimit(config.maxIterations)
-      val (stats, convergence) = if (config.globalConvergenceDetection.isDefined) {
-        // Global convergence case:
-        val globalConvergence = if (config.objectiveLoggingEnabled) {
-          new GlobalAdmmConvergenceDetection(
-            absoluteEpsilon = config.absoluteEpsilon,
-            relativeEpsilon = config.relativeEpsilon,
-            checkingInterval = config.globalConvergenceDetection.get) with DebugLogging
+      val ((stats, convergence), inferenceTime) = Timer.time {
+        if (config.globalConvergenceDetection.isDefined) {
+          // Global convergence case:
+          val globalConvergence = if (config.objectiveLoggingEnabled) {
+            new GlobalAdmmConvergenceDetection(
+              absoluteEpsilon = config.absoluteEpsilon,
+              relativeEpsilon = config.relativeEpsilon,
+              checkingInterval = config.globalConvergenceDetection.get) with DebugLogging
+          } else {
+            GlobalAdmmConvergenceDetection(
+              absoluteEpsilon = config.absoluteEpsilon,
+              relativeEpsilon = config.relativeEpsilon,
+              checkingInterval = config.globalConvergenceDetection.get)
+          }
+          val stats = graph.execute(executionConfig.withGlobalTerminationDetection(globalConvergence))
+          (stats, Some(globalConvergence))
         } else {
-          GlobalAdmmConvergenceDetection(
-            absoluteEpsilon = config.absoluteEpsilon,
-            relativeEpsilon = config.relativeEpsilon,
-            checkingInterval = config.globalConvergenceDetection.get)
+          val stats = graph.execute(executionConfig)
+          (stats, None)
         }
-        val stats = graph.execute(executionConfig.withGlobalTerminationDetection(globalConvergence))
-        (stats, Some(globalConvergence))
-      } else {
-        val stats = graph.execute(executionConfig)
-        (stats, None)
       }
       val convergenceMessage = stats.executionStatistics.terminationReason match {
         case TerminationReason.TimeLimitReached =>
@@ -167,12 +171,14 @@ object Wolf {
           "Computation terminated on user request."
       }
       println(convergenceMessage)
-      val resultMap = graph.aggregate(ConsensusAggregator)
+      val (resultMap, resultAggregationTime) = Timer.time { graph.aggregate(ConsensusAggregator) }
       val solution = ProblemSolution(
         stats = stats,
         results = resultMap.getOrElse(new IntDoubleHashMap(initialSize = 1, rehashFraction = 0.5f)),
         convergence = convergence,
-        graphLoadingTime = graphLoadingTime)
+        graphLoadingTime = graphLoadingTime,
+        inferenceTime = inferenceTime,
+        resultAggregationTime = resultAggregationTime)
       solution
     } finally {
       graph.shutdown
