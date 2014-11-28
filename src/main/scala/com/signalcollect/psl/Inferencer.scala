@@ -246,7 +246,9 @@ object Inferencer {
   }
 
   def solveInferenceProblem(groundedRules: Iterable[GroundedRule], groundedConstraints: Iterable[GroundedConstraint], idToGpMap: Map[Int, GroundedPredicate], groundingTime: Long, nodeActors: Option[Array[ActorRef]] = None, config: InferencerConfig = InferencerConfig()) = {
-    val ((functionsAndConstraints, boundsForConsensusVariables), functionCreationTime) = Timer.time { recreateFunctions(groundedRules, groundedConstraints, idToGpMap, config) }
+    val ((functionsAndConstraints, boundsForConsensusVariables), functionCreationTime) = Timer.time {
+      recreateFunctions(groundedRules, groundedConstraints, idToGpMap, config)
+    }
 
     val solution = Wolf.solveProblem(
       functionsAndConstraints,
@@ -255,11 +257,13 @@ object Inferencer {
       boundsForConsensusVariables)
 
     if (config.computeObjectiveValueOfSolution) {
-      val objectiveFunctionVal = functionsAndConstraints.foldLeft(0.0) {
-        case (sum, nextFunction) => sum + nextFunction.evaluateAt(solution.results)
+      val (objectiveFunctionVal, objEvaluationTime) = Timer.time {
+        functionsAndConstraints.foldLeft(0.0) {
+          case (sum, nextFunction) => sum + nextFunction.evaluateAt(solution.results)
+        }
       }
       //println("Computed the objective function.")
-      InferenceResult(solution, idToGpMap, Some(objectiveFunctionVal), Some(groundingTime), functionCreationTime = Some(functionCreationTime))
+      InferenceResult(solution, idToGpMap, Some(objectiveFunctionVal), Some(groundingTime), functionCreationTime = Some(functionCreationTime + objEvaluationTime))
     } else {
       InferenceResult(solution, idToGpMap, groundingTime = Some(groundingTime), functionCreationTime = Some(functionCreationTime))
     }

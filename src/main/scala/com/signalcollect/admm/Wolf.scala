@@ -131,13 +131,13 @@ object Wolf {
     val (graph, graphLoadingTime) = Timer.time {
       createGraph(functions, nodeActors, config, config.serializeMessages, boundsOnConsensusVars)
     }
-    println(s"ADMM graph creation completed in $graphLoadingTime ms.")
     try {
-      println("Starting inference ...")
-      val executionConfig = ExecutionConfiguration[Int, Double]().
-        withExecutionMode(if (config.asynchronous) ExecutionMode.OptimizedAsynchronous else ExecutionMode.Synchronous).
-        withStepsLimit(config.maxIterations)
       val ((stats, convergence), inferenceTime) = Timer.time {
+        println(s"ADMM graph creation completed in $graphLoadingTime ms.")
+        println("Starting inference ...")
+        val executionConfig = ExecutionConfiguration[Int, Double]().
+          withExecutionMode(if (config.asynchronous) ExecutionMode.OptimizedAsynchronous else ExecutionMode.Synchronous).
+          withStepsLimit(config.maxIterations)
         if (config.globalConvergenceDetection.isDefined) {
           // Global convergence case:
           val globalConvergence = if (config.objectiveLoggingEnabled) {
@@ -158,23 +158,26 @@ object Wolf {
           (stats, None)
         }
       }
-      val convergenceMessage = stats.executionStatistics.terminationReason match {
-        case TerminationReason.TimeLimitReached =>
-          "Computation finished because the time limit was reached."
-        case TerminationReason.Converged =>
-          "Computation finished because setting all the variables to 0 is a solution."
-        case TerminationReason.GlobalConstraintMet =>
-          "Computation finished because the global error was small enough."
-        case TerminationReason.ComputationStepLimitReached =>
-          "Computation finished because the steps limit was reached."
-        case TerminationReason.TerminatedByUser =>
-          "Computation terminated on user request."
+      val (results, resultAggregationTime) = Timer.time {
+        val convergenceMessage = stats.executionStatistics.terminationReason match {
+          case TerminationReason.TimeLimitReached =>
+            "Computation finished because the time limit was reached."
+          case TerminationReason.Converged =>
+            "Computation finished because setting all the variables to 0 is a solution."
+          case TerminationReason.GlobalConstraintMet =>
+            "Computation finished because the global error was small enough."
+          case TerminationReason.ComputationStepLimitReached =>
+            "Computation finished because the steps limit was reached."
+          case TerminationReason.TerminatedByUser =>
+            "Computation terminated on user request."
+        }
+        println(convergenceMessage)
+        val resultMap = graph.aggregate(ConsensusAggregator)
+        resultMap.getOrElse(new IntDoubleHashMap(initialSize = 1, rehashFraction = 0.5f))
       }
-      println(convergenceMessage)
-      val (resultMap, resultAggregationTime) = Timer.time { graph.aggregate(ConsensusAggregator) }
       val solution = ProblemSolution(
         stats = stats,
-        results = resultMap.getOrElse(new IntDoubleHashMap(initialSize = 1, rehashFraction = 0.5f)),
+        results = results,
         convergence = convergence,
         graphLoadingTime = graphLoadingTime,
         inferenceTime = inferenceTime,
