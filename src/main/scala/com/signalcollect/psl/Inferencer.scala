@@ -222,9 +222,16 @@ object Inferencer {
     pslData: ParsedPslFile,
     nodeActors: Option[Array[ActorRef]] = None,
     config: InferencerConfig = InferencerConfig()): InferenceResult = {
-    println(s"Running inferences for ${pslData.individuals.size} individuals ... ${if (pslData.individuals.size <= 10) pslData.individuals else "too many to list"}")
     // Ground the rules with the individuals.
     val ((groundedRules, groundedConstraints, idToGpMap), groundingTime) = Timer.time {
+      var individualsString = s"Running inferences for ${pslData.individuals.size} individuals ..."
+      if (pslData.individuals.size <= 10) {
+        individualsString += pslData.individuals.map(i => s"${i.value}: ${i.classTypes}")
+      } else {
+        individualsString += "first 10 results: "
+        individualsString += pslData.individuals.slice(0, 10).map(i => s"${i.value}: ${i.classTypes}")
+      }
+      println(individualsString)
       Grounding.ground(pslData, config.isBounded, config.removeSymmetricConstraints, config.pushBoundsInNodes)
     }
     println(s"Grounding completed in $groundingTime ms: ${groundedRules.size} grounded rules, ${groundedConstraints.size} constraints and ${idToGpMap.keys.size} grounded predicates.")

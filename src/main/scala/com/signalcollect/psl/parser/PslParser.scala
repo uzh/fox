@@ -222,13 +222,14 @@ object PslParser extends ParseHelper[ParsedPslFile] with ImplicitConversions {
        val facts = lines.flatMap{ case f: Fact => Some(f) case _ => None}
        val inds = lines.flatMap{ case f: Set[Individual] => Some(f) case _ => None}
        val classes = lines.flatMap{ case f: (PslClass, Set[Individual]) => Some(f) case _ => None}
+       val classMap = classes.groupBy(_._1).mapValues(c => c.map(i => i._2).foldLeft(Set.empty[Individual])(_ ++ _))
        
        if (inds.length == 0 ){
-         ParsedPslFile(classes.toMap, predicates, rules, facts)
+         ParsedPslFile(classMap, predicates, rules, facts)
        }
        else {
          val unionOfIndividuals = inds.foldLeft(inds(0))(_.union(_))
-          ParsedPslFile(classes.toMap, predicates, rules, facts, unionOfIndividuals)  
+          ParsedPslFile(classMap, predicates, rules, facts, unionOfIndividuals)  
        } 
     }
   }
@@ -257,8 +258,8 @@ object PslParser extends ParseHelper[ParsedPslFile] with ImplicitConversions {
         (PslClass(classType), Set.empty)
       case classType ~ colon ~ individuals =>
         for (ind <- individuals){
-            assert(ind.forall(c => !c.isUpper),
-            s"Individuals that appear in facts have to be all lowercase, and $ind contains at least one uppercase character.")
+            assert(!ind.charAt(0).isUpper,
+            s"Individuals that appear in facts must start with a lowercase character.")
         }
         (PslClass(classType), individuals.map(Individual(_, Set(PslClass(classType)))).toSet)
     }
