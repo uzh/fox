@@ -98,9 +98,10 @@ object Grounding {
           None
         } else {
           // Check if there is any variables which is not disjoint from the others.
-          val notPairwiseDisjoint = ignoreEmptySet.values.exists(a => ignoreEmptySet.values.exists { b =>
-            a != b && !b.isDisjoint(a)
-          })
+          val notPairwiseDisjoint = ignoreEmptySet.values.exists(
+            a => ignoreEmptySet.values.exists { b =>
+              a != b && !b.isDisjoint(a)
+            })
           if (notPairwiseDisjoint) {
             None
           } else {

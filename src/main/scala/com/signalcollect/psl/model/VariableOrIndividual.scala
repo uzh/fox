@@ -47,6 +47,9 @@ sealed trait VariableOrIndividual {
     if (set) { name } else if (!name.startsWith("Set(")) { name } else { varsOrIndividualsInSet.head }
 
   }
+  override def hashCode(): Int = {
+    value.hashCode()
+  }
   override def equals(that: Any) = {
     that match {
       case v: VariableOrIndividual => v.value == value
