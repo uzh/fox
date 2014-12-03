@@ -60,57 +60,59 @@ object Grounding {
    */
   def generateBindings(variables: List[Variable], individuals: Map[PslClass, Set[Individual]]): List[Map[String, Individual]] = {
     if (variables.size < 1) {
-      List.empty
-    } else {
-      // For each variable try all the individuals that are in the intersection of the classes it has.
-      val allMappings = variables.map {
-        variable =>
-          (variable.value,
-            if (variable.classTypes.isEmpty) {
-              individuals(PslClass("_")).map(v => Individual(v.value))
-            } else {
-              val sets = variable.classTypes.map(individuals(_)).toList
-              val intersection = sets.foldLeft(sets(0))(_ & _)
-              intersection.map(v => Individual(v.value))
-            })
-      }.toMap
+      return List.empty
+    }
+    // For each variable try all the individuals that are in the intersection of the classes it has.
+    val allMappings = variables.map {
+      variable =>
+        (variable.value,
+          if (variable.classTypes.isEmpty) {
+            individuals(PslClass("_")).map(v => Individual(v.value))
+          } else {
+            val sets = variable.classTypes.map(individuals(_)).toList
+            val intersection = sets.foldLeft(sets(0))(_ & _)
+            intersection.map(v => Individual(v.value))
+          })
+    }.toMap
+    if (allMappings.exists(_._2.isEmpty)) {
+      return List.empty
+    }
 
-      // Need a list of List[Map[String, Individual]], each one representing the value of a variable.
-      // e.g. List (Map(A -> anna), Map(A -> sara)) 	    
-      val allMappingsList = allMappings.map {
-        case (variableName, variableIndividuals) => {
-          val listOfPossibleMappings = variableIndividuals.map(v => Map[String, Individual](variableName -> v)).toList
-          listOfPossibleMappings
-        }
-      }.toList
+    // Need a list of List[Map[String, Individual]], each one representing the value of a variable.
+    // e.g. List (Map(A -> anna), Map(A -> sara)) 	    
+    val allMappingsList = allMappings.map {
+      case (variableName, variableIndividuals) => {
+        val listOfPossibleMappings = variableIndividuals.map(v => Map[String, Individual](variableName -> v)).toList
+        listOfPossibleMappings
+      }
+    }.toList
 
-      // Use combine to foldleft the values and get the result.
-      val foldedList = allMappingsList.foldLeft(List[Map[String, Individual]]())(combine(_, _))
+    // Use combine to foldleft the values and get the result.
+    val foldedList = allMappingsList.foldLeft(List[Map[String, Individual]]())(combine(_, _))
 
-      // Prune all the mappings that have the same individual in more than two variables.
-      // Note: this enforces the fact that if you bind an individual to a variable it cannot be bound again.
-      // Example: A-> anna, B-> cannot be anna.
-      // This may be not what the user expects, so we may want to make it configurable.
-      val prunedList = foldedList.flatMap { mapping =>
-        // The empty set is disjoint by definition from anything, even itself.
-        val ignoreEmptySet = mapping.filter(_._2.value != "")
-        if (ignoreEmptySet.values.toSet.size < ignoreEmptySet.keys.size) {
+    // Prune all the mappings that have the same individual in more than two variables.
+    // Note: this enforces the fact that if you bind an individual to a variable it cannot be bound again.
+    // Example: A-> anna, B-> cannot be anna.
+    // This may be not what the user expects, so we may want to make it configurable.
+    val prunedList = foldedList.flatMap { mapping =>
+      // The empty set is disjoint by definition from anything, even itself.
+      val ignoreEmptySet = mapping.filter(_._2.value != "")
+      if (ignoreEmptySet.values.toSet.size < ignoreEmptySet.keys.size) {
+        None
+      } else {
+        // Check if there is any variables which is not disjoint from the others.
+        val notPairwiseDisjoint = ignoreEmptySet.values.exists(
+          a => ignoreEmptySet.values.exists { b =>
+            a != b && !b.isDisjoint(a)
+          })
+        if (notPairwiseDisjoint) {
           None
         } else {
-          // Check if there is any variables which is not disjoint from the others.
-          val notPairwiseDisjoint = ignoreEmptySet.values.exists(
-            a => ignoreEmptySet.values.exists { b =>
-              a != b && !b.isDisjoint(a)
-            })
-          if (notPairwiseDisjoint) {
-            None
-          } else {
-            Some(mapping)
-          }
+          Some(mapping)
         }
       }
-      prunedList
     }
+    prunedList
   }
 
   /**
