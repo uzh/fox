@@ -225,11 +225,11 @@ object Inferencer {
     // Ground the rules with the individuals.
     val ((groundedRules, groundedConstraints, idToGpMap), groundingTime) = Timer.time {
       var individualsString = s"Running inferences for ${pslData.individuals.size} individuals ..."
-      if (pslData.individuals.size <= 10) {
+      if (pslData.individuals.size <= 5) {
         individualsString += pslData.individuals.map(i => s"${i.value}: ${i.classTypes}")
       } else {
-        individualsString += "first 10 results: "
-        individualsString += pslData.individuals.slice(0, 10).map(i => s"${i.value}: ${i.classTypes}")
+        individualsString += "first 5 results: "
+        individualsString += pslData.individuals.slice(0, 5).map(i => s"${i.value}: ${i.classTypes}")
       }
       println(individualsString)
       Grounding.ground(pslData, config.isBounded, config.removeSymmetricConstraints, config.pushBoundsInNodes)
