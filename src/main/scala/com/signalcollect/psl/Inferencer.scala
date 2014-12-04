@@ -192,6 +192,17 @@ case class InferencerConfig(
 object Inferencer {
 
   /**
+   *  Utility method that takes care also of the parsing from several files.
+   */
+  def runInferenceFromFiles(
+    pslFiles: List[File],
+    nodeActors: Option[Array[ActorRef]] = None,
+    config: InferencerConfig = InferencerConfig()): InferenceResult = {
+    val pslData = PslParser.parse(pslFiles)
+    runInference(pslData, nodeActors, config)
+  }
+
+  /**
    *  Utility method that takes care also of the parsing of a file.
    */
   def runInferenceFromFile(
