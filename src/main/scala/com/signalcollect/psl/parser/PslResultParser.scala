@@ -49,6 +49,11 @@ object PslResultParser extends ParseHelper[List[EncodedVariable]] with ImplicitC
   protected override val whiteSpace = """(\s|//.*|#.*|(?m)/\*(\*(?!/)|[^*])*\*/)+""".r
 
   def defaultParser = variables
+  
+    def parse(files: List[File]): List[EncodedVariable]= {
+    val parsedFiles = files.map(parseFile(_, defaultParser))
+    parsedFiles.foldLeft(List.empty[EncodedVariable]) (_ ++ _)
+  }
 
    lazy val variable: Parser[EncodedVariable] = {
     integer ~! ":" ~! double ^^ {

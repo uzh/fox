@@ -63,6 +63,12 @@ object PslParser extends ParseHelper[ParsedPslFile] with ImplicitConversions {
   protected override val whiteSpace = """(\s|//.*|#.*|(?m)/\*(\*(?!/)|[^*])*\*/)+""".r
 
   def defaultParser = pslFile
+  def fragmentParser = pslFileFragment
+  
+  def parse(files: List[File]): ParsedPslFile= {
+    val parsedFiles = files.map(parseFile(_, fragmentParser))
+    parsedFiles.foldLeft(ParsedFile()) (_ merge _).toParsedPslFile()
+  }
   
   var ruleId = 0
 
@@ -230,6 +236,25 @@ object PslParser extends ParseHelper[ParsedPslFile] with ImplicitConversions {
        else {
          val unionOfIndividuals = inds.foldLeft(inds(0))(_.union(_))
           ParsedPslFile(classMap, predicates, rules, facts, unionOfIndividuals)  
+       } 
+    }
+  }
+  
+    lazy val pslFileFragment: Parser[ParsedFile] = {
+    rep(pslLine) ^^ {
+      case lines =>
+       val predicates = lines.flatMap{ case f: Predicate => Some(f) case _ => None} 
+       val rules = lines.flatMap{ case f: Rule => Some(f) case _ => None}   
+       val facts = lines.flatMap{ case f: Fact => Some(f) case _ => None}
+       val inds = lines.flatMap{ case f: Set[Individual] => Some(f) case _ => None}
+       val classes = lines.flatMap{ case f: (PslClass, Set[Individual]) => Some(f) case _ => None}
+       val classMap = classes.groupBy(_._1).mapValues(c => c.map(i => i._2).foldLeft(Set.empty[Individual])(_ ++ _))
+       if (inds.length == 0 ){
+         ParsedFile(classMap, predicates, rules, facts)
+       }
+       else {
+         val unionOfIndividuals = inds.foldLeft(inds(0))(_.union(_))
+          ParsedFile(classMap, predicates, rules, facts, unionOfIndividuals)  
        } 
     }
   }
