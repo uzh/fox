@@ -33,6 +33,7 @@ class AnimalClassification extends FlatSpec with Matchers with TestAnnouncements
     class Animal: kitty
     class AnimalClass: dog, cat, fish
     class Animal: nemo
+    class Fish
     predicate: barks(Animal)
     predicate: meows(Animal)
     predicate [PartialFunctional]: animalClass(Animal, AnimalClass)

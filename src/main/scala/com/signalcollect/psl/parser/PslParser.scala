@@ -277,16 +277,20 @@ object PslParser extends ParseHelper[ParsedPslFile] with ImplicitConversions {
     }
   }
   
+    
   lazy val classType: Parser[(PslClass, Set[Individual])] = {
-    "class" ~> identifier ~ opt(":") ~ repsep(identifier, ",") ^^ {
-      case classType ~ colon ~ List("")  =>
-        (PslClass(classType), Set.empty)
-      case classType ~ colon ~ individuals =>
-        for (ind <- individuals){
+    "class" ~> identifier ~ opt(":" ~ repsep(identifier, ",")) ^^ {
+      case classType ~ optionalList =>
+        if(!optionalList.isDefined){
+          (PslClass(classType), Set.empty)
+        } else {
+          val individuals = optionalList.get._2
+          for (ind <- individuals){
             assert(!ind.charAt(0).isUpper,
             s"Individuals that appear in facts must start with a lowercase character.")
+          }
+          (PslClass(classType), individuals.map(Individual(_, Set(PslClass(classType)))).toSet)
         }
-        (PslClass(classType), individuals.map(Individual(_, Set(PslClass(classType)))).toSet)
     }
   }
 }
