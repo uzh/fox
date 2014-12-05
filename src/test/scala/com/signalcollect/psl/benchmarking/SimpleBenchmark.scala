@@ -30,15 +30,14 @@ import java.io.File
 
 object SimpleBenchmark extends App {
 
-  val config = InferencerConfig( maxIterations = 1
-  )
+  val config = InferencerConfig(maxIterations = 1)
 
   // For all the files in the small-benchmarks folder, run the examples $repetition times.
   val directory = new File("src/test/scala/com/signalcollect/psl/benchmarking/small-benchmarks/")
   val repetitions = 10
   val warmup = 10
 
-  val exampleToAvgTime: Map[String, (Double, Double, Double, Double)] = {
+  val exampleToAvgTime: Map[String, (Double, Double, Double, Double, Double, Double)] = {
     val files = directory.listFiles()
     val fileNames = files.map { x =>
       val indexOf = x.getName().indexOf("_of_")
@@ -48,13 +47,16 @@ object SimpleBenchmark extends App {
         x.getName().substring(0, indexOf - 1)
       }
     }.toList.distinct
+    println(fileNames)
     fileNames.flatMap {
       exampleFileName =>
         var i = 0
         var cumulativeTime = 0.0
         var cumulativeGroundingTime = 0.0
+        var cumulativeParsingTime = 0.0
         var minTime = Double.MaxValue
         var minGroundingTime = Double.MaxValue
+        var minParsingTime = Double.MaxValue
         val exampleFile = new File(directory, exampleFileName)
         while (i < warmup) {
           if (exampleFile.exists()) {
@@ -82,9 +84,14 @@ object SimpleBenchmark extends App {
           minTime = math.min(currentTime, minTime)
           cumulativeGroundingTime += inferenceResults.groundingTime.getOrElse(0L)
           minGroundingTime = math.min(inferenceResults.groundingTime.getOrElse(0L), minGroundingTime)
+          cumulativeParsingTime += inferenceResults.parsingTime.getOrElse(0L)
+          minParsingTime = math.min(inferenceResults.parsingTime.getOrElse(0L), minParsingTime)
           i = i + 1
         }
-        Map(exampleFile.getName() -> (cumulativeTime / repetitions, minTime, cumulativeGroundingTime / repetitions, minGroundingTime))
+        Map(exampleFile.getName() ->
+          (cumulativeTime / repetitions, minTime, 
+              cumulativeGroundingTime / repetitions, minGroundingTime, 
+              cumulativeParsingTime / repetitions, minParsingTime))
     }.toMap
 
   }
