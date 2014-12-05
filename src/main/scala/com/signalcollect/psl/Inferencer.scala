@@ -174,6 +174,9 @@ case class InferencerConfig(
   heartbeatIntervalInMs: Int = 0,
   verbose: Boolean = false) {
 
+  override def toString: String =
+    s"asynchronous: $asynchronous, lazyThreshold: $lazyThreshold, breezeOptimizer: $breezeOptimizer, globalConvergenceDetection: $globalConvergenceDetection, absoluteEpsilon: $absoluteEpsilon, relativeEpsilon: $relativeEpsilon, computeObjectiveValueOfSolution: $computeObjectiveValueOfSolution, objectiveLoggingEnabled: $objectiveLoggingEnabled, maxIterations: $maxIterations, stepSize: $stepSize, tolerance: $tolerance, isBounded: $isBounded, removeSymmetricConstraints: $removeSymmetricConstraints, parallelizeGrounding: $parallelizeGrounding, pushBoundsInNodes: $pushBoundsInNodes, verbose: $verbose"
+
   def getWolfConfig = {
     WolfConfig(
       asynchronous = asynchronous,
