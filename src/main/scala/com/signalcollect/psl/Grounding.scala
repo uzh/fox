@@ -31,28 +31,28 @@ object Grounding {
    * Main grounding class.
    * Returns the grounded rules and a map from grounded predicate id => grounded predicate instance.
    */
-  def ground(pslData: ParsedPslFile, isBounded: Boolean = true, removeSymmetricConstraints: Boolean = false,
-    pushBoundsInNodes: Boolean = false, 
-    parallelizeGrounding: Boolean = false, 
-    verbose: Boolean = false) = {
-    val allPossibleSetsAndIndividuals = generateAllPossibleSetsAsIndividuals(pslData.rulesWithPredicates, pslData.individualsByClass)
+  def ground(pslData: ParsedPslFile,
+    config: InferencerConfig = InferencerConfig()) = {
+    val allPossibleSetsAndIndividuals = generateAllPossibleSetsAsIndividuals(pslData.rulesWithPredicates,
+      pslData.individualsByClass, config.verbose)
+    if (config.verbose) println(s"Generated all classes of individuals: ${allPossibleSetsAndIndividuals.size}.")
     val groundedPredicates = createGroundedPredicates(pslData.rulesWithPredicates, pslData.predicates, pslData.facts,
-      allPossibleSetsAndIndividuals, removeSymmetricConstraints, parallelizeGrounding, verbose)
-    if (verbose) println(s"Created ${groundedPredicates.size} grounded predicates.")
+      allPossibleSetsAndIndividuals, config.removeSymmetricConstraints, config.parallelizeGrounding, config.verbose)
+    if (config.verbose) println(s"Created ${groundedPredicates.size} grounded predicates.")
     // Start by grounding the constraints first, so you can use some of the trivial constraints (e.g. symmetric with only one unbound grounded predicate) to assign
     // values to the grounded predicates before passing them to the rules.
     val (groundedConstraints, updatedGroundedPredicates) = createGroundedConstraints(pslData.predicates,
       groundedPredicates, allPossibleSetsAndIndividuals,
-      pslData.rulesWithPredicates.size, removeSymmetricConstraints, pushBoundsInNodes)
-    if (verbose) println(s"Created ${groundedConstraints.size} grounded constraints.")
+      pslData.rulesWithPredicates.size, config.removeSymmetricConstraints, config.pushBoundsInNodes)
+    if (config.verbose) println(s"Created ${groundedConstraints.size} grounded constraints.")
     val groundedRules = createGroundedRules(pslData.rulesWithPredicates, updatedGroundedPredicates,
       allPossibleSetsAndIndividuals, groundedConstraints.size + 1)
-    if (verbose) println(s"Created ${groundedRules.size} grounded rules.")
+    if (config.verbose) println(s"Created ${groundedRules.size} grounded rules.")
     val idToGpMap = updatedGroundedPredicates.values.map(gp => (gp.id, gp)).toMap
-    if (!isBounded) {
+    if (!config.isBounded) {
       val bounds = createGroundedConstraintBounds(updatedGroundedPredicates, groundedRules.size +
-        groundedConstraints.size + 1, groundedRules.size + groundedConstraints.size + 1, pushBoundsInNodes)
-      if (verbose) println(s"Created ${bounds.size} bounds.")
+        groundedConstraints.size + 1, groundedRules.size + groundedConstraints.size + 1, config.pushBoundsInNodes)
+      if (config.verbose) println(s"Created ${bounds.size} bounds.")
       (groundedRules, groundedConstraints ++ bounds, idToGpMap)
     } else {
       (groundedRules, groundedConstraints, idToGpMap)
@@ -154,10 +154,13 @@ object Grounding {
   /**
    * Generate all possible sets as individuals, so that they can be grounded where needed.
    */
-  def generateAllPossibleSetsAsIndividuals(rules: List[Rule], individuals: Map[PslClass, Set[Individual]]): Map[PslClass, Set[Individual]] = {
+  def generateAllPossibleSetsAsIndividuals(rules: List[Rule], individuals: Map[PslClass, Set[Individual]],
+    parallelizeGrounding: Boolean = false,
+    verbose: Boolean = true): Map[PslClass, Set[Individual]] = {
     // Find all set classes in predicates mentioned in rules.
     val setClasses = rules.flatMap {
       rule =>
+        if (verbose) println(s"Checking variables in rule: $rule")
         rule.allPredicatesInRule.flatMap {
           _.variables.flatMap { v =>
             v.classTypes.filter(_.set)
@@ -166,6 +169,7 @@ object Grounding {
     }.toSet
 
     if (setClasses.isEmpty) {
+      println("No variable with set type.")
       individuals
     } else {
       println("Generating all possible sets of individuals.")

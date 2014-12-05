@@ -168,9 +168,11 @@ case class InferencerConfig(
   isBounded: Boolean = true,
   serializeMessages: Boolean = false,
   removeSymmetricConstraints: Boolean = true,
+  parallelizeGrounding: Boolean = true,
   pushBoundsInNodes: Boolean = true,
   eagerSignalCollectConvergenceDetection: Boolean = true,
-  heartbeatIntervalInMs: Int = 0) {
+  heartbeatIntervalInMs: Int = 0,
+  verbose: Boolean = false) {
 
   def getWolfConfig = {
     WolfConfig(
@@ -244,7 +246,7 @@ object Inferencer {
         individualsString += pslData.individuals.slice(0, 5).map(i => s"${i.value}: ${i.classTypes}")
       }
       println(individualsString)
-      Grounding.ground(pslData, config.isBounded, config.removeSymmetricConstraints, config.pushBoundsInNodes)
+      Grounding.ground(pslData, config)
     }
     println(s"Grounding completed in $groundingTime ms: ${groundedRules.size} grounded rules, ${groundedConstraints.size} constraints and ${idToGpMap.keys.size} grounded predicates.")
     solveInferenceProblem(groundedRules, groundedConstraints, idToGpMap, groundingTime, parsingTime, nodeActors, config)
