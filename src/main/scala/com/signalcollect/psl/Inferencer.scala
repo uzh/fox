@@ -166,10 +166,11 @@ case class InferencerConfig(
   stepSize: Double = 1.0,
   tolerance: Double = 1e-12, // for Double precision is 15-17 decimal places, lower after arithmetic operations.
   isBounded: Boolean = true,
-  serializeMessages: Boolean = false,
+  parallelizeParsing: Boolean = true,
   removeSymmetricConstraints: Boolean = true,
   parallelizeGrounding: Boolean = true,
   pushBoundsInNodes: Boolean = true,
+  serializeMessages: Boolean = false,
   eagerSignalCollectConvergenceDetection: Boolean = true,
   heartbeatIntervalInMs: Int = 0,
   verbose: Boolean = false) {
@@ -203,7 +204,13 @@ object Inferencer {
     pslFiles: List[File],
     nodeActors: Option[Array[ActorRef]] = None,
     config: InferencerConfig = InferencerConfig()): InferenceResult = {
-    val (pslData, parsingTime) = Timer.time { PslParser.parse(pslFiles) }
+    val (pslData, parsingTime) = Timer.time {
+      if (config.parallelizeParsing) {
+        PslParser.parse(pslFiles)
+      } else {
+        PslParser.parseNonParallel(pslFiles)
+      }
+    }
     runInference(pslData, parsingTime, nodeActors, config)
   }
 
@@ -214,7 +221,13 @@ object Inferencer {
     pslFile: File,
     nodeActors: Option[Array[ActorRef]] = None,
     config: InferencerConfig = InferencerConfig()): InferenceResult = {
-    val (pslData, parsingTime) = Timer.time { PslParser.parse(pslFile) }
+    val (pslData, parsingTime) = Timer.time {
+      if (config.parallelizeParsing) {
+        PslParser.parseFileLineByLine(pslFile).toParsedPslFile()
+      } else {
+        PslParser.parse(pslFile)
+      }
+    }
     runInference(pslData, parsingTime, nodeActors, config)
   }
 
