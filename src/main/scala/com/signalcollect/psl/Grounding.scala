@@ -155,28 +155,30 @@ object Grounding {
     }.toSet
 
     if (setClasses.isEmpty) {
-      return individuals
+      individuals
+    } else {
+      println("Generating all possible sets of individuals.")
+      // Get not set individuals.
+      val nonSetIndividuals = individuals.filter(!_._1.set)
+
+      // For each of the set classes, create all possible combinations using the non set individuals.
+      val allPossibleSetsAsIndividuals = setClasses.flatMap { setClass =>
+        val nonSetIndividualsOfClass = nonSetIndividuals.filter(_._1.name == setClass.name)
+        if (nonSetIndividualsOfClass.size == 1) {
+          val relevantIndividuals = nonSetIndividualsOfClass.head._2
+          // Subsets creates all possible subsets of a set.
+          val allPossibleSetsForClass = relevantIndividuals.subsets.map(
+            subset => Individual(subset.toString, Set(setClass))).toSet
+          Some(Map(setClass -> allPossibleSetsForClass))
+        } else {
+          None
+        }
+      }.flatten.toMap
+
+      // Return original individuals merged with the new individuals for set classes.
+      individuals ++ allPossibleSetsAsIndividuals
     }
 
-    // Get not set individuals.
-    val nonSetIndividuals = individuals.filter(!_._1.set)
-
-    // For each of the set classes, create all possible combinations using the non set individuals.
-    val allPossibleSetsAsIndividuals = setClasses.flatMap { setClass =>
-      val nonSetIndividualsOfClass = nonSetIndividuals.filter(_._1.name == setClass.name)
-      if (nonSetIndividualsOfClass.size == 1) {
-        val relevantIndividuals = nonSetIndividualsOfClass.head._2
-        // Subsets creates all possible subsets of a set.
-        val allPossibleSetsForClass = relevantIndividuals.subsets.map(
-          subset => Individual(subset.toString, Set(setClass))).toSet
-        Some(Map(setClass -> allPossibleSetsForClass))
-      } else {
-        None
-      }
-    }.flatten.toMap
-
-    // Return original individuals merged with the new individuals for set classes.
-    individuals ++ allPossibleSetsAsIndividuals
   }
 
   /**

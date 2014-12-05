@@ -68,15 +68,14 @@ object ExperimentHelper {
   def run(pslString: String, minExponent: Int = 5, maxExponent: Int = 8): String = {
     var results = ""
     val stepIncrement = 10
-    val pslData = PslParser.parse(pslString)
 
     for { i <- 1 until stepIncrement } {
-      results += experiment(pslData, minExponent, maxExponent, i.toDouble / stepIncrement)
+      results += experiment(pslString, minExponent, maxExponent, i.toDouble / stepIncrement)
     }
     results
   }
 
-  def experiment(pslData: ParsedPslFile, minExponent: Int, maxExponent: Int, stepSize: Double = 1.0): String = {
+  def experiment(pslData: String, minExponent: Int, maxExponent: Int, stepSize: Double = 1.0): String = {
     val diff = maxExponent - minExponent
     var results = ""
 
@@ -107,8 +106,8 @@ object ExperimentHelper {
     results
   }
 
-  def runExperiment(pslData: ParsedPslFile, id: Int, config: InferencerConfig) = {
-    val inferenceResults = Inferencer.runInference(pslData, config = config)
+  def runExperiment(pslData: String, id: Int, config: InferencerConfig) = {
+    val inferenceResults = Inferencer.runInferenceFromString(pslData, config = config)
     val execStats = inferenceResults.solution.stats.executionStatistics
     val signalSteps = execStats.signalSteps
     val computationTime = execStats.computationTime.toUnit(TimeUnit.MILLISECONDS).toInt

@@ -49,11 +49,10 @@ class FriendsExample extends FlatSpec with Matchers with TestAnnouncements {
   fact: friends(anna, bob)
   fact: !friends(bob, carl)
   """
-  
+
   "FriendsExample" should "provide a solution consistent for friends, with a default value of 0.2" in {
-    val pslData = PslParser.parse(friends)
     val config = InferencerConfig(computeObjectiveValueOfSolution = true)
-    val inferenceResults = Inferencer.runInference(pslData, config = config)
+    val inferenceResults = Inferencer.runInferenceFromString(friends, config = config)
     val objectiveFunctionValOption = inferenceResults.objectiveFun
     assert(objectiveFunctionValOption.isDefined)
     objectiveFunctionValOption.foreach(_ should be(0.032 +- 1e-5))
@@ -68,9 +67,8 @@ class FriendsExample extends FlatSpec with Matchers with TestAnnouncements {
   fact: !friends(bob, carl)
   """
   "FriendsExample" should "provide a solution consistent for freenemies, an example with negative weights" in {
-    val pslData = PslParser.parse(freenemies)
     val config = InferencerConfig(computeObjectiveValueOfSolution = true)
-    val inferenceResults = Inferencer.runInference(pslData, config = config)
+    val inferenceResults = Inferencer.runInferenceFromString(freenemies, config = config)
     val objectiveFunctionValOption = inferenceResults.objectiveFun
     assert(objectiveFunctionValOption.isDefined)
     objectiveFunctionValOption.foreach(_ should be(-4.0 +- 1e-5))
@@ -85,10 +83,8 @@ class FriendsExample extends FlatSpec with Matchers with TestAnnouncements {
   fact: !friends(bob, carl)
   """
   "FriendsExample" should "provide a solution consistent for enemies, an example with negative prior" in {
-    val pslData = PslParser.parse(enemies)
-
     val config = InferencerConfig(computeObjectiveValueOfSolution = true)
-    val inferenceResults = Inferencer.runInference(pslData, config = config)
+    val inferenceResults = Inferencer.runInferenceFromString(enemies, config = config)
     val objectiveFunctionValOption = inferenceResults.objectiveFun
     assert(objectiveFunctionValOption.isDefined)
     objectiveFunctionValOption.foreach(_ should be(0.0 +- 1e-5))
@@ -104,9 +100,8 @@ class FriendsExample extends FlatSpec with Matchers with TestAnnouncements {
     fact: !friends(bob, carl)
   """
   "FriendsExample" should "provide a solution consistent for hardenemies, an example with negative prior and a hard rule" in {
-    val pslData = PslParser.parse(hardenemies)
     val config = InferencerConfig(computeObjectiveValueOfSolution = true)
-    val inferenceResults = Inferencer.runInference(pslData, config = config)
+    val inferenceResults = Inferencer.runInferenceFromString(hardenemies, config = config)
     val objectiveFunctionValOption = inferenceResults.objectiveFun
     assert(objectiveFunctionValOption.isDefined)
     objectiveFunctionValOption.foreach(_ should be(0.01 +- 6e-2))

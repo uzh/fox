@@ -1,0 +1,7 @@
+
+fact :playsIn(celeb1, movie1)
+fact :playsIn(celeb1, movie5)
+fact :playsIn(celeb1, movie3)
+fact :playsIn(celeb2, movie1)
+fact :playsIn(celeb2, movie5)
+fact :playsIn(celeb2, movie4)
