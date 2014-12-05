@@ -56,23 +56,27 @@ object SimpleBenchmark extends App {
         var minTime = Double.MaxValue
         var minGroundingTime = Double.MaxValue
         val exampleFile = new File(directory, exampleFileName)
-        val parsedFile = if (exampleFile.exists()) {
-          PslParser.parse(exampleFile)
-        } else {
-          // Fragmented file.
-          val fragments = directory.list().filter(_.contains(exampleFileName)).map(new File(directory, _)).toList
-          PslParser.parse(fragments)
-        }
-
         while (i < warmup) {
-          Inferencer.runInference(parsedFile, config = config)
+          if (exampleFile.exists()) {
+            Inferencer.runInferenceFromFile(exampleFile, config = config)
+          } else {
+            // Fragmented file.
+            val fragments = directory.list().filter(_.contains(exampleFileName)).map(new File(directory, _)).toList
+            Inferencer.runInferenceFromFiles(fragments, config = config)
+          }
+
           i = i + 1
         }
         i = 0
         while (i < repetitions) {
           val (inferenceResults, currentTime) = Timer.time {
-            Inferencer.runInference(
-              parsedFile, config = config)
+            if (exampleFile.exists()) {
+              Inferencer.runInferenceFromFile(exampleFile, config = config)
+            } else {
+              // Fragmented file.
+              val fragments = directory.list().filter(_.contains(exampleFileName)).map(new File(directory, _)).toList
+              Inferencer.runInferenceFromFiles(fragments, config = config)
+            }
           }
           cumulativeTime += currentTime
           minTime = math.min(currentTime, minTime)

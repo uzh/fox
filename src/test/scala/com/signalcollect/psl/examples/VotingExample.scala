@@ -55,9 +55,8 @@ class VotingExample extends FlatSpec with Matchers with TestAnnouncements {
     fact [0.99]: enemies(bob, carl)
 	"""
   "VotingExample" should "provide a solution consistent with Matlab" in {
-    val pslData = PslParser.parse(votingExample)
     val config = InferencerConfig(computeObjectiveValueOfSolution = true, lazyThreshold = None, absoluteEpsilon = 0, relativeEpsilon = 0)
-    val inferenceResults = Inferencer.runInference(pslData, config = config)
+    val inferenceResults = Inferencer.runInferenceFromString(votingExample, config = config)
     val objectiveFunctionValOption = inferenceResults.objectiveFun
     assert(objectiveFunctionValOption.isDefined)
     objectiveFunctionValOption.foreach(_ should be(0.24 +- 5e-4))

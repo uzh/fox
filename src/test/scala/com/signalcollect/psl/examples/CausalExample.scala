@@ -170,9 +170,8 @@ GroundedPredicate 119: causes[ ] (u, y)  has truth value 0.46
 
 
   it should "provide a solution consistent for hardenemies, an example with negative prior and a hard rule" in {
-    val pslData = PslParser.parse(casual)
     val config = InferencerConfig(computeObjectiveValueOfSolution = true)
-    val inferenceResults = Inferencer.runInference(pslData, config = config)
+    val inferenceResults = Inferencer.runInferenceFromString(casual, config = config)
     val objectiveFunctionValOption = inferenceResults.objectiveFun
     // println(inferenceResults.printSelected(List("causes")))
   }

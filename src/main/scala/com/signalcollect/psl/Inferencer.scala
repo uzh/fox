@@ -198,8 +198,8 @@ object Inferencer {
     pslFiles: List[File],
     nodeActors: Option[Array[ActorRef]] = None,
     config: InferencerConfig = InferencerConfig()): InferenceResult = {
-    val pslData = PslParser.parse(pslFiles)
-    runInference(pslData, nodeActors, config)
+    val (pslData, parsingTime) = Timer.time { PslParser.parse(pslFiles) }
+    runInference(pslData, parsingTime, nodeActors, config)
   }
 
   /**
@@ -209,8 +209,8 @@ object Inferencer {
     pslFile: File,
     nodeActors: Option[Array[ActorRef]] = None,
     config: InferencerConfig = InferencerConfig()): InferenceResult = {
-    val pslData = PslParser.parse(pslFile)
-    runInference(pslData, nodeActors, config)
+    val (pslData, parsingTime) = Timer.time { PslParser.parse(pslFile) }
+    runInference(pslData, parsingTime, nodeActors, config)
   }
 
   /**
@@ -220,8 +220,8 @@ object Inferencer {
     pslFile: String,
     nodeActors: Option[Array[ActorRef]] = None,
     config: InferencerConfig = InferencerConfig()): InferenceResult = {
-    val pslData = PslParser.parse(pslFile)
-    runInference(pslData, nodeActors, config)
+    val (pslData, parsingTime) = Timer.time { PslParser.parse(pslFile) }
+    runInference(pslData, parsingTime, nodeActors, config)
   }
 
   /**
@@ -231,6 +231,7 @@ object Inferencer {
    */
   def runInference(
     pslData: ParsedPslFile,
+    parsingTime: Long,
     nodeActors: Option[Array[ActorRef]] = None,
     config: InferencerConfig = InferencerConfig()): InferenceResult = {
     // Ground the rules with the individuals.
@@ -246,7 +247,7 @@ object Inferencer {
       Grounding.ground(pslData, config.isBounded, config.removeSymmetricConstraints, config.pushBoundsInNodes)
     }
     println(s"Grounding completed in $groundingTime ms: ${groundedRules.size} grounded rules, ${groundedConstraints.size} constraints and ${idToGpMap.keys.size} grounded predicates.")
-    solveInferenceProblem(groundedRules, groundedConstraints, idToGpMap, groundingTime, nodeActors, config)
+    solveInferenceProblem(groundedRules, groundedConstraints, idToGpMap, groundingTime, parsingTime, nodeActors, config)
   }
 
   def recreateFunctions(groundedRules: Iterable[GroundedRule], groundedConstraints: Iterable[GroundedConstraint], idToGpMap: Map[Int, GroundedPredicate], config: InferencerConfig = InferencerConfig()): (Iterable[OptimizableFunction], Map[Int, (Double, Double)]) = {
@@ -263,7 +264,9 @@ object Inferencer {
     (functions ++ constraints, boundsForConsensusVariables)
   }
 
-  def solveInferenceProblem(groundedRules: Iterable[GroundedRule], groundedConstraints: Iterable[GroundedConstraint], idToGpMap: Map[Int, GroundedPredicate], groundingTime: Long, nodeActors: Option[Array[ActorRef]] = None, config: InferencerConfig = InferencerConfig()) = {
+  def solveInferenceProblem(groundedRules: Iterable[GroundedRule], groundedConstraints: Iterable[GroundedConstraint], idToGpMap: Map[Int, GroundedPredicate],
+    groundingTime: Long, parsingTime: Long,
+    nodeActors: Option[Array[ActorRef]] = None, config: InferencerConfig = InferencerConfig()) = {
     val ((functionsAndConstraints, boundsForConsensusVariables), functionCreationTime) = Timer.time {
       recreateFunctions(groundedRules, groundedConstraints, idToGpMap, config)
     }
@@ -281,9 +284,9 @@ object Inferencer {
         }
       }
       //println("Computed the objective function.")
-      InferenceResult(solution, idToGpMap, Some(objectiveFunctionVal), Some(groundingTime), functionCreationTime = Some(functionCreationTime + objEvaluationTime))
+      InferenceResult(solution, idToGpMap, Some(objectiveFunctionVal), groundingTime = Some(groundingTime), parsingTime = Some(parsingTime), functionCreationTime = Some(functionCreationTime + objEvaluationTime))
     } else {
-      InferenceResult(solution, idToGpMap, groundingTime = Some(groundingTime), functionCreationTime = Some(functionCreationTime))
+      InferenceResult(solution, idToGpMap, groundingTime = Some(groundingTime), parsingTime = Some(parsingTime), functionCreationTime = Some(functionCreationTime))
     }
   }
 }
