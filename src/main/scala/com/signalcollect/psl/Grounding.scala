@@ -194,7 +194,7 @@ object Grounding {
       rules.flatMap {
         rule =>
           val bindings = generateBindings(rule.variables, individuals)
-          bindings.flatMap {
+          bindings.par.flatMap {
             binding =>
               val bodyContribution = rule.body.map(p => (p, p.varsOrIndsWithClasses.map {
                 case v: Variable => binding(v.value)
@@ -219,14 +219,14 @@ object Grounding {
                 val varA = Variable("A", Set(predicate.classes(0)))
                 val varB = Variable("B", Set(predicate.classes(1)))
                 val bindings = generateBindings(List(varA, varB), individuals)
-                bindings.flatMap {
+                bindings.par.flatMap {
                   binding => List(Some((predicate, List(binding("A"), binding("B")))))
                 }
               case Symmetric =>
                 val varA = Variable("A", predicate.classes.toSet)
                 val varB = Variable("B", predicate.classes.toSet)
                 val bindings = generateBindings(List(varA, varB), individuals)
-                bindings.flatMap {
+                bindings.par.flatMap {
                   binding =>
                     List(
                       Some((predicate, List(binding("A"), binding("B")))),
@@ -238,10 +238,8 @@ object Grounding {
     }.flatten.toSet
 
     // Collect the truth values in facts.
-    val truthValues = {
-      for {
-        fact <- facts
-      } yield ((fact.name, fact.groundingsAsSingleIndividuals.map(_.value)), fact.truthValue)
+    val truthValues = facts.map{fact =>
+      ((fact.name, fact.groundingsAsSingleIndividuals.map(_.value)), fact.truthValue)
     }.toMap
 
     // Create the grounded predicates by merging the truth values.
