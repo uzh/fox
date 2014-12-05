@@ -66,8 +66,17 @@ object PslParser extends ParseHelper[ParsedPslFile] with ImplicitConversions {
   def fragmentParser = pslFileFragment
   
   def parse(files: List[File]): ParsedPslFile= {
-    val parsedFiles = files.map(parseFile(_, fragmentParser))
+    val parsedFiles = files.map(parseFileLineByLine(_))
     parsedFiles.foldLeft(ParsedFile()) (_ merge _).toParsedPslFile()
+  }
+  
+  def parseFileLineByLine(file: File): ParsedFile = {
+    val chunkSize = 12800 * 1024
+    val iterator = io.Source.fromFile(file).getLines.grouped(chunkSize)
+    val parsedLines = iterator.flatMap { lines =>
+      lines.par.map { line => parseString(line, fragmentParser) }
+    }
+    parsedLines.foldLeft(ParsedFile()) (_ merge _)
   }
   
   var ruleId = 0
