@@ -1,0 +1,33 @@
+class User : user1, user2, user3, user4, user5, user6, user7, user8, user9, user10, user11, user12, user13, user14, user15, user16, user17, user18, user19, user20, user21, user22, user23, user24, user25, user26, user27, user28, user29, user30, user31, user32, user33, user34, user35, user36, user37, user38, user39, user40, user41, user42, user43, user44, user45, user46, user47, user48, user49, user50, user51, user52, user53, user54, user55, user56, user57, user58, user59, user60, user61, user62, user63, user64, user65, user66, user67, user68, user69, user70, user71, user72, user73, user74, user75, user76, user77, user78, user79, user80, user81, user82, user83, user84, user85, user86, user87, user88, user89, user90, user91
+class Movie : movie1, movie2, movie3, movie4, movie5
+class Actor : celeb1, celeb2
+class Director : celeb3
+class Likable : movie1, movie2, movie3, movie4, movie5
+class Likable : celeb1, celeb2, celeb3
+
+    predicate [prior = 0.5]: likes(User, Likable)
+    predicate [Functional]: directedBy(Movie, Director)
+    predicate: playsIn(Actor, Movie)
+    predicate[Symmetric]: friends(User, User)
+
+    // Each director directed at least a movie.
+    rule [weight = 1000]: EXISTS[MOVIE] directedBy(MOVIE, DIRECTOR)
+    // If an actor and director plays in a movie, then he or she probably directed it.
+    rule [weight = 100]:   playsIn(ACTOR-DIRECTOR,MOVIE) => directedBy(MOVIE, ACTOR-DIRECTOR)
+
+    // Like an actor, like movie with the actor, and the reverse.
+    rule [weight = 50]:   likes(USER-A, ACTOR) && playsIn(ACTOR,MOVIE) => likes(USER-A,MOVIE)
+    rule [weight = 1]:   likes(USER-A, MOVIE) && playsIn(ACTOR,MOVIE) => likes(USER-A,ACTOR)
+
+    // Like a director, like the movie with the director, and the reverse.
+    rule [weight = 100]:   likes(USER-A, DIRECTOR) && directedBy(MOVIE, DIRECTOR) => likes(USER-A,MOVIE)
+    rule [weight = 10]:   likes(USER-A,MOVIE) && directedBy(MOVIE,DIRECTOR) => likes(USER-A,DIRECTOR)
+    
+    // Like what your friends like.
+    // likesAL + friendsAB - 1 - likesBL  
+    // likesAL = 0.9 => friendsAB - likesBL - 0.1 => friendsAB <= likesBL + 0.1
+    rule [weight = 5]:   likes(USER-A, LIKABLE) && friends(USER-A,USER-B) => likes(USER-B,LIKABLE)
+    
+    // Like what similar users like, if they like at least two similar things.
+    rule [weight = 0.1]: likes(USER-A, LIKABLE) && likes(USER-A, LIKABLE2) && likes(USER-B,LIKABLE)  => likes(USER-B,LIKABLE2)
+    
