@@ -35,6 +35,7 @@ case class GlobalAdmmConvergenceDetection(
   stepSize: Double = 1.0,
   absoluteEpsilon: Double = 10e-8,
   relativeEpsilon: Double = 10e-3,
+  override val aggregationInterval: Long = 1,
   override val checkingInterval: Long = 2)
   extends AbstractGlobalAdmmConvergenceDetection {
 }
@@ -48,7 +49,6 @@ trait DebugLogging extends GlobalAdmmConvergenceDetection {
 }
 
 abstract class AbstractGlobalAdmmConvergenceDetection extends GlobalTerminationDetection[Int, Double] {
-  override def aggregationInterval = 1
   def stepSize: Double
   def absoluteEpsilon: Double
   def relativeEpsilon: Double
