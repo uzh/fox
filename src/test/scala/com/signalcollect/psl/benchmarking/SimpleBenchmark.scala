@@ -30,7 +30,7 @@ import java.io.File
 
 object SimpleBenchmark extends App {
 
-  val config = InferencerConfig( //,globalConvergenceDetection = None,
+  val config = InferencerConfig( maxIterations = 1
   )
 
   // For all the files in the small-benchmarks folder, run the examples $repetition times.

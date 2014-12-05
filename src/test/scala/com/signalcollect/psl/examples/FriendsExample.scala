@@ -49,7 +49,7 @@ class FriendsExample extends FlatSpec with Matchers with TestAnnouncements {
   fact: friends(anna, bob)
   fact: !friends(bob, carl)
   """
-  
+
   "FriendsExample" should "provide a solution consistent for friends, with a default value of 0.2" in {
     val config = InferencerConfig(computeObjectiveValueOfSolution = true)
     val inferenceResults = Inferencer.runInferenceFromString(friends, config = config)
