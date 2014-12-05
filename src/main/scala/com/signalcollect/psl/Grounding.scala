@@ -31,9 +31,10 @@ object Grounding {
    * Main grounding class.
    * Returns the grounded rules and a map from grounded predicate id => grounded predicate instance.
    */
-  def ground(pslData: ParsedPslFile, isBounded: Boolean = true, removeSymmetricConstraints: Boolean = false, pushBoundsInNodes: Boolean = true) = {
+  def ground(pslData: ParsedPslFile, isBounded: Boolean = true, removeSymmetricConstraints: Boolean = false, 
+      pushBoundsInNodes: Boolean = true, parallelizeGrounding: Boolean = true) = {
     val allPossibleSetsAndIndividuals = generateAllPossibleSetsAsIndividuals(pslData.rulesWithPredicates, pslData.individualsByClass)
-    val groundedPredicates = createGroundedPredicates(pslData.rulesWithPredicates, pslData.predicates, pslData.facts, allPossibleSetsAndIndividuals, removeSymmetricConstraints)
+    val groundedPredicates = createGroundedPredicates(pslData.rulesWithPredicates, pslData.predicates, pslData.facts, allPossibleSetsAndIndividuals, removeSymmetricConstraints, parallelizeGrounding)
     // Start by grounding the constraints first, so you can use some of the trivial constraints (e.g. symmetric with only one unbound grounded predicate) to assign
     // values to the grounded predicates before passing them to the rules.
     val (groundedConstraints, updatedGroundedPredicates) = createGroundedConstraints(pslData.predicates, groundedPredicates, allPossibleSetsAndIndividuals,
@@ -188,13 +189,16 @@ object Grounding {
    * Then add the truth values that are in the facts and the predicates.
    */
   def createGroundedPredicates(rules: List[Rule], predicates: List[Predicate], facts: List[Fact],
-    individuals: Map[PslClass, Set[Individual]], removeSymmetricConstraints: Boolean = false): Map[(String, List[Individual]), GroundedPredicate] = {
+    individuals: Map[PslClass, Set[Individual]], 
+    removeSymmetricConstraints: Boolean = false, 
+    parallelizeBindings: Boolean = false): Map[(String, List[Individual]), GroundedPredicate] = {
     // Ground predicates in rules.
     val groundedPredicatesKeys =
       rules.flatMap {
         rule =>
           val bindings = generateBindings(rule.variables, individuals)
-          bindings.par.flatMap {
+          val parallelMapOfBindings = if (parallelizeBindings) { bindings.par } else { bindings }
+          val result = parallelMapOfBindings.flatMap {
             binding =>
               val bodyContribution = rule.body.map(p => (p, p.varsOrIndsWithClasses.map {
                 case v: Variable => binding(v.value)
@@ -207,6 +211,7 @@ object Grounding {
               val totalContribution = bodyContribution ++ headContribution
               totalContribution
           }
+          if (parallelizeBindings) { result.seq } else { result }
       }.toSet
 
     //Ground predicates in constraints
@@ -219,26 +224,30 @@ object Grounding {
                 val varA = Variable("A", Set(predicate.classes(0)))
                 val varB = Variable("B", Set(predicate.classes(1)))
                 val bindings = generateBindings(List(varA, varB), individuals)
-                bindings.par.flatMap {
+                val parallelMapOfBindings = if (parallelizeBindings) { bindings.par } else { bindings }
+                val result = parallelMapOfBindings.flatMap {
                   binding => List(Some((predicate, List(binding("A"), binding("B")))))
                 }
+                if (parallelizeBindings) { result.seq } else { result }
               case Symmetric =>
                 val varA = Variable("A", predicate.classes.toSet)
                 val varB = Variable("B", predicate.classes.toSet)
                 val bindings = generateBindings(List(varA, varB), individuals)
-                bindings.par.flatMap {
+                val parallelMapOfBindings = if (parallelizeBindings) { bindings.par } else { bindings }
+                val result = parallelMapOfBindings.flatMap {
                   binding =>
                     List(
                       Some((predicate, List(binding("A"), binding("B")))),
                       Some((predicate, List(binding("B"), binding("A")))))
                 }
+                if (parallelizeBindings) { result.seq } else { result }
               case _ => List(None)
             }
         }
     }.flatten.toSet
 
     // Collect the truth values in facts.
-    val truthValues = facts.map{fact =>
+    val truthValues = facts.map { fact =>
       ((fact.name, fact.groundingsAsSingleIndividuals.map(_.value)), fact.truthValue)
     }.toMap
 
