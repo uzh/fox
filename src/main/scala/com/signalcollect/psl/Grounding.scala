@@ -31,18 +31,22 @@ object Grounding {
    * Main grounding class.
    * Returns the grounded rules and a map from grounded predicate id => grounded predicate instance.
    */
-  def ground(pslData: ParsedPslFile, isBounded: Boolean = true, removeSymmetricConstraints: Boolean = false, 
-      pushBoundsInNodes: Boolean = true, parallelizeGrounding: Boolean = true) = {
+  def ground(pslData: ParsedPslFile, isBounded: Boolean = true, removeSymmetricConstraints: Boolean = false,
+    pushBoundsInNodes: Boolean = true, parallelizeGrounding: Boolean = true) = {
     val allPossibleSetsAndIndividuals = generateAllPossibleSetsAsIndividuals(pslData.rulesWithPredicates, pslData.individualsByClass)
     val groundedPredicates = createGroundedPredicates(pslData.rulesWithPredicates, pslData.predicates, pslData.facts, allPossibleSetsAndIndividuals, removeSymmetricConstraints, parallelizeGrounding)
+    println(s"Created ${groundedPredicates.size} grounded predicates.")
     // Start by grounding the constraints first, so you can use some of the trivial constraints (e.g. symmetric with only one unbound grounded predicate) to assign
     // values to the grounded predicates before passing them to the rules.
     val (groundedConstraints, updatedGroundedPredicates) = createGroundedConstraints(pslData.predicates, groundedPredicates, allPossibleSetsAndIndividuals,
       pslData.rulesWithPredicates.size, removeSymmetricConstraints, pushBoundsInNodes)
+    println(s"Created ${groundedConstraints.size} grounded constraints.")
     val groundedRules = createGroundedRules(pslData.rulesWithPredicates, updatedGroundedPredicates, allPossibleSetsAndIndividuals, groundedConstraints.size + 1)
+    println(s"Created ${groundedRules.size} grounded rules.")
     val idToGpMap = updatedGroundedPredicates.values.map(gp => (gp.id, gp)).toMap
     if (!isBounded) {
       val bounds = createGroundedConstraintBounds(updatedGroundedPredicates, groundedRules.size + groundedConstraints.size + 1, groundedRules.size + groundedConstraints.size + 1, pushBoundsInNodes)
+      println(s"Created ${bounds.size} bounds.")
       (groundedRules, groundedConstraints ++ bounds, idToGpMap)
     } else {
       (groundedRules, groundedConstraints, idToGpMap)
@@ -189,8 +193,8 @@ object Grounding {
    * Then add the truth values that are in the facts and the predicates.
    */
   def createGroundedPredicates(rules: List[Rule], predicates: List[Predicate], facts: List[Fact],
-    individuals: Map[PslClass, Set[Individual]], 
-    removeSymmetricConstraints: Boolean = false, 
+    individuals: Map[PslClass, Set[Individual]],
+    removeSymmetricConstraints: Boolean = false,
     parallelizeBindings: Boolean = false): Map[(String, List[Individual]), GroundedPredicate] = {
     // Ground predicates in rules.
     val groundedPredicatesKeys =
