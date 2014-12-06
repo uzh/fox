@@ -74,29 +74,22 @@ object Grounding {
       return List.empty
     }
     // For each variable try all the individuals that are in the intersection of the classes it has.
-    val allMappings = variables.map {
+    //     Need a list of List[Map[String, Individual]], each one representing the value of a variable.
+    //     e.g. List (Map(A -> anna), Map(A -> sara)) 	    
+    val allMappingsList = variables.map {
       variable =>
-        (variable.value,
-          if (variable.classTypes.isEmpty) {
-            individuals(PslClass("_")).map(v => Individual(v.value))
-          } else {
-            val sets = variable.classTypes.map(individuals(_)).toList
-            val intersection = sets.foldLeft(sets(0))(_ & _)
-            intersection.map(v => Individual(v.value))
-          })
-    }.toMap
-    if (allMappings.exists(_._2.isEmpty)) {
-      return List.empty
+        val variableIndividuals = if (variable.classTypes.isEmpty) {
+          individuals(PslClass("_")).map(v => Individual(v.value))
+        } else {
+          val sets = variable.classTypes.map(individuals(_)).toList
+          val intersection = sets.foldLeft(sets(0))(_ & _)
+          intersection.map(v => Individual(v.value))
+        }
+        if (variableIndividuals.isEmpty) {
+          return List.empty
+        }
+        variableIndividuals.map(v => Map[String, Individual](variable.value -> v)).toList
     }
-
-    // Need a list of List[Map[String, Individual]], each one representing the value of a variable.
-    // e.g. List (Map(A -> anna), Map(A -> sara)) 	    
-    val allMappingsList = allMappings.map {
-      case (variableName, variableIndividuals) => {
-        val listOfPossibleMappings = variableIndividuals.map(v => Map[String, Individual](variableName -> v)).toList
-        listOfPossibleMappings
-      }
-    }.toList
 
     // Use combine to foldleft the values and get the result.
     val foldedList = allMappingsList.foldLeft(List[Map[String, Individual]]())(combine(_, _))
