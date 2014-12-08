@@ -166,11 +166,17 @@ case class InferencerConfig(
   stepSize: Double = 1.0,
   tolerance: Double = 1e-12, // for Double precision is 15-17 decimal places, lower after arithmetic operations.
   isBounded: Boolean = true,
-  serializeMessages: Boolean = false,
+  parallelizeParsing: Boolean = true,
   removeSymmetricConstraints: Boolean = true,
+  parallelizeGrounding: Boolean = true,
   pushBoundsInNodes: Boolean = true,
+  serializeMessages: Boolean = false,
   eagerSignalCollectConvergenceDetection: Boolean = true,
-  heartbeatIntervalInMs: Int = 0) {
+  heartbeatIntervalInMs: Int = 0,
+  verbose: Boolean = false) {
+
+  override def toString: String =
+    s"asynchronous: $asynchronous, lazyThreshold: $lazyThreshold, breezeOptimizer: $breezeOptimizer, globalConvergenceDetection: $globalConvergenceDetection, absoluteEpsilon: $absoluteEpsilon, relativeEpsilon: $relativeEpsilon, computeObjectiveValueOfSolution: $computeObjectiveValueOfSolution, objectiveLoggingEnabled: $objectiveLoggingEnabled, maxIterations: $maxIterations, stepSize: $stepSize, tolerance: $tolerance, isBounded: $isBounded, removeSymmetricConstraints: $removeSymmetricConstraints, parallelizeGrounding: $parallelizeGrounding, pushBoundsInNodes: $pushBoundsInNodes, verbose: $verbose"
 
   def getWolfConfig = {
     WolfConfig(
@@ -198,7 +204,13 @@ object Inferencer {
     pslFiles: List[File],
     nodeActors: Option[Array[ActorRef]] = None,
     config: InferencerConfig = InferencerConfig()): InferenceResult = {
-    val (pslData, parsingTime) = Timer.time { PslParser.parse(pslFiles) }
+    val (pslData, parsingTime) = Timer.time {
+      if (config.parallelizeParsing) {
+        PslParser.parse(pslFiles)
+      } else {
+        PslParser.parseNonParallel(pslFiles)
+      }
+    }
     runInference(pslData, parsingTime, nodeActors, config)
   }
 
@@ -209,7 +221,13 @@ object Inferencer {
     pslFile: File,
     nodeActors: Option[Array[ActorRef]] = None,
     config: InferencerConfig = InferencerConfig()): InferenceResult = {
-    val (pslData, parsingTime) = Timer.time { PslParser.parse(pslFile) }
+    val (pslData, parsingTime) = Timer.time {
+      if (config.parallelizeParsing) {
+        PslParser.parseFileLineByLine(pslFile).toParsedPslFile()
+      } else {
+        PslParser.parse(pslFile)
+      }
+    }
     runInference(pslData, parsingTime, nodeActors, config)
   }
 
@@ -244,7 +262,7 @@ object Inferencer {
         individualsString += pslData.individuals.slice(0, 5).map(i => s"${i.value}: ${i.classTypes}")
       }
       println(individualsString)
-      Grounding.ground(pslData, config.isBounded, config.removeSymmetricConstraints, config.pushBoundsInNodes)
+      Grounding.ground(pslData, config)
     }
     println(s"Grounding completed in $groundingTime ms: ${groundedRules.size} grounded rules, ${groundedConstraints.size} constraints and ${idToGpMap.keys.size} grounded predicates.")
     solveInferenceProblem(groundedRules, groundedConstraints, idToGpMap, groundingTime, parsingTime, nodeActors, config)

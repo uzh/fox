@@ -31,17 +31,27 @@ object Grounding {
    * Main grounding class.
    * Returns the grounded rules and a map from grounded predicate id => grounded predicate instance.
    */
-  def ground(pslData: ParsedPslFile, isBounded: Boolean = true, removeSymmetricConstraints: Boolean = false, pushBoundsInNodes: Boolean = true) = {
-    val allPossibleSetsAndIndividuals = generateAllPossibleSetsAsIndividuals(pslData.rulesWithPredicates, pslData.individualsByClass)
-    val groundedPredicates = createGroundedPredicates(pslData.rulesWithPredicates, pslData.predicates, pslData.facts, allPossibleSetsAndIndividuals, removeSymmetricConstraints)
+  def ground(pslData: ParsedPslFile, config: InferencerConfig = InferencerConfig()) = {
+    val allPossibleSetsAndIndividuals = generateAllPossibleSetsAsIndividuals(pslData.rulesWithPredicates,
+      pslData.individualsByClass, config)
+    if (config.verbose) println(s"Generated all classes of individuals: ${allPossibleSetsAndIndividuals.size}.")
+    val groundedPredicates = createGroundedPredicates(pslData.rulesWithPredicates, pslData.predicates, pslData.facts,
+      allPossibleSetsAndIndividuals, config)
+    if (config.verbose) println(s"Created ${groundedPredicates.size} grounded predicates.")
     // Start by grounding the constraints first, so you can use some of the trivial constraints (e.g. symmetric with only one unbound grounded predicate) to assign
     // values to the grounded predicates before passing them to the rules.
-    val (groundedConstraints, updatedGroundedPredicates) = createGroundedConstraints(pslData.predicates, groundedPredicates, allPossibleSetsAndIndividuals,
-      pslData.rulesWithPredicates.size, removeSymmetricConstraints, pushBoundsInNodes)
-    val groundedRules = createGroundedRules(pslData.rulesWithPredicates, updatedGroundedPredicates, allPossibleSetsAndIndividuals, groundedConstraints.size + 1)
+    val (groundedConstraints, updatedGroundedPredicates) = createGroundedConstraints(pslData.predicates,
+      groundedPredicates, allPossibleSetsAndIndividuals,
+      pslData.rulesWithPredicates.size, config)
+    if (config.verbose) println(s"Created ${groundedConstraints.size} grounded constraints.")
+    val groundedRules = createGroundedRules(pslData.rulesWithPredicates, updatedGroundedPredicates,
+      allPossibleSetsAndIndividuals, groundedConstraints.size + 1, config)
+    if (config.verbose) println(s"Created ${groundedRules.size} grounded rules.")
     val idToGpMap = updatedGroundedPredicates.values.map(gp => (gp.id, gp)).toMap
-    if (!isBounded) {
-      val bounds = createGroundedConstraintBounds(updatedGroundedPredicates, groundedRules.size + groundedConstraints.size + 1, groundedRules.size + groundedConstraints.size + 1, pushBoundsInNodes)
+    if (!config.isBounded) {
+      val bounds = createGroundedConstraintBounds(updatedGroundedPredicates, groundedRules.size +
+        groundedConstraints.size + 1, groundedRules.size + groundedConstraints.size + 1, config.pushBoundsInNodes)
+      if (config.verbose) println(s"Created ${bounds.size} bounds.")
       (groundedRules, groundedConstraints ++ bounds, idToGpMap)
     } else {
       (groundedRules, groundedConstraints, idToGpMap)
@@ -58,34 +68,28 @@ object Grounding {
    *  (A->demo, B->repub), (A->demo, B->anna).
    *
    */
-  def generateBindings(variables: List[Variable], individuals: Map[PslClass, Set[Individual]]): List[Map[String, Individual]] = {
+  def generateBindings(variables: List[Variable], individuals: Map[PslClass, Set[Individual]],
+    config: InferencerConfig = InferencerConfig()): List[Map[String, Individual]] = {
     if (variables.size < 1) {
       return List.empty
     }
     // For each variable try all the individuals that are in the intersection of the classes it has.
-    val allMappings = variables.map {
+    //     Need a list of List[Map[String, Individual]], each one representing the value of a variable.
+    //     e.g. List (Map(A -> anna), Map(A -> sara)) 	    
+    val allMappingsList = variables.map {
       variable =>
-        (variable.value,
-          if (variable.classTypes.isEmpty) {
-            individuals(PslClass("_")).map(v => Individual(v.value))
-          } else {
-            val sets = variable.classTypes.map(individuals(_)).toList
-            val intersection = sets.foldLeft(sets(0))(_ & _)
-            intersection.map(v => Individual(v.value))
-          })
-    }.toMap
-    if (allMappings.exists(_._2.isEmpty)) {
-      return List.empty
+        val variableIndividuals = if (variable.classTypes.isEmpty) {
+          individuals(PslClass("_")).map(v => Individual(v.value))
+        } else {
+          val sets = variable.classTypes.map(individuals(_)).toList
+          val intersection = sets.foldLeft(sets(0))(_ & _)
+          intersection.map(v => Individual(v.value))
+        }
+        if (variableIndividuals.isEmpty) {
+          return List.empty
+        }
+        variableIndividuals.map(v => Map[String, Individual](variable.value -> v)).toList
     }
-
-    // Need a list of List[Map[String, Individual]], each one representing the value of a variable.
-    // e.g. List (Map(A -> anna), Map(A -> sara)) 	    
-    val allMappingsList = allMappings.map {
-      case (variableName, variableIndividuals) => {
-        val listOfPossibleMappings = variableIndividuals.map(v => Map[String, Individual](variableName -> v)).toList
-        listOfPossibleMappings
-      }
-    }.toList
 
     // Use combine to foldleft the values and get the result.
     val foldedList = allMappingsList.foldLeft(List[Map[String, Individual]]())(combine(_, _))
@@ -143,10 +147,12 @@ object Grounding {
   /**
    * Generate all possible sets as individuals, so that they can be grounded where needed.
    */
-  def generateAllPossibleSetsAsIndividuals(rules: List[Rule], individuals: Map[PslClass, Set[Individual]]): Map[PslClass, Set[Individual]] = {
+  def generateAllPossibleSetsAsIndividuals(rules: List[Rule], individuals: Map[PslClass, Set[Individual]],
+    config: InferencerConfig = InferencerConfig()): Map[PslClass, Set[Individual]] = {
     // Find all set classes in predicates mentioned in rules.
     val setClasses = rules.flatMap {
       rule =>
+        if (config.verbose) println(s"Checking variables in rule: $rule")
         rule.allPredicatesInRule.flatMap {
           _.variables.flatMap { v =>
             v.classTypes.filter(_.set)
@@ -155,9 +161,10 @@ object Grounding {
     }.toSet
 
     if (setClasses.isEmpty) {
+      if (config.verbose) println("No variable with set type.")
       individuals
     } else {
-      println("Generating all possible sets of individuals.")
+      if (config.verbose) println("Generating all possible sets of individuals.")
       // Get not set individuals.
       val nonSetIndividuals = individuals.filter(!_._1.set)
 
@@ -188,93 +195,94 @@ object Grounding {
    * Then add the truth values that are in the facts and the predicates.
    */
   def createGroundedPredicates(rules: List[Rule], predicates: List[Predicate], facts: List[Fact],
-    individuals: Map[PslClass, Set[Individual]], removeSymmetricConstraints: Boolean = false): Map[(String, List[Individual]), GroundedPredicate] = {
+    individuals: Map[PslClass, Set[Individual]],
+    config: InferencerConfig = InferencerConfig()): Map[(String, List[Individual]), GroundedPredicate] = {
+    // Collect the truth values in facts.
+    val parallelMapOfFacts = if (config.parallelizeGrounding) { facts.par } else { facts }
+    val truthValues = parallelMapOfFacts.map { fact =>
+      ((fact.name, fact.groundingsAsSingleIndividuals.map(_.value)), fact.truthValue)
+    }.toMap
+
     // Ground predicates in rules.
     val groundedPredicatesKeys =
       rules.flatMap {
         rule =>
-          val bindings = generateBindings(rule.variables, individuals)
-          bindings.flatMap {
+          if (config.verbose) println(s"Creating grounded predicate keys for rule: $rule")
+          val bindings = generateBindings(rule.variables, individuals, config)
+          val parallelMapOfBindings = if (config.parallelizeGrounding) { bindings.par } else { bindings }
+          val result = parallelMapOfBindings.flatMap {
             binding =>
-              val bodyContribution = rule.body.map(p => (p, p.varsOrIndsWithClasses.map {
+              val bodyContribution = rule.body.map(p => (p.predicate.get, p.varsOrIndsWithClasses.map {
                 case v: Variable => binding(v.value)
                 case i: Individual => Individual(i.value)
               }))
-              val headContribution = rule.head.map(p => (p, p.varsOrIndsWithClasses.map {
+              val headContribution = rule.head.map(p => (p.predicate.get, p.varsOrIndsWithClasses.map {
                 case v: Variable => binding(v.value)
                 case i: Individual => Individual(i.value)
               }))
               val totalContribution = bodyContribution ++ headContribution
               totalContribution
           }
+          if (config.parallelizeGrounding) { result.seq } else { result }
       }.toSet
 
     //Ground predicates in constraints
     val groundedConstraintPredicatesKeys = predicates.filter(!_.properties.isEmpty).flatMap {
       predicate =>
+        if (config.verbose) println(s"Creating grounded constraint keys for predicate: $predicate")
         predicate.properties.flatMap {
           property =>
             property match {
               case Functional | PartialFunctional =>
                 val varA = Variable("A", Set(predicate.classes(0)))
                 val varB = Variable("B", Set(predicate.classes(1)))
-                val bindings = generateBindings(List(varA, varB), individuals)
-                bindings.flatMap {
-                  binding => List(Some((predicate, List(binding("A"), binding("B")))))
+                val bindings = generateBindings(List(varA, varB), individuals, config)
+                val parallelMapOfBindings = if (config.parallelizeGrounding) { bindings.par } else { bindings }
+                val result = parallelMapOfBindings.flatMap {
+                  binding => Some((predicate, List(binding("A"), binding("B"))))
                 }
+                if (config.parallelizeGrounding) { result.seq } else { result }
               case Symmetric =>
                 val varA = Variable("A", predicate.classes.toSet)
                 val varB = Variable("B", predicate.classes.toSet)
-                val bindings = generateBindings(List(varA, varB), individuals)
-                bindings.flatMap {
+                val bindings = generateBindings(List(varA, varB), individuals, config)
+                val parallelMapOfBindings = if (config.parallelizeGrounding) { bindings.par } else { bindings }
+                val result = parallelMapOfBindings.flatMap {
                   binding =>
-                    List(
-                      Some((predicate, List(binding("A"), binding("B")))),
-                      Some((predicate, List(binding("B"), binding("A")))))
+                    Some((predicate, List(binding("A"), binding("B"))))
                 }
-              case _ => List(None)
+                if (config.parallelizeGrounding) { result.seq } else { result }
+              case _ => None
             }
         }
-    }.flatten.toSet
+    }.toSet
 
-    // Collect the truth values in facts.
-    val truthValues = {
-      for {
-        fact <- facts
-      } yield ((fact.name, fact.groundingsAsSingleIndividuals.map(_.value)), fact.truthValue)
-    }.toMap
+    val allGroundedPredicatesKeys = groundedPredicatesKeys ++ groundedConstraintPredicatesKeys
 
     // Create the grounded predicates by merging the truth values.
     // groundedPredicateKeys contains a set of (predicate, grounding) pairs.
     // The key is the predicate name and the grounding.
     var id = 0
-    val groundedPredicates = groundedPredicatesKeys.map {
-      case (pInR, grounding) =>
-        val gp = GroundedPredicate({ id += 1; id }, pInR.predicate.get, grounding,
-          truthValues.getOrElse((pInR.name, grounding.map(_.value)), None))
-        ((pInR.name, grounding), gp)
-    }.toMap
 
     // Create the grounded constraint predicates by merging the truth values.
-    val groundedConstraintPredicates = groundedConstraintPredicatesKeys.map {
+    val groundedPredicates = allGroundedPredicatesKeys.map {
       case (pr, grounding) =>
         val gp = GroundedPredicate({ id += 1; id }, pr, grounding,
           truthValues.getOrElse((pr.name, grounding.map(_.value)), None))
         ((pr.name, grounding), gp)
     }.toMap
 
-    // Merge the two maps, overwriting the duplicate values.
-    val allPredicateKeys = groundedPredicates ++ groundedConstraintPredicates
+    if (config.verbose) println(s"Created ${groundedPredicates.size} grounded predicate keys.")
 
-    if (!removeSymmetricConstraints) {
-      return allPredicateKeys
+    if (!config.removeSymmetricConstraints) {
+      return groundedPredicates
     }
 
     // Symmetric optimization:
     // For all the symmetric predicates, merge the predicate p(a,b) and p(b,a), keeping only the one with the parameters in alphabetical order.
     // In case there is a truth value, keep it.    
-    val unaffectedPredicateKeys = allPredicateKeys.filter(_._1._2.length != 2)
-    val affectedPredicateKeys = allPredicateKeys.filter(_._1._2.length == 2)
+    val unaffectedPredicateKeys = groundedPredicates.filter(_._1._2.length != 2)
+    val affectedPredicateKeys = groundedPredicates.filter(_._1._2.length == 2)
     val optimizedPredicateKeys = affectedPredicateKeys.map {
       case ((predicateName, grounding), gp) =>
         if (!gp.definition.properties.contains(Symmetric) || grounding(0).name < grounding(1).name) {
@@ -302,13 +310,14 @@ object Grounding {
    * We do it in a second time, so we can have a unique id for each grounded predicate.
    */
   def createGroundedRules(rules: List[Rule], groundedPredicates: Map[(String, List[Individual]), GroundedPredicate],
-    individuals: Map[PslClass, Set[Individual]], startingId: Int = 0): List[GroundedRule] = {
+    individuals: Map[PslClass, Set[Individual]], startingId: Int = 0,
+    config: InferencerConfig = InferencerConfig()): List[GroundedRule] = {
     var id = startingId
     rules.flatMap {
       rule =>
         // Existentially quantified vars.
         val existentialVariables = rule.variables.filter(v => rule.existentialVars.contains(v.name))
-        val existentialBindings = generateBindings(existentialVariables, individuals)
+        val existentialBindings = generateBindings(existentialVariables, individuals, config)
         // Expand the eventual existential quantified variables in the head to a GP for each existential binding of each predicate in rule.
         val newHead = if (existentialBindings.length > 0) {
           existentialBindings.flatMap {
@@ -331,7 +340,7 @@ object Grounding {
 
         // Normal vars.
         // Treat the rule as a normal rule.
-        val bindings = generateBindings(newRule.variables, individuals)
+        val bindings = generateBindings(newRule.variables, individuals, config)
         bindings.map {
           binding =>
             val groundedBody = newRule.body.map(getGroundedPredicate(groundedPredicates, _, binding)).flatten
@@ -353,7 +362,7 @@ object Grounding {
    */
   def createGroundedConstraints(predicates: List[Predicate], groundedPredicates: Map[(String, List[Individual]), GroundedPredicate],
     individuals: Map[PslClass, Set[Individual]], startingConstraintId: Int = 0,
-    removeSymmetricConstraints: Boolean = false, pushBoundsInNodes: Boolean = true): (List[GroundedConstraint], Map[(String, List[Individual]), GroundedPredicate]) = {
+    config: InferencerConfig = InferencerConfig()): (List[GroundedConstraint], Map[(String, List[Individual]), GroundedPredicate]) = {
     // The id of the grounded constraint.
     var id = 1
     // The ruleId is the id for each predicate property we are making into a constraint.
@@ -370,14 +379,14 @@ object Grounding {
           property =>
             val (nextId, con, newGps: Map[(String, List[Individual]), GroundedPredicate]) = property match {
               case Symmetric =>
-                if (!removeSymmetricConstraints) {
+                if (!config.removeSymmetricConstraints) {
                   createSymmetricConstraints(id, { ruleId += 1; ruleId }, predicate, currentGroundedPredicates, individuals)
                 } else {
                   // We have avoided creating symmetric constraints by rewriting all gps (a,b) and (b,a) to a normalized form 
                   (id - 1, List.empty, Map.empty)
                 }
               case Functional | PartialFunctional | _ =>
-                createFunctionalConstraints(id, { ruleId += 1; ruleId }, property, predicate, currentGroundedPredicates, individuals, pushBoundsInNodes)
+                createFunctionalConstraints(id, { ruleId += 1; ruleId }, property, predicate, currentGroundedPredicates, individuals, config)
             }
             currentGroundedPredicates = currentGroundedPredicates ++ newGps
             id = nextId + 1
@@ -392,14 +401,15 @@ object Grounding {
    */
   def createFunctionalConstraints(startingId: Int, ruleId: Int, property: PredicateProperty, predicate: Predicate,
     groundedPredicates: Map[(String, List[Individual]), GroundedPredicate],
-    individuals: Map[PslClass, Set[Individual]], pushBoundsInNodes: Boolean): (Int, List[GroundedConstraint], Map[(String, List[Individual]), GroundedPredicate]) = {
+    individuals: Map[PslClass, Set[Individual]],
+    config: InferencerConfig = InferencerConfig()): (Int, List[GroundedConstraint], Map[(String, List[Individual]), GroundedPredicate]) = {
 
     // Functional means that the first individual is the same in all the grounded predicates of the same constraint.
     var id = startingId
 
     val varA = Variable("A", Set(predicate.classes(0)))
     val varB = Variable("B", Set(predicate.classes(1)))
-    val bindings = generateBindings(List(varA, varB), individuals)
+    val bindings = generateBindings(List(varA, varB), individuals, config)
     val valuesOfA = bindings.map(m => m("A")).distinct
 
     // For each individual, e.g. "a" create a constraint involving all other individuals.
@@ -412,7 +422,7 @@ object Grounding {
             getGroundedPredicate(groundedPredicates, key)
         }
         val constraint = GroundedConstraint({ id += 1; id }, ruleId, property, groundedPredicatesWithA)
-        if (!pushBoundsInNodes || constraint.computeCoefficientMatrix.size > 1) {
+        if (!config.pushBoundsInNodes || constraint.computeCoefficientMatrix.size > 1) {
           (Some(constraint), None)
         } else if (constraint.computeCoefficientMatrix.size < 1) {
           // Rewind the id.
@@ -546,7 +556,8 @@ object Grounding {
    * Used only when the hasSymmetricConstraints is true.
    */
   def createSymmetricConstraints(startingId: Int, ruleId: Int, predicate: Predicate, groundedPredicates: Map[(String, List[Individual]), GroundedPredicate],
-    individuals: Map[PslClass, Set[Individual]]): (Int, List[GroundedConstraint], Map[(String, List[Individual]), GroundedPredicate]) = {
+    individuals: Map[PslClass, Set[Individual]],
+    config: InferencerConfig = InferencerConfig()): (Int, List[GroundedConstraint], Map[(String, List[Individual]), GroundedPredicate]) = {
     // Given all the combinations of individuals, e.g. (a,b), (b,c), (a,c)
     // For each produce the constraint: (a,b) - (b,a) = 0.	  
 
@@ -554,7 +565,7 @@ object Grounding {
     // All of the current predicate properties refer to binary predicates.
     val varA = Variable("A", predicate.classes.toSet)
     val varB = Variable("B", predicate.classes.toSet)
-    val bindings = generateBindings(List(varA, varB), individuals)
+    val bindings = generateBindings(List(varA, varB), individuals, config)
 
     // Filter duplicates like Map(A-> a, B-> b) and Map(A -> b, B-> a) and avoid: (a,b) + (b,a) = 0 and (b,a) + (a, b) = 0.
     // Choose the couple that has a lower index in the list.
