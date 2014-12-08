@@ -48,8 +48,10 @@ final class AsyncConsensusVertex(
       shouldSignal = true
       signalsReceivedSinceCollect = 0
       state = collect
+      true
+    } else {
+      false
     }
-    true
   }
 
   override def scoreCollect = 0

@@ -94,7 +94,9 @@ case class NonExistentConsensusVertexHandler(
     val (lowerBound, upperBound) =
       boundsOnConsensusVars.getOrElse(vertexId, (0.0, 1.0))
     if (asynchronous) {
-      if (lazyThreshold.isDefined) throw new Exception("Asynchronous inferencing cannot be combined with lazy inferencing.")
+      if (lazyThreshold.isDefined) {
+        println("Asynchronous inferencing cannot be combined with lazy inferencing, lazy setting is being ignored.")
+      }
       Some(new AsyncConsensusVertex(
         variableId = vertexId,
         initialState = initialState,
@@ -136,7 +138,7 @@ object Wolf {
         println(s"ADMM graph creation completed in $graphLoadingTime ms.")
         println("Starting inference ...")
         val executionConfig = ExecutionConfiguration[Int, Double]().
-          withExecutionMode(if (config.asynchronous) ExecutionMode.OptimizedAsynchronous else ExecutionMode.Synchronous).
+          withExecutionMode(if (config.asynchronous) ExecutionMode.PureAsynchronous else ExecutionMode.Synchronous).
           withStepsLimit(config.maxIterations)
         if (config.globalConvergenceDetection.isDefined) {
           // Global convergence case:
@@ -144,12 +146,16 @@ object Wolf {
             new GlobalAdmmConvergenceDetection(
               absoluteEpsilon = config.absoluteEpsilon,
               relativeEpsilon = config.relativeEpsilon,
-              checkingInterval = config.globalConvergenceDetection.get) with DebugLogging
+              checkingInterval = config.globalConvergenceDetection.get,
+              aggregationInterval = if (config.asynchronous) 500 else 1 // every iteration for sync, every second for async.
+              ) with DebugLogging
           } else {
             GlobalAdmmConvergenceDetection(
               absoluteEpsilon = config.absoluteEpsilon,
               relativeEpsilon = config.relativeEpsilon,
-              checkingInterval = config.globalConvergenceDetection.get)
+              checkingInterval = config.globalConvergenceDetection.get,
+              aggregationInterval = if (config.asynchronous) 500 else 1 // every iteration for sync, every second for async.
+              )
           }
           val stats = graph.execute(executionConfig.withGlobalTerminationDetection(globalConvergence))
           (stats, Some(globalConvergence))
@@ -278,7 +284,9 @@ object Wolf {
     }
     assert(f.getStepSize == config.stepSize)
     val subproblem = if (config.asynchronous) {
-      if (config.lazyThreshold.isDefined) throw new Exception("Asynchronous inferencing cannot be combined with lazy inferencing.")
+      if (config.lazyThreshold.isDefined) {
+        println("Asynchronous inferencing cannot be combined with lazy inferencing, lazy setting is being ignored.")
+      }
       new AsyncSubproblemVertex(
         subproblemId = subId,
         optimizableFunction = f)
@@ -296,7 +304,6 @@ object Wolf {
     }
     for (consensusId <- f.idToIndexMappings) {
       subproblem.addEdge(new DummyEdge(consensusId), graph)
-      //println(s"Add edge $subId ($f) to $consensusId")
       graph.addEdge(consensusId, new DummyEdge(subId))
     }
     graph.addVertex(subproblem)

@@ -34,67 +34,17 @@ import com.signalcollect.admm.optimizers.OptimizableFunction
  */
 class AsyncSubproblemVertex(
   subproblemId: Int, // The id of the subproblem.
-  val optimizableFunction: OptimizableFunction) // The function that is contained in the subproblem.
-  extends MemoryEfficientDataGraphVertex[Array[Double], Double, Double](subproblemId, null.asInstanceOf[Array[Double]])
-  with Subproblem {
-
-  type OutgoingSignalType = Double
+  optimizableFunction: OptimizableFunction) // The function that is contained in the subproblem.
+  extends SubproblemVertex(subproblemId, optimizableFunction) {
 
   var signalsReceivedSinceCollect = 0
 
-  def multipliers = optimizableFunction.getYEfficient
-
-  /**
-   * Overriding the internal S/C signal implementation.
-   * We do not signal with the edges (so no need to define signal()),
-   * instead the signalling is done here.
-   */
   override def executeSignalOperation(graphEditor: GraphEditor[Int, Double]) {
-    // TODO: We don't really need the S/C vertex target ids. Can we save some memory here?
-    var alreadySentId = Set.empty[Int]
-    val idToIndexMapping = optimizableFunction.idToIndexMappings
-    val idToIndexMappingLength = idToIndexMapping.length
-    var i = 0
-    while (i < idToIndexMappingLength) {
-      val targetId = idToIndexMapping(i)
-      if (!alreadySentId.contains(targetId)) {
-        val targetIdValue = state(i)
-        graphEditor.sendSignal(targetIdValue, targetId, id)
-        alreadySentId += targetId
-      }
-      i += 1
-    }
-    lastSignalState = state
+    super.executeSignalOperation(graphEditor)
+    shouldSignal = false
   }
 
-  override def afterInitialization(graphEditor: GraphEditor[Int, Double]) {
-    executeCollectOperation(graphEditor)
-  }
-
-  // Collect all the connected consensus variable values.
-  def consensusAssignments: Array[Double] = {
-    val idToIndexMapping = optimizableFunction.idToIndexMappings
-    val idToIndexMappingLength = idToIndexMapping.length
-    val consensusVariableAssigments = new Array[Double](idToIndexMappingLength)
-    var i = 0
-    while (i < idToIndexMappingLength) {
-      val idAtIndex = idToIndexMapping(i)
-      consensusVariableAssigments(i) = mostRecentSignalMap(idAtIndex)
-      i += 1
-    }
-    consensusVariableAssigments
-  }
-
-  def collect: Array[Double] = {
-    signalsReceivedSinceCollect = 0
-    val consensus = consensusAssignments
-    // Update the lagrangian multipliers (y) : y-step
-    optimizableFunction.updateLagrangeEfficient(consensus)
-    // Minimize the local function and get argmin (x) : x-step
-    optimizableFunction.optimizeEfficient(consensus)
-    val newOptimizedAssignments = optimizableFunction.getX
-    newOptimizedAssignments
-  }
+  var shouldSignal = true
 
   /**
    * Overriding the internal S/C signal implementation.
@@ -102,25 +52,24 @@ class AsyncSubproblemVertex(
   override def deliverSignalWithSourceId(signal: Double, sourceId: Int, graphEditor: GraphEditor[Int, Double]): Boolean = {
     signalsReceivedSinceCollect += 1
     mostRecentSignalMap.put(sourceId, signal)
-    false
+    if (signalsReceivedSinceCollect == _targetIds.size) {
+      signalsReceivedSinceCollect = 0
+      state = collect
+      shouldSignal = true
+      true
+    } else {
+      false
+    }
   }
 
-  override def scoreCollect = {
-    if (signalsReceivedSinceCollect == _targetIds.size) {
+  override def scoreCollect = 0
+
+  override def scoreSignal = {
+    if (shouldSignal) {
       1
     } else {
       0
     }
   }
 
-  // Always signal, even in the first iteration, when the consensus variable doesn't.
-  override def scoreSignal = 1
-
-  /**
-   * Signalling is efficiently done in 'executeSignalOperation'.
-   * This function should therefore never be called.
-   */
-  override def computeSignal(targetId: Int): Double = {
-    throw new UnsupportedOperationException
-  }
 }
