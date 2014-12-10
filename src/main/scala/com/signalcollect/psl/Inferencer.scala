@@ -54,6 +54,7 @@ case class InferenceResult(
   functionCreationTime: Option[Long] = None,
   numGroundedRules: Option[Int] = None,
   numGroundedConstraints: Option[Int] = None,
+  numBoundedVars: Option[Int] = None,
   numFunctions: Option[Int] = None,
   numConstraints: Option[Int] = None) {
 
@@ -174,13 +175,14 @@ case class InferencerConfig(
   removeSymmetricConstraints: Boolean = true,
   parallelizeGrounding: Boolean = true,
   pushBoundsInNodes: Boolean = true,
+  optimizedFunctionCreation: Boolean = true,
   serializeMessages: Boolean = false,
   eagerSignalCollectConvergenceDetection: Boolean = true,
   heartbeatIntervalInMs: Int = 0,
   verbose: Boolean = false) {
 
   override def toString: String =
-    s"asynchronous: $asynchronous, lazyThreshold: $lazyThreshold, breezeOptimizer: $breezeOptimizer, globalConvergenceDetection: $globalConvergenceDetection, absoluteEpsilon: $absoluteEpsilon, relativeEpsilon: $relativeEpsilon, computeObjectiveValueOfSolution: $computeObjectiveValueOfSolution, objectiveLoggingEnabled: $objectiveLoggingEnabled, maxIterations: $maxIterations, stepSize: $stepSize, tolerance: $tolerance, isBounded: $isBounded, removeSymmetricConstraints: $removeSymmetricConstraints, parallelizeGrounding: $parallelizeGrounding, pushBoundsInNodes: $pushBoundsInNodes, verbose: $verbose"
+    s"asynchronous: $asynchronous, lazyThreshold: $lazyThreshold, breezeOptimizer: $breezeOptimizer, globalConvergenceDetection: $globalConvergenceDetection, absoluteEpsilon: $absoluteEpsilon, relativeEpsilon: $relativeEpsilon, computeObjectiveValueOfSolution: $computeObjectiveValueOfSolution, objectiveLoggingEnabled: $objectiveLoggingEnabled, maxIterations: $maxIterations, stepSize: $stepSize, tolerance: $tolerance, isBounded: $isBounded, removeSymmetricConstraints: $removeSymmetricConstraints, parallelizeGrounding: $parallelizeGrounding, pushBoundsInNodes: $pushBoundsInNodes, optimizedFunctionCreation: $optimizedFunctionCreation, verbose: $verbose"
 
   def getWolfConfig = {
     WolfConfig(
@@ -273,8 +275,8 @@ object Inferencer {
   }
 
   def recreateFunctions(groundedRules: Iterable[GroundedRule], groundedConstraints: Iterable[GroundedConstraint], idToGpMap: Map[Int, GroundedPredicate], config: InferencerConfig = InferencerConfig()): (Iterable[OptimizableFunction], Iterable[OptimizableFunction], Map[Int, (Double, Double)]) = {
-    val functions = groundedRules.flatMap(_.createOptimizableFunction(config.stepSize, config.tolerance, config.breezeOptimizer))
-    val constraints = groundedConstraints.flatMap(_.createOptimizableFunction(config.stepSize, config.tolerance, config.breezeOptimizer))
+    val functions = groundedRules.flatMap(_.createOptimizableFunction(config.stepSize, config.tolerance, config.breezeOptimizer, config.optimizedFunctionCreation))
+    val constraints = groundedConstraints.flatMap(_.createOptimizableFunction(config.stepSize, config.tolerance, config.breezeOptimizer, config.optimizedFunctionCreation))
     val boundsForConsensusVariables: Map[Int, (Double, Double)] = if (config.pushBoundsInNodes && config.isBounded) {
       idToGpMap.filter(p => p._2.lowerBound != 0.0 || p._2.upperBound != 1.0).map {
         case (id, p) => (id, (p.lowerBound, p.upperBound))
@@ -312,6 +314,7 @@ object Inferencer {
       groundingTime = Some(groundingTime), parsingTime = Some(parsingTime), functionCreationTime = Some(functionCreationTime + objEvaluationTime),
       numGroundedRules = Some(groundedRules.size),
       numGroundedConstraints = Some(groundedConstraints.size),
+      numBoundedVars = Some(boundsForConsensusVariables.size),
       numFunctions = Some(functions.size),
       numConstraints = Some(constraints.size))
   }

@@ -43,7 +43,7 @@ trait GroundedRuleOrConstraint {
       case v: GroundedConstraint => false
     }
   }
-  
+
   def unboundGroundedPredicates: List[GroundedPredicate]
   def variables: List[Int] = unboundGroundedPredicates.map(gp => gp.id).toList
 }
@@ -93,7 +93,9 @@ case class GroundedConstraint(
     groundedPredicates.filter(!_.truthValue.isDefined)
   }
 
-  def createOptimizableFunction(stepSize: Double, tolerance: Double = 0.0, breezeOptimizer: Boolean = false): Option[OptimizableFunction] = {
+  def createOptimizableFunction(stepSize: Double, tolerance: Double = 0.0,
+    breezeOptimizer: Boolean = false,
+    optimizedFunctionCreation: Boolean = true): Option[OptimizableFunction] = {
     // Easy optimization, if all are facts, ignore.
     if (unboundGroundedPredicates.size == 0)
       return None
@@ -116,23 +118,26 @@ case class GroundedConstraint(
      * - if the minimum possible value the predicates can achieve is always more than
      * less or equal (leq) constraint.
      */
-    if (comparator != "leq") {
-      val maxPossibleValue = coefficientMatrix.map { coeff => if (coeff > 0) coeff else 0 }.sum
-      if (maxPossibleValue < constant) {
-        //println(s"[Warning]: Constraint is always false and be discarded: ${property} on ${groundedPredicates}")
-        //println(s"MaxPossibleValue: ${maxPossibleValue}, constant: ${constant}")
-        return None
-      }
-    }
-    if (comparator != "geq") {
-      val minPossibleValue = coefficientMatrix.map { coeff => if (coeff > 0) 0 else coeff }.sum
-      if (minPossibleValue > constant) {
-        //println(s"[Warning]: Constraint is always false and will be discarded: ${property} on ${groundedPredicates}")
-        //println(s"MinimumPossibleValue: ${minPossibleValue}, constant: ${constant}")
-        return None
-      }
-    }
+    if (optimizedFunctionCreation) {
+      if (comparator != "leq") {
+        val maxPossibleValue = coefficientMatrix.map { coeff => if (coeff > 0) coeff else 0 }.sum
+        if (maxPossibleValue < constant) {
+          //println(s"[Warning]: Constraint is always false and be discarded: ${property} on ${groundedPredicates}")
+          //println(s"MaxPossibleValue: ${maxPossibleValue}, constant: ${constant}")
+          return None
+        }
 
+      }
+      if (comparator != "geq") {
+        val minPossibleValue = coefficientMatrix.map { coeff => if (coeff > 0) 0 else coeff }.sum
+        if (minPossibleValue > constant) {
+          //println(s"[Warning]: Constraint is always false and will be discarded: ${property} on ${groundedPredicates}")
+          //println(s"MinimumPossibleValue: ${minPossibleValue}, constant: ${constant}")
+          return None
+        }
+      }
+    }
+    
     // TODO: Define zMap - currently just initialized to 0.
     val zMap: Map[Int, Double] = unboundGroundedPredicates.map(gp => (gp.id, 0.0)).toMap
     val zIndices: Array[Int] = unboundGroundedPredicates.map(gp => gp.id).toArray
