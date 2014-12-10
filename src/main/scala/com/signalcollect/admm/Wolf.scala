@@ -50,7 +50,7 @@ import com.signalcollect.util.IntDoubleHashMap
 import akka.actor.ActorRef
 
 case class ProblemSolution(
-  stats: ExecutionInformation[Int, Double],
+  stats: Option[ExecutionInformation[Int, Double]],
   results: IntDoubleHashMap,
   convergence: Option[AbstractGlobalAdmmConvergenceDetection] = None,
   graphLoadingTime: Long,
@@ -130,67 +130,78 @@ object Wolf {
     nodeActors: Option[Array[ActorRef]] = None,
     config: WolfConfig,
     boundsOnConsensusVars: Map[Int, (Double, Double)] = Map.empty): ProblemSolution = {
-    val (graph, graphLoadingTime) = Timer.time {
-      createGraph(functions, nodeActors, config, config.serializeMessages, boundsOnConsensusVars)
-    }
-    try {
-      val ((stats, convergence), inferenceTime) = Timer.time {
-        println(s"ADMM graph creation completed in $graphLoadingTime ms.")
-        println("Starting inference ...")
-        val executionConfig = ExecutionConfiguration[Int, Double]().
-          withExecutionMode(if (config.asynchronous) ExecutionMode.PureAsynchronous else ExecutionMode.Synchronous).
-          withStepsLimit(config.maxIterations)
-        if (config.globalConvergenceDetection.isDefined) {
-          // Global convergence case:
-          val globalConvergence = if (config.objectiveLoggingEnabled) {
-            new GlobalAdmmConvergenceDetection(
-              absoluteEpsilon = config.absoluteEpsilon,
-              relativeEpsilon = config.relativeEpsilon,
-              checkingInterval = config.globalConvergenceDetection.get,
-              aggregationInterval = if (config.asynchronous) 500 else 1 // every iteration for sync, every second for async.
-              ) with DebugLogging
+    if (config.maxIterations > 0) {
+      val (graph, graphLoadingTime) = Timer.time {
+        createGraph(functions, nodeActors, config, config.serializeMessages, boundsOnConsensusVars)
+      }
+      try {
+        val ((stats, convergence), inferenceTime) = Timer.time {
+          println(s"ADMM graph creation completed in $graphLoadingTime ms.")
+          println("Starting inference ...")
+          val executionConfig = ExecutionConfiguration[Int, Double]().
+            withExecutionMode(if (config.asynchronous) ExecutionMode.PureAsynchronous else ExecutionMode.Synchronous).
+            withStepsLimit(config.maxIterations)
+          if (config.globalConvergenceDetection.isDefined) {
+            // Global convergence case:
+            val globalConvergence = if (config.objectiveLoggingEnabled) {
+              new GlobalAdmmConvergenceDetection(
+                absoluteEpsilon = config.absoluteEpsilon,
+                relativeEpsilon = config.relativeEpsilon,
+                checkingInterval = config.globalConvergenceDetection.get,
+                aggregationInterval = if (config.asynchronous) 500 else 1 // every iteration for sync, every second for async.
+                ) with DebugLogging
+            } else {
+              GlobalAdmmConvergenceDetection(
+                absoluteEpsilon = config.absoluteEpsilon,
+                relativeEpsilon = config.relativeEpsilon,
+                checkingInterval = config.globalConvergenceDetection.get,
+                aggregationInterval = if (config.asynchronous) 500 else 1 // every iteration for sync, every second for async.
+                )
+            }
+            val stats = graph.execute(executionConfig.withGlobalTerminationDetection(globalConvergence))
+            (stats, Some(globalConvergence))
           } else {
-            GlobalAdmmConvergenceDetection(
-              absoluteEpsilon = config.absoluteEpsilon,
-              relativeEpsilon = config.relativeEpsilon,
-              checkingInterval = config.globalConvergenceDetection.get,
-              aggregationInterval = if (config.asynchronous) 500 else 1 // every iteration for sync, every second for async.
-              )
+            val stats = graph.execute(executionConfig)
+            (stats, None)
           }
-          val stats = graph.execute(executionConfig.withGlobalTerminationDetection(globalConvergence))
-          (stats, Some(globalConvergence))
-        } else {
-          val stats = graph.execute(executionConfig)
-          (stats, None)
         }
-      }
-      val (results, resultAggregationTime) = Timer.time {
-        val convergenceMessage = stats.executionStatistics.terminationReason match {
-          case TerminationReason.TimeLimitReached =>
-            "Computation finished because the time limit was reached."
-          case TerminationReason.Converged =>
-            "Computation finished because setting all the variables to 0 is a solution."
-          case TerminationReason.GlobalConstraintMet =>
-            "Computation finished because the global error was small enough."
-          case TerminationReason.ComputationStepLimitReached =>
-            "Computation finished because the steps limit was reached."
-          case TerminationReason.TerminatedByUser =>
-            "Computation terminated on user request."
+        val (results, resultAggregationTime) = Timer.time {
+          val convergenceMessage = stats.executionStatistics.terminationReason match {
+            case TerminationReason.TimeLimitReached =>
+              "Computation finished because the time limit was reached."
+            case TerminationReason.Converged =>
+              "Computation finished because setting all the variables to 0 is a solution."
+            case TerminationReason.GlobalConstraintMet =>
+              "Computation finished because the global error was small enough."
+            case TerminationReason.ComputationStepLimitReached =>
+              "Computation finished because the steps limit was reached."
+            case TerminationReason.TerminatedByUser =>
+              "Computation terminated on user request."
+          }
+          println(convergenceMessage)
+          val resultMap = graph.aggregate(ConsensusAggregator)
+          resultMap.getOrElse(new IntDoubleHashMap(initialSize = 1, rehashFraction = 0.5f))
         }
-        println(convergenceMessage)
-        val resultMap = graph.aggregate(ConsensusAggregator)
-        resultMap.getOrElse(new IntDoubleHashMap(initialSize = 1, rehashFraction = 0.5f))
+        val solution = ProblemSolution(
+          stats = Some(stats),
+          results = results,
+          convergence = convergence,
+          graphLoadingTime = graphLoadingTime,
+          inferenceTime = inferenceTime,
+          resultAggregationTime = resultAggregationTime)
+        solution
+      } finally {
+        graph.shutdown
       }
-      val solution = ProblemSolution(
-        stats = stats,
-        results = results,
-        convergence = convergence,
-        graphLoadingTime = graphLoadingTime,
-        inferenceTime = inferenceTime,
-        resultAggregationTime = resultAggregationTime)
-      solution
-    } finally {
-      graph.shutdown
+    } else {
+      // maxIterations <= 0.
+      ProblemSolution(
+        stats = None,
+        results = new IntDoubleHashMap(),
+        convergence = None,
+        graphLoadingTime = 0,
+        inferenceTime = 0,
+        resultAggregationTime = 0)
     }
   }
 

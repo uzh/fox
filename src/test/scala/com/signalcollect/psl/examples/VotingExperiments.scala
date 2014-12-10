@@ -108,11 +108,11 @@ object ExperimentHelper {
 
   def runExperiment(pslData: String, id: Int, config: InferencerConfig) = {
     val inferenceResults = Inferencer.runInferenceFromString(pslData, config = config)
-    val execStats = inferenceResults.solution.stats.executionStatistics
+    val execStats = inferenceResults.solution.stats.get.executionStatistics
     val signalSteps = execStats.signalSteps
     val computationTime = execStats.computationTime.toUnit(TimeUnit.MILLISECONDS).toInt
-    val vertices = inferenceResults.solution.stats.aggregatedWorkerStatistics.numberOfVertices
-    val edges = inferenceResults.solution.stats.aggregatedWorkerStatistics.numberOfOutgoingEdges
+    val vertices = inferenceResults.solution.stats.get.aggregatedWorkerStatistics.numberOfVertices
+    val edges = inferenceResults.solution.stats.get.aggregatedWorkerStatistics.numberOfOutgoingEdges
     val objectiveFunctionValOption = inferenceResults.objectiveFun
     assert(objectiveFunctionValOption.isDefined)
   }
