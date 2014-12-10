@@ -87,6 +87,8 @@ final class LazySubproblemVertex(
         if (signalChanged) {
           atLeastOneSignalSent = true
           graphEditor.sendSignal(targetIdValue, targetId, id)
+          lastSignalState(i) = targetIdValue
+          lastMultipliers(i) = multipliers(i)
         }
         alreadySentId += targetId
       }
@@ -96,9 +98,8 @@ final class LazySubproblemVertex(
     // If we did not signal, but the multipliers changed, then we want to schedule ourselves.
     if (!atLeastOneSignalSent && atLeastOneMultiplierChanged) {
       graphEditor.sendSignal(MSG.SKIP_COLLECT, id, id)
+      lastMultipliers = multipliers.clone
     }
-    lastSignalState = state.clone
-    lastMultipliers = multipliers.clone
   }
 
   var skipCollect = false
