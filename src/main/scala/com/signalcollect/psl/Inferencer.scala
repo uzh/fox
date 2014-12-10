@@ -51,7 +51,11 @@ case class InferenceResult(
   objectiveFun: Option[Double] = None,
   groundingTime: Option[Long] = None,
   parsingTime: Option[Long] = None,
-  functionCreationTime: Option[Long] = None) {
+  functionCreationTime: Option[Long] = None,
+  numGroundedRules: Option[Int] = None,
+  numGroundedConstraints: Option[Int] = None,
+  numFunctions: Option[Int] = None,
+  numConstraints: Option[Int] = None) {
 
   def getGp(predicate: String, individuals: String*): Option[GroundedPredicate] = {
     val individualList = individuals.toList
@@ -268,7 +272,7 @@ object Inferencer {
     solveInferenceProblem(groundedRules, groundedConstraints, idToGpMap, groundingTime, parsingTime, nodeActors, config)
   }
 
-  def recreateFunctions(groundedRules: Iterable[GroundedRule], groundedConstraints: Iterable[GroundedConstraint], idToGpMap: Map[Int, GroundedPredicate], config: InferencerConfig = InferencerConfig()): (Iterable[OptimizableFunction], Map[Int, (Double, Double)]) = {
+  def recreateFunctions(groundedRules: Iterable[GroundedRule], groundedConstraints: Iterable[GroundedConstraint], idToGpMap: Map[Int, GroundedPredicate], config: InferencerConfig = InferencerConfig()): (Iterable[OptimizableFunction], Iterable[OptimizableFunction], Map[Int, (Double, Double)]) = {
     val functions = groundedRules.flatMap(_.createOptimizableFunction(config.stepSize, config.tolerance, config.breezeOptimizer))
     val constraints = groundedConstraints.flatMap(_.createOptimizableFunction(config.stepSize, config.tolerance, config.breezeOptimizer))
     val boundsForConsensusVariables: Map[Int, (Double, Double)] = if (config.pushBoundsInNodes && config.isBounded) {
@@ -279,32 +283,36 @@ object Inferencer {
       Map.empty
     }
     println(s"Problem converted to consensus optimization with ${functions.size} functions and ${constraints.size} constraints.")
-    (functions ++ constraints, boundsForConsensusVariables)
+    (functions, constraints, boundsForConsensusVariables)
   }
 
   def solveInferenceProblem(groundedRules: Iterable[GroundedRule], groundedConstraints: Iterable[GroundedConstraint], idToGpMap: Map[Int, GroundedPredicate],
     groundingTime: Long, parsingTime: Long,
     nodeActors: Option[Array[ActorRef]] = None, config: InferencerConfig = InferencerConfig()) = {
-    val ((functionsAndConstraints, boundsForConsensusVariables), functionCreationTime) = Timer.time {
+    val ((functions, constraints, boundsForConsensusVariables), functionCreationTime) = Timer.time {
       recreateFunctions(groundedRules, groundedConstraints, idToGpMap, config)
     }
 
     val solution = Wolf.solveProblem(
-      functionsAndConstraints,
+      functions ++ constraints,
       nodeActors,
       config.getWolfConfig,
       boundsForConsensusVariables)
 
-    if (config.computeObjectiveValueOfSolution) {
-      val (objectiveFunctionVal, objEvaluationTime) = Timer.time {
-        functionsAndConstraints.foldLeft(0.0) {
+    val (objectiveFunctionVal: Option[Double], objEvaluationTime) = Timer.time {
+      if (config.computeObjectiveValueOfSolution) {
+        val result = (functions ++ constraints).foldLeft(0.0) {
           case (sum, nextFunction) => sum + nextFunction.evaluateAt(solution.results)
         }
-      }
-      //println("Computed the objective function.")
-      InferenceResult(solution, idToGpMap, Some(objectiveFunctionVal), groundingTime = Some(groundingTime), parsingTime = Some(parsingTime), functionCreationTime = Some(functionCreationTime + objEvaluationTime))
-    } else {
-      InferenceResult(solution, idToGpMap, groundingTime = Some(groundingTime), parsingTime = Some(parsingTime), functionCreationTime = Some(functionCreationTime))
+        Some(result)
+      } else { None }
     }
+    //println("Computed the objective function.")
+    InferenceResult(solution, idToGpMap, objectiveFunctionVal,
+      groundingTime = Some(groundingTime), parsingTime = Some(parsingTime), functionCreationTime = Some(functionCreationTime + objEvaluationTime),
+      numGroundedRules = Some(groundedRules.size),
+      numGroundedConstraints = Some(groundedConstraints.size),
+      numFunctions = Some(functions.size),
+      numConstraints = Some(constraints.size))
   }
 }
