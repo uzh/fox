@@ -1,4 +1,4 @@
-// This is an example that showcases most of the features in Wolf-DSL.
+// This is an example that showcases most of the features in the fox-DSL.
 // Classes:
 class Person:	anna, bob, carl
 class Party:	demo, repub
