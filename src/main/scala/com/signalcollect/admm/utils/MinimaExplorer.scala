@@ -91,7 +91,7 @@ object MinimaExplorer {
   def runExploration(pslData: ParsedPslFile, config: InferencerConfig = InferencerConfig(),
     groundedPredicateNames: List[String] = List.empty): List[(String, Double, Double, Double)] = {
     // This is the same as the inferencer, we copy it so we don't have to recreate the functions.
-    val (groundedRules, groundedConstraints, idToGpMap) = Grounding.ground(pslData, config.isBounded, config.removeSymmetricConstraints)
+    val (groundedRules, groundedConstraints, idToGpMap) = Grounding.ground(pslData, config)
     val functions = groundedRules.flatMap(_.createOptimizableFunction(config.stepSize, config.tolerance, config.breezeOptimizer))
     val constraints = groundedConstraints.flatMap(_.createOptimizableFunction(config.stepSize, config.tolerance, config.breezeOptimizer))
     val functionsAndConstraints = functions ++ constraints
