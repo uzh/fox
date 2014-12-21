@@ -1,0 +1,68 @@
+class Person: sara, philip, fred, george, john-travolta, samuel-l-jackson, ewan-mcgregor, tom-cruise
+class Movie: mission-impossible, rear-window, vertigo, top-gun, blade-runner, indiana-jones-and-the-last-crusade, star-wars
+class Actor: james-stewart, tom-cruise, harrison-ford
+
+predicate: likes(Person, _)
+predicate: playsIn(Actor, Movie)
+
+rule [weight = 1]: likes(PERSON, MOVIE) && playsIn(ACTOR, MOVIE) => likes(PERSON, ACTOR)
+rule [weight = 1]: likes(PERSON, MOVIE-A) && playsIn(ACTOR, MOVIE-A) && playsIn(ACTOR, MOVIE-B) => likes(PERSON, MOVIE-B)
+rule [weight = 1]: likes(PERSON-A, A) && likes(PERSON-B, A) && likes(PERSON-B, B) => likes(PERSON-A, B)
+  
+fact: playsIn(tom-cruise, top-gun)
+fact: playsIn(tom-cruise, mission-impossible)
+fact: playsIn(james-stewart, rear-window)
+fact: playsIn(james-stewart, vertigo)
+fact: playsIn(harrison-ford, indiana-jones-and-the-last-crusade)
+fact: playsIn(harrison-ford, blade-runner)
+fact: playsIn(harrison-ford, star-wars)
+
+fact [truthValue = 0.1]: likes(sara, tom-cruise)
+fact [truthValue = 0.9]: likes(sara, harrison-ford)
+
+fact [truthValue = 0.9]: likes(sara, pulp-fiction)
+fact [truthValue = 0.8]: likes(sara, star-wars)
+fact [truthValue = 0.8]: likes(sara, trainspotting)
+fact [truthValue = 0.8]: likes(sara, blade-runner)
+
+fact [truthValue = 0.9]: likes(philip, pulp-fiction)
+fact [truthValue = 1.0]: likes(philip, blade-runner)
+fact [truthValue = 0.8]: likes(philip, harrison-ford)
+fact [truthValue = 1.0]: likes(philip, rear-window)
+
+fact [truthValue = 1.0]: likes(fred, trainspotting)
+fact [truthValue = 1.0]: likes(fred, rear-window)
+fact [truthValue = 1.0]: likes(george, blade-runner)
+fact [truthValue = 1.0]: likes(george, north-by-northwest)
+
+fact [truthValue = 1.0]: likes(john, star-wars)
+fact [truthValue = 1.0]: likes(john, tom-cruise)
+fact [truthValue = 1.0]: likes(mary, blade-runner)
+fact [truthValue = 1.0]: likes(elvis, harrison-ford)
+
+fact [truthValue = 1.0]: likes(sally, the-big-sleep)
+fact [truthValue = 1.0]: likes(sally, humphrey-bogart)
+fact [truthValue = 1.0]: likes(sally, north-by-northwest)
+fact: playsIn(humphrey-bogart, the-big-sleep)
+fact: playsIn(humphrey-bogart, casablanca)
+fact [truthValue = 1.0]: likes(richard, the-lion-king)
+fact [truthValue = 1.0]: likes(richard, the-jungle-book)
+fact [truthValue = 1.0]: likes(richard, mulan)
+fact [truthValue = 1.0]: likes(lisa, the-lion-king)
+fact [truthValue = 1.0]: likes(lisa, mulan)
+fact [truthValue = 1.0]: likes(harry, harry-potter-and-the-prisoner-of-azkaban)
+fact [truthValue = 1.0]: likes(harry, mulan)
+fact [truthValue = 1.0]: likes(hermione, harry-potter-and-the-prisoner-of-azkaban)
+fact [truthValue = 0.1]: likes(hermione, tom-cruise)
+fact [truthValue = 1.0]: likes(hermione, harrison-ford)
+fact [truthValue = 1.0]: likes(alice, the-big-sleep)
+fact [truthValue = 1.0]: likes(alice, north-by-northwest)
+fact [truthValue = 1.0]: likes(alice, harrison-ford)
+fact [truthValue = 1.0]: likes(peter, the-hobbit)
+fact [truthValue = 0.5]: likes(peter, the-lord-of-the-rings)
+fact [truthValue = 1.0]: likes(peter, aliens)
+fact [truthValue = 1.0]: likes(peter, moon)
+fact [truthValue = 1.0]: likes(susanna, the-hobbit)
+fact [truthValue = 1.0]: likes(susanna, the-lord-of-the-rings)
+fact [truthValue = 0.9]: likes(susanna, pulp-fiction)
+fact [truthValue = 0.8]: likes(susanna, star-wars)

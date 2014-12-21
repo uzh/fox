@@ -110,7 +110,7 @@ class SquaredHingeLossOptimizer(
         x(0) -= a1b0 * x(1)
         x(0) /= a0
       } else {
-        x = minimize(quadraticLossFunction, x)
+        x = minimize(quadraticLossFunction, newXIfNoLoss)
       }
     }
   }

@@ -41,6 +41,8 @@ abstract class ParseHelper[T] extends RegexParsers {
 
   def defaultParser: Parser[T]
 
+  def parse(files: List[File]): T 
+
   def parse(f: File): T = {
     parseFile(f, defaultParser)
   }
@@ -54,13 +56,12 @@ abstract class ParseHelper[T] extends RegexParsers {
   def double: Parser[Double] = "\\-?[0-9]+\\.?[0-9]*((e|E)-?[0-9]+)?".r ^^ (_.toDouble)
 
   def identifier: Parser[String] = "[-a-zA-Z0-9]+".r
-  
+
   def identifierOrDash: Parser[String] = "[-a-zA-Z0-9_]*".r
-  
+
   def identifierOrDashOrSquareBracket: Parser[String] = "[-a-zA-Z0-9_\\[\\]]*".r
-  
+
   def identifierOrBracket: Parser[String] = "[-a-zA-Z0-9\\{\\}\\[\\]]*".r
-  
 
   /**
    * Helper function for better error messages.

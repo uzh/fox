@@ -1,0 +1,4 @@
+
+fact :directedBy(movie1, celeb3)
+fact :directedBy(movie2, celeb3)
+fact :directedBy(movie3, celeb3)

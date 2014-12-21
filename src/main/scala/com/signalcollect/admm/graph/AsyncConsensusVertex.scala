@@ -28,8 +28,10 @@ import com.signalcollect.GraphEditor
 final class AsyncConsensusVertex(
   variableId: Int, // the id of the variable, which identifies it also in the subproblem nodes.
   initialState: Double = 0.0, // the initial value for the consensus variable.
-  isBounded: Boolean = true) // shall we use bounding (cutoff below 0 and above 1)? 
-  extends ConsensusVertex(variableId, initialState, isBounded) {
+  isBounded: Boolean = true, // shall we use bounding (cutoff below 0 and above 1)? 
+  lowerBound: Double = 0.0, // each consensus variable can only assume values in the range [lowerBound, upperBound].
+  upperBound: Double = 1.0)
+  extends ConsensusVertex(variableId, initialState, isBounded, lowerBound, upperBound) {
 
   var shouldSignal = false
   var signalsReceivedSinceCollect = 0
@@ -46,12 +48,14 @@ final class AsyncConsensusVertex(
       shouldSignal = true
       signalsReceivedSinceCollect = 0
       state = collect
+      true
+    } else {
+      false
     }
-    true
   }
 
   override def scoreCollect = 0
-  
+
   override def scoreSignal = {
     if (shouldSignal) {
       1

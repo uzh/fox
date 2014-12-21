@@ -28,6 +28,24 @@ import com.signalcollect.psl.model.Variable
 import com.signalcollect.psl.model.Squared
 import com.signalcollect.psl.model.PslClass
 
+case class ParsedFile(
+  explicitClasses: Map[PslClass, Set[Individual]] = Map.empty,
+  predicates: List[Predicate] = List.empty,
+  rules: List[Rule] = List.empty,
+  facts: List[Fact] = List.empty,
+  constants: Set[Individual] = Set.empty) {
+
+  def toParsedPslFile(): ParsedPslFile = {
+    ParsedPslFile(explicitClasses, predicates, rules, facts, constants)
+  }
+
+  def merge(that: ParsedFile): ParsedFile = {
+    ParsedFile(explicitClasses ++ that.explicitClasses, predicates ++ that.predicates, rules ++ that.rules, 
+        facts ++ that.facts, constants ++ that.constants)
+  }
+
+}
+
 case class ParsedPslFile(
   explicitClasses: Map[PslClass, Set[Individual]] = Map.empty,
   predicates: List[Predicate] = List.empty,

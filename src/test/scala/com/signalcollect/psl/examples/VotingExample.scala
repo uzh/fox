@@ -34,31 +34,31 @@ import com.signalcollect.util.TestAnnouncements
 class VotingExample extends FlatSpec with Matchers with TestAnnouncements {
 
   val votingExample = """
-	  predicate : votes(Person, Party)
-	  predicate: 		friends(_, _)
+	  predicate [Functional]: votes(Person, Party)
+	  predicate: 		friends(Person, Person)
     predicate: 		enemies(_, _)
 
-    class Person: anna, bob, carl
+    class Person: anna, bob
     class Party: demo, repub
 
     rule [weight = 1]: 	votes(A,P) && friends(A,B) => votes(B,P) 
-    //rule [weight = 1]: 	votes(A,P) && enemies(A,B) => !votes(B,P) 
+    rule [weight = 1]: 	votes(A,P) && enemies(A,B) => !votes(B,P) 
     rule [2]: 	enemies(A,B) => !friends(A,B) 
     rule [3]: 	friends(A,B) => !enemies(A,B)  
     
 	  fact [0.9]: friends(anna, bob)
     fact [0.9]: friends(bob, anna)
 	  fact [truthValue = 0.8]: votes(anna, demo)
+    fact [truthValue = 0.2]: votes(anna, repub)
     fact [truthValue = 0.2]: votes(carl, repub)
     fact [0.99]: enemies(carl, bob)
     fact [0.99]: enemies(bob, carl)
 	"""
   "VotingExample" should "provide a solution consistent with Matlab" in {
-    val pslData = PslParser.parse(votingExample)
-    val config = InferencerConfig(computeObjectiveValueOfSolution = true)
-    val inferenceResults = Inferencer.runInference(pslData, config = config)
+    val config = InferencerConfig(computeObjectiveValueOfSolution = true, lazyThreshold = None, absoluteEpsilon = 0, relativeEpsilon = 0)
+    val inferenceResults = Inferencer.runInferenceFromString(votingExample, config = config)
     val objectiveFunctionValOption = inferenceResults.objectiveFun
     assert(objectiveFunctionValOption.isDefined)
-    objectiveFunctionValOption.foreach(_ should be(0.0 +- 5e-5))
+    objectiveFunctionValOption.foreach(_ should be(0.24 +- 5e-4))
   }
 }

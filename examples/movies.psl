@@ -22,7 +22,7 @@ fact [truthValue = 0.9]: likes(sara, harrison-ford)
 
 fact [truthValue = 0.9]: likes(sara, pulp-fiction)
 fact [truthValue = 0.8]: likes(sara, star-wars)
-fact [truthValue = 0.8]: likes(sara, transpotting)
+fact [truthValue = 0.8]: likes(sara, trainspotting)
 fact [truthValue = 0.8]: likes(sara, blade-runner)
 
 fact [truthValue = 0.9]: likes(philip, pulp-fiction)

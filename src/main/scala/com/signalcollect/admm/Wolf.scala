@@ -50,10 +50,12 @@ import com.signalcollect.util.IntDoubleHashMap
 import akka.actor.ActorRef
 
 case class ProblemSolution(
-  stats: ExecutionInformation[Int, Double],
+  stats: Option[ExecutionInformation[Int, Double]],
   results: IntDoubleHashMap,
   convergence: Option[AbstractGlobalAdmmConvergenceDetection] = None,
-  graphLoadingTime: Long) // in case we have local convergence this is None.
+  graphLoadingTime: Long,
+  inferenceTime: Long,
+  resultAggregationTime: Long) // in case we have local convergence this is None.
 
 case class WolfConfig(
   asynchronous: Boolean,
@@ -73,10 +75,11 @@ case class NonExistentConsensusVertexHandlerFactory(
   asynchronous: Boolean, // If the execution is asynchronous.
   initialState: Double, // Initial value for the consensus variable.
   isBounded: Boolean, // Use bounding (cutoff below 0 and above 1).
-  lazyThreshold: Option[Double]) // Only send values that have changed.
+  lazyThreshold: Option[Double], // Only send values that have changed.
+  boundsOnConsensusVars: Map[Int, (Double, Double)] = Map.empty) // Push trivial bounds inside the nodes.
   extends EdgeAddedToNonExistentVertexHandlerFactory[Int, Double] {
   def createInstance: EdgeAddedToNonExistentVertexHandler[Int, Double] =
-    new NonExistentConsensusVertexHandler(asynchronous, initialState, isBounded, lazyThreshold)
+    new NonExistentConsensusVertexHandler(asynchronous, initialState, isBounded, lazyThreshold, boundsOnConsensusVars)
   override def toString = "NoneExistentConsensusVertexFactory"
 }
 
@@ -84,26 +87,37 @@ case class NonExistentConsensusVertexHandler(
   asynchronous: Boolean, // If the execution is asynchronous.
   initialState: Double, // Initial value for the consensus variable.
   isBounded: Boolean, // Use bounding (cutoff below 0 and above 1).
-  lazyThreshold: Option[Double]) // Only continue if a value changed by more than the threshold.
+  lazyThreshold: Option[Double], // Only continue if a value changed by more than the threshold.
+  boundsOnConsensusVars: Map[Int, (Double, Double)] = Map.empty) // Push trivial bounds inside the nodes.
   extends EdgeAddedToNonExistentVertexHandler[Int, Double] {
   def handleImpossibleEdgeAddition(edge: Edge[Int], vertexId: Int): Option[Vertex[Int, _, Int, Double]] = {
+    val (lowerBound, upperBound) =
+      boundsOnConsensusVars.getOrElse(vertexId, (0.0, 1.0))
     if (asynchronous) {
-      if (lazyThreshold.isDefined) throw new Exception("Asynchronous inferencing cannot be combined with lazy inferencing.")
+      if (lazyThreshold.isDefined) {
+        println("Asynchronous inferencing cannot be combined with lazy inferencing, lazy setting is being ignored.")
+      }
       Some(new AsyncConsensusVertex(
         variableId = vertexId,
         initialState = initialState,
-        isBounded = isBounded))
+        isBounded = isBounded,
+        lowerBound,
+        upperBound))
     } else {
       if (lazyThreshold.isDefined) {
         Some(new LazyConsensusVertex(
           variableId = vertexId,
           initialState = initialState,
-          isBounded = isBounded))
+          isBounded = isBounded,
+          lowerBound,
+          upperBound))
       } else {
         Some(new ConsensusVertex(
           variableId = vertexId,
           initialState = initialState,
-          isBounded = isBounded))
+          isBounded = isBounded,
+          lowerBound,
+          upperBound))
       }
     }
   }
@@ -114,57 +128,80 @@ object Wolf {
   def solveProblem(
     functions: Traversable[OptimizableFunction],
     nodeActors: Option[Array[ActorRef]] = None,
-    config: WolfConfig): ProblemSolution = {
-    val (graph, graphLoadingTime) = Timer.time {
-      createGraph(functions, nodeActors, config, config.serializeMessages)
-    }
-    println(s"ADMM graph creation completed in $graphLoadingTime ms.")
-    try {
-      println("Starting inference ...")
-      val executionConfig = ExecutionConfiguration[Int, Double]().
-        withExecutionMode(if (config.asynchronous) ExecutionMode.OptimizedAsynchronous else ExecutionMode.Synchronous).
-        withStepsLimit(config.maxIterations)
-      val (stats, convergence) = if (config.globalConvergenceDetection.isDefined) {
-        // Global convergence case:
-        val globalConvergence = if (config.objectiveLoggingEnabled) {
-          new GlobalAdmmConvergenceDetection(
-            absoluteEpsilon = config.absoluteEpsilon,
-            relativeEpsilon = config.relativeEpsilon,
-            checkingInterval = config.globalConvergenceDetection.get) with DebugLogging
-        } else {
-          GlobalAdmmConvergenceDetection(
-            absoluteEpsilon = config.absoluteEpsilon,
-            relativeEpsilon = config.relativeEpsilon,
-            checkingInterval = config.globalConvergenceDetection.get)
+    config: WolfConfig,
+    boundsOnConsensusVars: Map[Int, (Double, Double)] = Map.empty): ProblemSolution = {
+    if (config.maxIterations > 0) {
+      val (graph, graphLoadingTime) = Timer.time {
+        createGraph(functions, nodeActors, config, config.serializeMessages, boundsOnConsensusVars)
+      }
+      try {
+        val ((stats, convergence), inferenceTime) = Timer.time {
+          println(s"ADMM graph creation completed in $graphLoadingTime ms.")
+          println("Starting inference ...")
+          val executionConfig = ExecutionConfiguration[Int, Double]().
+            withExecutionMode(if (config.asynchronous) ExecutionMode.PureAsynchronous else ExecutionMode.Synchronous).
+            withStepsLimit(config.maxIterations)
+          if (config.globalConvergenceDetection.isDefined) {
+            // Global convergence case:
+            val globalConvergence = if (config.objectiveLoggingEnabled) {
+              new GlobalAdmmConvergenceDetection(
+                absoluteEpsilon = config.absoluteEpsilon,
+                relativeEpsilon = config.relativeEpsilon,
+                checkingInterval = config.globalConvergenceDetection.get,
+                aggregationInterval = if (config.asynchronous) 500 else 1 // every iteration for sync, every second for async.
+                ) with DebugLogging
+            } else {
+              GlobalAdmmConvergenceDetection(
+                absoluteEpsilon = config.absoluteEpsilon,
+                relativeEpsilon = config.relativeEpsilon,
+                checkingInterval = config.globalConvergenceDetection.get,
+                aggregationInterval = if (config.asynchronous) 500 else 1 // every iteration for sync, every second for async.
+                )
+            }
+            val stats = graph.execute(executionConfig.withGlobalTerminationDetection(globalConvergence))
+            (stats, Some(globalConvergence))
+          } else {
+            val stats = graph.execute(executionConfig)
+            (stats, None)
+          }
         }
-        val stats = graph.execute(executionConfig.withGlobalTerminationDetection(globalConvergence))
-        (stats, Some(globalConvergence))
-      } else {
-        val stats = graph.execute(executionConfig)
-        (stats, None)
+        val (results, resultAggregationTime) = Timer.time {
+          val convergenceMessage = stats.executionStatistics.terminationReason match {
+            case TerminationReason.TimeLimitReached =>
+              "Computation finished because the time limit was reached."
+            case TerminationReason.Converged =>
+              "Computation finished because setting all the variables to 0 is a solution."
+            case TerminationReason.GlobalConstraintMet =>
+              "Computation finished because the global error was small enough."
+            case TerminationReason.ComputationStepLimitReached =>
+              "Computation finished because the steps limit was reached."
+            case TerminationReason.TerminatedByUser =>
+              "Computation terminated on user request."
+          }
+          println(convergenceMessage)
+          val resultMap = graph.aggregate(ConsensusAggregator)
+          resultMap.getOrElse(new IntDoubleHashMap(initialSize = 1, rehashFraction = 0.5f))
+        }
+        val solution = ProblemSolution(
+          stats = Some(stats),
+          results = results,
+          convergence = convergence,
+          graphLoadingTime = graphLoadingTime,
+          inferenceTime = inferenceTime,
+          resultAggregationTime = resultAggregationTime)
+        solution
+      } finally {
+        graph.shutdown
       }
-      val convergenceMessage = stats.executionStatistics.terminationReason match {
-        case TerminationReason.TimeLimitReached =>
-          "Computation finished because the time limit was reached."
-        case TerminationReason.Converged =>
-          "Computation finished because setting all the variables to 0 is a solution."
-        case TerminationReason.GlobalConstraintMet =>
-          "Computation finished because the global error was small enough."
-        case TerminationReason.ComputationStepLimitReached =>
-          "Computation finished because the steps limit was reached."
-        case TerminationReason.TerminatedByUser =>
-          "Computation terminated on user request."
-      }
-      println(convergenceMessage)
-      val resultMap = graph.aggregate(ConsensusAggregator)
-      val solution = ProblemSolution(
-        stats = stats,
-        results = resultMap.getOrElse(new IntDoubleHashMap(initialSize = 1, rehashFraction = 0.5f)),
-        convergence = convergence,
-        graphLoadingTime = graphLoadingTime)
-      solution
-    } finally {
-      graph.shutdown
+    } else {
+      // maxIterations <= 0.
+      ProblemSolution(
+        stats = None,
+        results = new IntDoubleHashMap(),
+        convergence = None,
+        graphLoadingTime = 0,
+        inferenceTime = 0,
+        resultAggregationTime = 0)
     }
   }
 
@@ -173,14 +210,16 @@ object Wolf {
     functions: Traversable[OptimizableFunction],
     nodeActors: Option[Array[ActorRef]] = None,
     config: WolfConfig,
-    serializeMessages: Boolean = false): Graph[Int, Double] = {
+    serializeMessages: Boolean = false,
+    boundsOnConsensusVars: Map[Int, (Double, Double)] = Map.empty): Graph[Int, Double] = {
     //println(s"Creating the ADMM graph ...")
     // Use node actors with graph builder, if they have been passed.
     val consensusHandlerFactory = new NonExistentConsensusVertexHandlerFactory(
       asynchronous = config.asynchronous, // If the execution is asynchronous.
       initialState = 0.0, // Initial value for the consensus variable.
       isBounded = config.isBounded, // Use bounding (cutoff below 0 and above 1) .
-      lazyThreshold = config.lazyThreshold) // Only send values that have changed.
+      lazyThreshold = config.lazyThreshold, // Only send values that have changed.
+      boundsOnConsensusVars)
     val graphBuilder = {
       nodeActors.map(new GraphBuilder[Int, Double]().withPreallocatedNodes(_)).
         getOrElse(new GraphBuilder[Int, Double]()).
@@ -256,7 +295,9 @@ object Wolf {
     }
     assert(f.getStepSize == config.stepSize)
     val subproblem = if (config.asynchronous) {
-      if (config.lazyThreshold.isDefined) throw new Exception("Asynchronous inferencing cannot be combined with lazy inferencing.")
+      if (config.lazyThreshold.isDefined) {
+        println("Asynchronous inferencing cannot be combined with lazy inferencing, lazy setting is being ignored.")
+      }
       new AsyncSubproblemVertex(
         subproblemId = subId,
         optimizableFunction = f)

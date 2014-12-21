@@ -36,7 +36,7 @@ object MSG {
  *
  * The skip collect message ensures this vertex skips the next step, which is the one during which
  * the consensus vertices collect. The ensure collect message gets sent in the subsequent step and
- * ensures that S/C will schedule thew vertex, even if no consensus vertex sent a signal to it.
+ * ensures that S/C will schedule the vertex, even if no consensus vertex sent a signal to it.
  */
 final class LazySubproblemVertex(
   subproblemId: Int, // The id of the subproblem.
@@ -87,6 +87,8 @@ final class LazySubproblemVertex(
         if (signalChanged) {
           atLeastOneSignalSent = true
           graphEditor.sendSignal(targetIdValue, targetId, id)
+          lastSignalState(i) = targetIdValue
+          lastMultipliers(i) = multipliers(i)
         }
         alreadySentId += targetId
       }
@@ -96,9 +98,8 @@ final class LazySubproblemVertex(
     // If we did not signal, but the multipliers changed, then we want to schedule ourselves.
     if (!atLeastOneSignalSent && atLeastOneMultiplierChanged) {
       graphEditor.sendSignal(MSG.SKIP_COLLECT, id, id)
+      lastMultipliers = multipliers.clone
     }
-    lastSignalState = state.clone
-    lastMultipliers = multipliers.clone
   }
 
   var skipCollect = false

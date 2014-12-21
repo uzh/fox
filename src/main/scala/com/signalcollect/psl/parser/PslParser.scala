@@ -63,6 +63,26 @@ object PslParser extends ParseHelper[ParsedPslFile] with ImplicitConversions {
   protected override val whiteSpace = """(\s|//.*|#.*|(?m)/\*(\*(?!/)|[^*])*\*/)+""".r
 
   def defaultParser = pslFile
+  def fragmentParser = pslFileFragment
+  
+  def parse(files: List[File]): ParsedPslFile= {
+    val parsedFiles = files.map(parseFileLineByLine(_))
+    parsedFiles.foldLeft(ParsedFile()) (_ merge _).toParsedPslFile()
+  }
+  
+  def parseNonParallel(files: List[File]): ParsedPslFile= {
+    val parsedFiles = files.map(parseFile(_, fragmentParser))
+    parsedFiles.foldLeft(ParsedFile()) (_ merge _).toParsedPslFile()
+  }
+  
+  def parseFileLineByLine(file: File): ParsedFile = {
+    val chunkSize = 12800 * 1024
+    val iterator = io.Source.fromFile(file).getLines.grouped(chunkSize)
+    val parsedLines = iterator.flatMap { lines =>
+      lines.par.map { line => parseString(line, fragmentParser) }
+    }
+    parsedLines.foldLeft(ParsedFile()) (_ merge _)
+  }
   
   var ruleId = 0
 
@@ -222,13 +242,33 @@ object PslParser extends ParseHelper[ParsedPslFile] with ImplicitConversions {
        val facts = lines.flatMap{ case f: Fact => Some(f) case _ => None}
        val inds = lines.flatMap{ case f: Set[Individual] => Some(f) case _ => None}
        val classes = lines.flatMap{ case f: (PslClass, Set[Individual]) => Some(f) case _ => None}
+       val classMap = classes.groupBy(_._1).mapValues(c => c.map(i => i._2).foldLeft(Set.empty[Individual])(_ ++ _))
        
        if (inds.length == 0 ){
-         ParsedPslFile(classes.toMap, predicates, rules, facts)
+         ParsedPslFile(classMap, predicates, rules, facts)
        }
        else {
          val unionOfIndividuals = inds.foldLeft(inds(0))(_.union(_))
-          ParsedPslFile(classes.toMap, predicates, rules, facts, unionOfIndividuals)  
+          ParsedPslFile(classMap, predicates, rules, facts, unionOfIndividuals)  
+       } 
+    }
+  }
+  
+    lazy val pslFileFragment: Parser[ParsedFile] = {
+    rep(pslLine) ^^ {
+      case lines =>
+       val predicates = lines.flatMap{ case f: Predicate => Some(f) case _ => None} 
+       val rules = lines.flatMap{ case f: Rule => Some(f) case _ => None}   
+       val facts = lines.flatMap{ case f: Fact => Some(f) case _ => None}
+       val inds = lines.flatMap{ case f: Set[Individual] => Some(f) case _ => None}
+       val classes = lines.flatMap{ case f: (PslClass, Set[Individual]) => Some(f) case _ => None}
+       val classMap = classes.groupBy(_._1).mapValues(c => c.map(i => i._2).foldLeft(Set.empty[Individual])(_ ++ _))
+       if (inds.length == 0 ){
+         ParsedFile(classMap, predicates, rules, facts)
+       }
+       else {
+         val unionOfIndividuals = inds.foldLeft(inds(0))(_.union(_))
+          ParsedFile(classMap, predicates, rules, facts, unionOfIndividuals)  
        } 
     }
   }
@@ -251,16 +291,20 @@ object PslParser extends ParseHelper[ParsedPslFile] with ImplicitConversions {
     }
   }
   
+    
   lazy val classType: Parser[(PslClass, Set[Individual])] = {
-    "class" ~> identifier ~ opt(":") ~ repsep(identifier, ",") ^^ {
-      case classType ~ colon ~ List("")  =>
-        (PslClass(classType), Set.empty)
-      case classType ~ colon ~ individuals =>
-        for (ind <- individuals){
-            assert(ind.forall(c => !c.isUpper),
-            s"Individuals that appear in facts have to be all lowercase, and $ind contains at least one uppercase character.")
+    "class" ~> identifier ~ opt(":" ~ repsep(identifier, ",")) ^^ {
+      case classType ~ optionalList =>
+        if(!optionalList.isDefined){
+          (PslClass(classType), Set.empty)
+        } else {
+          val individuals = optionalList.get._2
+          for (ind <- individuals){
+            assert(!ind.charAt(0).isUpper,
+            s"Individuals that appear in facts must start with a lowercase character.")
+          }
+          (PslClass(classType), individuals.map(Individual(_, Set(PslClass(classType)))).toSet)
         }
-        (PslClass(classType), individuals.map(Individual(_, Set(PslClass(classType)))).toSet)
     }
   }
 }

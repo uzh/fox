@@ -91,7 +91,9 @@ case class GroundedRule(
     head.filter(!_.truthValue.isDefined) ::: body.filter(!_.truthValue.isDefined)
   }
 
-  def createOptimizableFunction(stepSize: Double, tolerance: Double = 0.0, breezeOptimizer: Boolean = false): Option[OptimizableFunction] = {
+  def createOptimizableFunction(stepSize: Double, tolerance: Double = 0.0,
+    breezeOptimizer: Boolean = false,
+    optimizedFunctionCreation: Boolean = true): Option[OptimizableFunction] = {
     // Easy optimization, if all are facts, ignore.
     if (unboundGroundedPredicates.size == 0) {
       return None
@@ -106,9 +108,11 @@ case class GroundedRule(
      * the ones with negative coefficient are all 0 (the min possible value).
      * If the value in this case is below 0, it will never be above 0, so we can safely ignore it.
      */
-    val bestPossibleScenario = coefficientMatrix.map { coeff => if (coeff > 0) coeff else 0 }.sum - constant
-    if (bestPossibleScenario < 0) {
-      return None
+    if (optimizedFunctionCreation) {
+      val bestPossibleScenario = coefficientMatrix.map { coeff => if (coeff > 0) coeff else 0 }.sum - constant
+      if (bestPossibleScenario < 0) {
+        return None
+      }
     }
 
     // TODO: Define zMap - currently just initialized to 0.

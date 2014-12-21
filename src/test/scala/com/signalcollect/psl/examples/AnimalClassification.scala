@@ -30,14 +30,17 @@ import com.signalcollect.util.TestAnnouncements
 class AnimalClassification extends FlatSpec with Matchers with TestAnnouncements {
 
   val animalClassExample2Classes = """
-    class Animal: lisa, blabla
-    class AnimalClass: dog, cat
+    class Animal: kitty
+    class AnimalClass: dog, cat, fish
+    class Animal: nemo
+    class Fish
     predicate: barks(Animal)
     predicate: meows(Animal)
     predicate [PartialFunctional]: animalClass(Animal, AnimalClass)
         
     rule [weight = 1]: barks(ANIMAL) => animalClass(ANIMAL, dog)
     rule [weight = 1]: meows(ANIMAL) => animalClass(ANIMAL, cat)
+    rule [weight = 1]: !barks(ANIMAL) && !meows(ANIMAL) => animalClass(ANIMAL, fish)
 
     fact [truthValue = 0.1]: barks(lisa)
     fact [truthValue = 0.2]: meows(lisa)
@@ -48,6 +51,7 @@ class AnimalClassification extends FlatSpec with Matchers with TestAnnouncements
     val inferenceResults = Inferencer.runInferenceFromString(animalClassExample2Classes, config = config)
     val objectiveFunctionValOption = inferenceResults.objectiveFun
     assert(objectiveFunctionValOption.isDefined)
+    assert(inferenceResults.idToGpMap.size == 15)
     objectiveFunctionValOption.foreach(_ should be(0.0 +- 1e-5))
   }
 
@@ -73,6 +77,7 @@ class AnimalClassification extends FlatSpec with Matchers with TestAnnouncements
     val inferenceResults = Inferencer.runInferenceFromString(animalClassExample, config = config)
     val objectiveFunctionValOption = inferenceResults.objectiveFun
     assert(objectiveFunctionValOption.isDefined)
+    assert(inferenceResults.idToGpMap.size == 12)
     objectiveFunctionValOption.foreach(_ should be(0.0 +- 1e-5))
   }
 }
