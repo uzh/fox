@@ -45,12 +45,15 @@ import com.signalcollect.psl.model.GroundedRule
  */
 object MinimaExplorer {
 
+  def approxUpperBound = 0.85
+  def approxLowerBound = 0.15
+
   def roundUpDouble(value: Double, exponent: Int = 3) = {
     ((math.pow(10, exponent) * value).round / math.pow(10, exponent).toDouble)
   }
 
   def roundUpWithCutoff(value: Double, exponent: Int = 3) = {
-    if (value >= 0.85) { 1.0 } else if (value <= 0.15) { 0.0 } else { roundUpDouble(value, exponent) }
+    if (value >= approxUpperBound) { 1.0 } else if (value <= approxLowerBound) { 0.0 } else { roundUpDouble(value, exponent) }
   }
 
   def divideFunctionsAndConstraints(functionsAndConstraints: List[OptimizableFunction]) = {
@@ -95,38 +98,21 @@ object MinimaExplorer {
     val functions = groundedRules.flatMap(_.createOptimizableFunction(config.stepSize, config.tolerance, config.breezeOptimizer))
     val constraints = groundedConstraints.flatMap(_.createOptimizableFunction(config.stepSize, config.tolerance, config.breezeOptimizer))
     val functionsAndConstraints = functions ++ constraints
+
     val solution = Wolf.solveProblem(
       functionsAndConstraints,
       None,
       config.getWolfConfig)
 
     val objectiveFunctionVal: Double = functionsAndConstraints.foldLeft(0.0) {
-      case (sum, nextFunction) => sum + nextFunction.evaluateAt(solution.results)
+      case (sum, nextFunction) => {
+        val nextResult = nextFunction.evaluateAt(solution.results)
+        if (nextResult == Double.MaxValue) { println(nextFunction) }
+        sum + nextResult
+      }
     }
-    //
-    //    println(s"First inference completed, objective value: $objectiveFunctionVal")
-    //    println(solution.stats)
-
-    val naivePredicateBounds = NaiveMinimaExplorer.exploreResultsNaive(groundedRules, groundedConstraints, solution.results)
-
-    val (optimizerBaseFunctions, hardFunctions) = divideFunctionsAndConstraints(functionsAndConstraints)
-    val totalZindices = optimizerBaseFunctions.flatMap(_.zIndices).toSet.toArray
-    var id = functions.size + constraints.size
-
-    val newConstraints = hardFunctions ++ {
-      if (optimizerBaseFunctions.size > 0) {
-        // Keep the objective function with the objective function val as a hard constraint.
-        val newConstraint = new ConvexConstraintOptimizer(
-          { id = id + 1; id },
-          objectiveFunctionVal,
-          totalZindices,
-          config.stepSize,
-          totalZindices.map(t => (t, 0.0)).toMap,
-          optimizerBaseFunctions,
-          config.tolerance)
-        List(newConstraint)
-      } else { List.empty }
-    }
+    println(s"First inference completed, objective value: $objectiveFunctionVal")
+    //println(solution.stats)
 
     val groundedPredicatesToTest = if (groundedPredicateNames.isEmpty) {
       idToGpMap.filter(!_._2.truthValue.isDefined)
@@ -134,17 +120,38 @@ object MinimaExplorer {
       idToGpMap.filter(!_._2.truthValue.isDefined) filter (gp => groundedPredicateNames.exists(gp._2.toString.contains(_)))
     }
 
+    val naivePredicateBounds = NaiveMinimaExplorer.exploreResultsNaive(groundedRules, groundedConstraints, solution.results)
+
     // For each grounded predicate create two problems, one with the min x and one with the min -x
     val result = groundedPredicatesToTest.map {
       case (zIndex, gp) =>
         val (naivePredicateMinBound, naivePredicateMaxBound) = naivePredicateBounds.getOrElse(zIndex, (Double.MaxValue, Double.MinValue))
-        if (naivePredicateMinBound == 0.0 && naivePredicateMaxBound == 1.0) {
-          (gp.toString, solution.results.get(zIndex), 0.0, 1.0)
+        val minValue = if (naivePredicateMinBound <= approxLowerBound) {
+          0.0
         } else {
+          val functionsNew = groundedRules.flatMap(_.createOptimizableFunction(config.stepSize, config.tolerance, config.breezeOptimizer))
+          val constraintsNew = groundedConstraints.flatMap(_.createOptimizableFunction(config.stepSize, config.tolerance, config.breezeOptimizer))
+          val (optimizerBaseFunctions, hardFunctions) = divideFunctionsAndConstraints(functionsNew ++ constraintsNew)
+          val totalZindices = optimizerBaseFunctions.flatMap(_.zIndices).toSet.toArray
+
+          val newConstraint = {
+            if (optimizerBaseFunctions.size > 0) {
+              // Keep the objective function with the objective function val as a hard constraint.
+              List(new ConvexConstraintOptimizer(
+                groundedRules.size + groundedConstraints.size + 2,
+                objectiveFunctionVal,
+                totalZindices,
+                config.stepSize,
+                totalZindices.map(t => (t, 0.0)).toMap,
+                optimizerBaseFunctions,
+                0))
+            } else { List.empty }
+          }
+          //println(s"newConstraint $newConstraint")
 
           val minNewFunction = new SquaredHingeLossOptimizer(
-            { id = id + 1; id },
-            1.0,
+            groundedRules.size + groundedConstraints.size + 3,
+            100.0,
             0.0,
             Array(zIndex),
             config.stepSize,
@@ -152,25 +159,52 @@ object MinimaExplorer {
             Array(1.0))
 
           val minSolution = Wolf.solveProblem(
-            newConstraints ++ List(minNewFunction),
+            hardFunctions ++ newConstraint ++ List(minNewFunction),
             None,
             config.getWolfConfig)
 
-          //        println(minSolution.stats)
-          //        val minObjVal: Double = (newConstraints ++ List(minNewFunction)).foldLeft(0.0) {
-          //          case (sum, nextFunction) => sum + nextFunction.evaluateAt(solution.results)
-          //        }
-          //        println(minObjVal)
-          //
-          //        minSolution.results.foreach {
-          //          case (id, truthValue) =>
-          //            val gp = idToGpMap(id)
-          //            println(s"\n$gp has truth value $truthValue")
-          //        }
+//          println(s"minNewFunction : $minNewFunction")
+//          println(minSolution.stats)
+//          val minObjVal: Double = (hardFunctions ++ newConstraint ++ List(minNewFunction)).foldLeft(0.0) {
+//            case (sum, nextFunction) => sum + nextFunction.evaluateAt(minSolution.results)
+//          }
+//          println(minObjVal)
+//          println(minSolution.results.get(zIndex))
+//          //          minSolution.results.foreach {
+//          //            case (id, truthValue) =>
+//          //              val gp = idToGpMap(id)
+//          //              println(s"\n$gp has truth value $truthValue")
+//          //          }
+
+          minSolution.results.get(zIndex)
+
+        }
+        val maxValue = if (naivePredicateMaxBound >= approxUpperBound) {
+          1.0
+        } else {
+          val functionsNew = groundedRules.flatMap(_.createOptimizableFunction(config.stepSize, 0.0, config.breezeOptimizer))
+          val constraintsNew = groundedConstraints.flatMap(_.createOptimizableFunction(config.stepSize, 0.0, config.breezeOptimizer))
+          val (optimizerBaseFunctions, hardFunctions) = divideFunctionsAndConstraints(functionsNew ++ constraintsNew)
+          val totalZindices = optimizerBaseFunctions.flatMap(_.zIndices).toSet.toArray
+
+          val newConstraint = {
+            if (optimizerBaseFunctions.size > 0) {
+              // Keep the objective function with the objective function val as a hard constraint.
+              List(new ConvexConstraintOptimizer(
+                groundedRules.size + groundedConstraints.size + 2,
+                objectiveFunctionVal,
+                totalZindices,
+                config.stepSize,
+                totalZindices.map(t => (t, 0.0)).toMap,
+                optimizerBaseFunctions,
+                0))
+            } else { List.empty }
+          }
+          //println(s"newConstraint $newConstraint")
 
           val maxNewFunction = new SquaredHingeLossOptimizer(
-            { id = id + 1; id },
-            1.0,
+            groundedRules.size + groundedConstraints.size + 3,
+            100.0,
             -1.0,
             Array(zIndex),
             config.stepSize,
@@ -178,31 +212,28 @@ object MinimaExplorer {
             Array(-1.0))
 
           val maxSolution = Wolf.solveProblem(
-            newConstraints ++ List(maxNewFunction),
+            hardFunctions ++ newConstraint ++ List(maxNewFunction),
             None,
             config.getWolfConfig)
-
-          //        println(maxSolution.stats)
-          //        val maxObjVal: Double = (newConstraints ++ List(maxNewFunction)).foldLeft(0.0) {
-          //          case (sum, nextFunction) => sum + nextFunction.evaluateAt(solution.results)
-          //        }
-          //        println(maxObjVal)
-          //
-          //        maxSolution.results.foreach {
-          //          case (id, truthValue) =>
-          //            val gp = idToGpMap(id)
-          //            println(s"\n$gp has truth value $truthValue")
-          //        }
-          val minValue = math.min(naivePredicateMinBound, minSolution.results.get(zIndex))
-          val maxValue = math.max(naivePredicateMaxBound, maxSolution.results.get(zIndex))
-
-          val boundedMaxValue = roundUpWithCutoff(maxValue)
-          val boundedMinValue = roundUpWithCutoff(minValue)
-
-          (gp.toString, roundUpDouble(solution.results.get(zIndex)), boundedMinValue, boundedMaxValue)
-          //(gp.toString, solution.results.get(zIndex), minValue, maxValue)
+//          println(s"maxNewFunction : $maxNewFunction")
+//          println(maxSolution.stats)
+//          val maxObjVal: Double = (hardFunctions ++ newConstraint ++ List(maxNewFunction)).foldLeft(0.0) {
+//            case (sum, nextFunction) => sum + nextFunction.evaluateAt(maxSolution.results)
+//          }
+//          println(maxObjVal)
+//          println(maxSolution.results.get(zIndex))
+//          //          maxSolution.results.foreach {
+//          //            case (id, truthValue) =>
+//          //              val gp = idToGpMap(id)
+//          //              println(s"\n$gp has truth value $truthValue")
+//          //          }
+          maxSolution.results.get(zIndex)
         }
 
+        val boundedMaxValue = roundUpWithCutoff(math.max(naivePredicateMaxBound, maxValue))
+        val boundedMinValue = roundUpWithCutoff(math.min(naivePredicateMinBound, minValue))
+
+        (gp.toString, roundUpWithCutoff(solution.results.get(zIndex)), boundedMinValue, boundedMaxValue)
     }
     result.toList
   }

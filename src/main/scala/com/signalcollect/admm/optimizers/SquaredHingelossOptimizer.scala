@@ -35,15 +35,15 @@ class SquaredHingeLossOptimizer(
 
   lazy val quadraticLossFunction = {
     new DiffFunction[DenseVector[Double]] {
-      def calculate(x: DenseVector[Double]) = {
-        val coeffsDotX = coeffs.dot(x)
+      def calculate(d: DenseVector[Double]) = {
+        val coeffsDotX = coeffs.dot(d)
         //weight * max(coeffs^T * x - constant, 0)^2 + stepSize/2 * norm2(x - z + (y / stepSize))^2
-        (math.pow(math.max(coeffsDotX - constant, 0), 2) * weight + stepSize / 2 * norm2WithoutSquareRoot(x - z + y / stepSize),
+        (math.pow(math.max(coeffsDotX - constant, 0), 2) * weight + stepSize / 2 * norm2WithoutSquareRoot(d - z + y / stepSize),
           // gradient of function above.
           if (constant < coeffsDotX) {
-            coeffs * (coeffsDotX - constant) * 2.0 * weight + (x - z) * stepSize + y
+            coeffs * (coeffsDotX - constant) * 2.0 * weight + (d - z) * stepSize + y
           } else {
-            (x - z) * stepSize + y
+            (d - z) * stepSize + y
           })
       }
     }
@@ -51,8 +51,8 @@ class SquaredHingeLossOptimizer(
 
   def basicFunction = {
     new DiffFunction[DenseVector[Double]] {
-      def calculate(x: DenseVector[Double]) = {
-        val coeffsDotX = coeffs.dot(x)
+      def calculate(d: DenseVector[Double]) = {
+        val coeffsDotX = coeffs.dot(d)
         //weight * max(coeffs^T * x - constant, 0)^2
         (math.pow(math.max(coeffsDotX - constant, 0), 2) * weight,
           // gradient of function above.

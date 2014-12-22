@@ -74,10 +74,10 @@ rule: indep(X,Y)  && !cond-indep(X,Y,Z) => !causes(Z, Y)
 
 class Variable: u,w,x,y
 
-fact: indep(w, u)
-fact: !cond-indep(w, u, x)
-fact: !indep(w, y)
-fact: cond-indep(w, y, x)
+fact [truthValue = 0.8]: indep(w, u)
+fact [truthValue = 1.0]: !cond-indep(w, u, x)
+fact [truthValue = 1.0]: !indep(w, y)
+fact [truthValue = 0.8]: cond-indep(w, y, x)
   """
 
   val expected = """
@@ -192,14 +192,14 @@ GroundedPredicate 40: causes[ ] (w, u) : [0.0050777510230964815, 0.9976288302377
 
   it should "provide a solution consistent for the causal example" in {
     val config = InferencerConfig(computeObjectiveValueOfSolution = true, lazyThreshold = None)
-    val results = MinimaExplorer.exploreFromString(causal, config, List("cond-indep"))
+    val results = MinimaExplorer.exploreFromString(causal, config, List("causes[ ] (x, y)"))
     for (result <- results) {
       if (result._3 == 0 && result._4 == 0) {
-        println(s"${result._1}: false")
+        println(s"${result._1}: false = ${result._2} : [${result._3},${result._4}]")
       } else if (result._3 == 1 && result._4 == 1) {
-        println(s"${result._1}: true")
+        println(s"${result._1}: true  = ${result._2} : [${result._3},${result._4}]")
       } else {
-        println(s"${result._1}: unknown")
+        println(s"${result._1}: unknown  = ${result._2} : [${result._3},${result._4}]")
       }
     }
   }

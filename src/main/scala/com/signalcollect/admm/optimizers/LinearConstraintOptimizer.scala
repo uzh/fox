@@ -37,8 +37,8 @@ class LinearConstraintOptimizer(
 
   def basicFunction = {
     new Function1[DenseVector[Double], Double] {
-      def apply(x: DenseVector[Double]) = {
-        val coeffsDotX = coeffs.dot(x)
+      def apply(d: DenseVector[Double]) = {
+        val coeffsDotX = coeffs.dot(d)
         if (comparator == "leq" && coeffsDotX > constant
           || comparator == "geq" && coeffsDotX < constant
           || comparator == "eq" && coeffsDotX != constant) {
