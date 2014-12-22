@@ -163,18 +163,18 @@ object MinimaExplorer {
             None,
             config.getWolfConfig)
 
-//          println(s"minNewFunction : $minNewFunction")
-//          println(minSolution.stats)
-//          val minObjVal: Double = (hardFunctions ++ newConstraint ++ List(minNewFunction)).foldLeft(0.0) {
-//            case (sum, nextFunction) => sum + nextFunction.evaluateAt(minSolution.results)
-//          }
-//          println(minObjVal)
-//          println(minSolution.results.get(zIndex))
-//          //          minSolution.results.foreach {
-//          //            case (id, truthValue) =>
-//          //              val gp = idToGpMap(id)
-//          //              println(s"\n$gp has truth value $truthValue")
-//          //          }
+          //          println(s"minNewFunction : $minNewFunction")
+          //          println(minSolution.stats)
+          //          val minObjVal: Double = (hardFunctions ++ newConstraint ++ List(minNewFunction)).foldLeft(0.0) {
+          //            case (sum, nextFunction) => sum + nextFunction.evaluateAt(minSolution.results)
+          //          }
+          //          println(minObjVal)
+          //          println(minSolution.results.get(zIndex))
+          //          //          minSolution.results.foreach {
+          //          //            case (id, truthValue) =>
+          //          //              val gp = idToGpMap(id)
+          //          //              println(s"\n$gp has truth value $truthValue")
+          //          //          }
 
           minSolution.results.get(zIndex)
 
@@ -215,25 +215,29 @@ object MinimaExplorer {
             hardFunctions ++ newConstraint ++ List(maxNewFunction),
             None,
             config.getWolfConfig)
-//          println(s"maxNewFunction : $maxNewFunction")
-//          println(maxSolution.stats)
-//          val maxObjVal: Double = (hardFunctions ++ newConstraint ++ List(maxNewFunction)).foldLeft(0.0) {
-//            case (sum, nextFunction) => sum + nextFunction.evaluateAt(maxSolution.results)
-//          }
-//          println(maxObjVal)
-//          println(maxSolution.results.get(zIndex))
-//          //          maxSolution.results.foreach {
-//          //            case (id, truthValue) =>
-//          //              val gp = idToGpMap(id)
-//          //              println(s"\n$gp has truth value $truthValue")
-//          //          }
+          //          println(s"maxNewFunction : $maxNewFunction")
+          //          println(maxSolution.stats)
+          //          val maxObjVal: Double = (hardFunctions ++ newConstraint ++ List(maxNewFunction)).foldLeft(0.0) {
+          //            case (sum, nextFunction) => sum + nextFunction.evaluateAt(maxSolution.results)
+          //          }
+          //          println(maxObjVal)
+          //          println(maxSolution.results.get(zIndex))
+          //          //          maxSolution.results.foreach {
+          //          //            case (id, truthValue) =>
+          //          //              val gp = idToGpMap(id)
+          //          //              println(s"\n$gp has truth value $truthValue")
+          //          //          }
           maxSolution.results.get(zIndex)
         }
 
         val boundedMaxValue = roundUpWithCutoff(math.max(naivePredicateMaxBound, maxValue))
         val boundedMinValue = roundUpWithCutoff(math.min(naivePredicateMinBound, minValue))
+        val boundedMiddleValue = roundUpWithCutoff(solution.results.get(zIndex))
+        assert(boundedMinValue <= boundedMaxValue)
+        assert(boundedMinValue <= boundedMiddleValue)
+        assert(boundedMiddleValue <= boundedMaxValue)
 
-        (gp.toString, roundUpWithCutoff(solution.results.get(zIndex)), boundedMinValue, boundedMaxValue)
+        (gp.toString, boundedMiddleValue, boundedMinValue, boundedMaxValue)
     }
     result.toList
   }
