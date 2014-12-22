@@ -41,6 +41,7 @@ test in assembly := {}
 libraryDependencies ++= Seq(
   "org.scala-lang" % "scala-library" % scalaVersion.value  % "compile",
   "org.scala-lang" % "scala-reflect" % scalaVersion.value % "compile",
+  "com.signalcollect" %% "signal-collect" % "3.0.0" % "compile",
   "commons-lang" %  "commons-lang" % "2.6" % "compile",
   "edu.emory.mathcs" % "parallelcolt" % "0.9.4" % "compile",
   "edu.emory.mathcs" % "jplasma" % "1.2" % "compile",
