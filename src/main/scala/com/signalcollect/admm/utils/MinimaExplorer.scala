@@ -45,8 +45,8 @@ import com.signalcollect.psl.model.GroundedRule
  */
 object MinimaExplorer {
 
-  def approxUpperBound = 0.85
-  def approxLowerBound = 0.15
+  def approxUpperBound = 0.95
+  def approxLowerBound = 0.05
 
   def roundUpDouble(value: Double, exponent: Int = 3) = {
     ((math.pow(10, exponent) * value).round / math.pow(10, exponent).toDouble)
