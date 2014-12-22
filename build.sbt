@@ -56,6 +56,8 @@ libraryDependencies ++= Seq(
 
 resolvers += "Ifi Public" at "https://maven.ifi.uzh.ch/maven2/content/groups/public/"
 
+resolvers += "PSL third party dependencies" at "https://scm.umiacs.umd.edu/maven/lccd/content/repositories/psl-thirdparty/"
+
 seq(bintraySettings:_*)
 
 pomExtra := (
