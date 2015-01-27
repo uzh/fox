@@ -158,27 +158,16 @@ object MinimaExplorer {
             Map(zIndex -> 0.0),
             Array(1.0))
 
+          println(s"minSolution $gp")
           val minSolution = Wolf.solveProblem(
             hardFunctions ++ newConstraint ++ List(minNewFunction),
             None,
             config.getWolfConfig)
 
-          //          println(s"minNewFunction : $minNewFunction")
-          //          println(minSolution.stats)
-          //          val minObjVal: Double = (hardFunctions ++ newConstraint ++ List(minNewFunction)).foldLeft(0.0) {
-          //            case (sum, nextFunction) => sum + nextFunction.evaluateAt(minSolution.results)
-          //          }
-          //          println(minObjVal)
-          //          println(minSolution.results.get(zIndex))
-          //          //          minSolution.results.foreach {
-          //          //            case (id, truthValue) =>
-          //          //              val gp = idToGpMap(id)
-          //          //              println(s"\n$gp has truth value $truthValue")
-          //          //          }
-
           minSolution.results.get(zIndex)
 
         }
+        println(s"maxSolution $gp")
         val maxValue = if (naivePredicateMaxBound >= approxUpperBound) {
           1.0
         } else {
@@ -200,7 +189,6 @@ object MinimaExplorer {
                 0))
             } else { List.empty }
           }
-          //println(s"newConstraint $newConstraint")
 
           val maxNewFunction = new SquaredHingeLossOptimizer(
             groundedRules.size + groundedConstraints.size + 3,
@@ -215,18 +203,6 @@ object MinimaExplorer {
             hardFunctions ++ newConstraint ++ List(maxNewFunction),
             None,
             config.getWolfConfig)
-          //          println(s"maxNewFunction : $maxNewFunction")
-          //          println(maxSolution.stats)
-          //          val maxObjVal: Double = (hardFunctions ++ newConstraint ++ List(maxNewFunction)).foldLeft(0.0) {
-          //            case (sum, nextFunction) => sum + nextFunction.evaluateAt(maxSolution.results)
-          //          }
-          //          println(maxObjVal)
-          //          println(maxSolution.results.get(zIndex))
-          //          //          maxSolution.results.foreach {
-          //          //            case (id, truthValue) =>
-          //          //              val gp = idToGpMap(id)
-          //          //              println(s"\n$gp has truth value $truthValue")
-          //          //          }
           maxSolution.results.get(zIndex)
         }
 

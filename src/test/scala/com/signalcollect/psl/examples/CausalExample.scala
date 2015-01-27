@@ -33,8 +33,7 @@ class CausalExample extends FlatSpec with Matchers with TestAnnouncements {
 
   val causal = """
 // The two arguments are independent of each other.
-//predicate [Symmetric]: indep(Variable, Variable)
-predicate : indep(Variable, Variable)
+predicate [Symmetric]: indep(Variable, Variable)
 // The two first arguments are conditionally independent based on the third argument.
 predicate : cond-indep(Variable, Variable, Variable)
 // The first argument causes the second argument.
@@ -43,7 +42,7 @@ predicate : cond-indep(Variable, Variable, Variable)
 predicate : causes(Variable, Variable)
 
 // 0. conditional independence is symmetric in the first two variables.
-//rule: cond-indep(X, Y, Z) => cond-indep(Y, X, Z)
+rule: cond-indep(X, Y, Z) => cond-indep(Y, X, Z)
 
 // 1. mutual exclusivity of independence and dependence.
 // ! (( X → Y) && (X -/-> Y))
@@ -72,13 +71,49 @@ rule: !indep(X,Y)  && cond-indep(X,Y,Z) => causes(Z, X) || causes (Z, Y)
 rule: indep(X,Y)  && !cond-indep(X,Y,Z) => !causes(Z, X)
 rule: indep(X,Y)  && !cond-indep(X,Y,Z) => !causes(Z, Y)
 
+// 8. If X and Y are independent, then they are not causing each other.
+rule: indep(X,Y) => !causes(X, Y)
+rule: indep(X,Y) => !causes(Y, X)
+
+// 9. If X and Y are conditionally independent, then they are not causing each other (at least directly!)
+// This gets wrong with transitivity (I would remove transitivity and keep only direct causes).
+//rule: cond-indep(X,Y,Z) => !causes(X, Y)
+//rule: cond-indep(X,Y,Z) => !causes(Y, X)
+
 class Variable: u,w,x,y
 
-fact [truthValue = 0.8]: indep(w, u)
-fact [truthValue = 1.0]: !cond-indep(w, u, x)
-fact [truthValue = 1.0]: !indep(w, y)
-fact [truthValue = 0.8]: cond-indep(w, y, x)
-  """
+// GroundedPredicate 48: causes[ ] (x, y): unknown  = 0.595 : [0.593,1.0]
+
+//fact [truthValue = 0.8]: indep(w, u)
+//fact [truthValue = 1.0]: !cond-indep(w, u, x)
+//fact [truthValue = 1.0]: !indep(w, y)
+//fact [truthValue = 0.8]: cond-indep(w, y, x)
+
+
+//fact: indep(w, u)
+//fact: !cond-indep(w, u, x)
+//fact: !indep(w, y)
+//fact: cond-indep(w, y, x)
+
+ fact: !indep(x, u)
+ fact: !indep(x, w)
+ fact: !indep(x, y)
+ fact: !indep(y, u)
+ fact: !indep(y, w)
+ fact: indep(w, u)
+fact: !cond-indep(w, u, x)
+fact: !cond-indep(w, u, y)
+fact: cond-indep(u, y, x)
+fact: cond-indep(w, y, x)
+fact: !cond-indep(x, w, y)
+fact: !cond-indep(x, w, u)
+fact: !cond-indep(x, y, w)
+fact: !cond-indep(x, u, y)
+fact: !cond-indep(x, u, w)
+fact: !cond-indep(u, y, w)
+fact: !cond-indep(y, w, u)
+
+ """
 
   val expected = """
 
@@ -191,7 +226,11 @@ GroundedPredicate 40: causes[ ] (w, u) : [0.0050777510230964815, 0.9976288302377
   //fact [0]: causes(y,u)
 
   it should "provide a solution consistent for the causal example" in {
-    val config = InferencerConfig(computeObjectiveValueOfSolution = true, lazyThreshold = None)
+    val config = InferencerConfig(
+        computeObjectiveValueOfSolution = true, 
+        lazyThreshold = None, 
+        removeSymmetricConstraints = false,
+        maxIterations = 20000)
     val results = MinimaExplorer.exploreFromString(causal, config, List("causes"))
     for (result <- results) {
       if (result._3 == 0 && result._4 == 0) {
