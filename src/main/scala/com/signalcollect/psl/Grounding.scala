@@ -204,7 +204,7 @@ object Grounding {
     val truthValues = parallelMapOfFacts.map { fact =>
       ((fact.name, fact.groundingsAsSingleIndividuals.map(_.value)), fact.truthValue)
     }.toMap
-
+    
     // Ground predicates in rules.
     val groundedPredicatesKeys =
       rules.flatMap {

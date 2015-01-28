@@ -52,21 +52,24 @@ case class Fact(
               println(s"Too few arguments for the predicate $p: $variableGroundings")
               List.empty
             } else {
-              if (classType.name == "_" || !classType.set) {
+              if (classType.name == "_") {
                 assert(variableGroundings(i).size == 1, "Too many variables for an argument that is not a set.")
-                List(groundingsAsSingleIndividuals(i))
+                variableGroundings(i)
+              } else if (!classType.set) {
+                assert(variableGroundings(i).size == 1, "Too many variables for an argument that is not a set.")
+                variableGroundings(i).map { ind => Individual(ind.name, Set(classType)) }
               } else {
                 // The argument is a set of a certain class, so the individual constants are each of that class.
                 // Example: symptom (Disease, Set[Symptom]) 
                 // symptom(flu, {cough, fever}) => flu: Disease, cough: Symptom, fever: Symptom.
                 val individualClass = PslClass(classType.name)
-                List(groundingsAsSingleIndividuals(i)) ++
+                Set(Individual(groundingsAsSingleIndividuals(i).toString, Set(classType))) ++
                   variableGroundings(i).map { ind => Individual(ind.name, Set(individualClass)) }
               }
             }
         }.flatten
       }
-      case None => groundingsAsSingleIndividuals
+      case None => variableGroundings.flatten
     }
   }
 

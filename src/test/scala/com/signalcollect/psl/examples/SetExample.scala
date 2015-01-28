@@ -31,16 +31,16 @@ import com.signalcollect.util.TestAnnouncements
 class SetExample extends FlatSpec with Matchers with TestAnnouncements {
 
   val causal = """
-predicate : causes(Set[Variable], Set[Variable])
+predicate : causes(Variable, Set[Variable])
 
 //rule: !causes(X, X)
 //rule: causes(X ,Y) => causes(Y,X)
-rule: causes(X,Y)  && causes(X,Z) => causes(X,{Y,Z})
+rule: causes(X,Y)  && causes(X,{Y,Z}) => causes(Z,X)
 
 class Variable: x,y,z
 
 fact: causes(x, y)
-fact: causes(x, z)
+fact: causes(x, {y,z})
 //fact[0.3]: !causes(y, {w, u})
 //fact[0.7]: !causes({x, y} , u)
   """
@@ -48,5 +48,6 @@ fact: causes(x, z)
   it should "provide a solution consistent for the set example" in {
     val config = InferencerConfig(computeObjectiveValueOfSolution = true, lazyThreshold = None)
     val results = Inferencer.runInferenceFromString(causal, config = config)
+    println(results)
   }
 }

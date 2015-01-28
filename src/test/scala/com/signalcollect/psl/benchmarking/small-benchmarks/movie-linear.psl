@@ -1,0 +1,28 @@
+      	predicate: likes(_, _)
+      	predicate: playsIn(_, _)
+      	    
+      	rule [weight = 1, distanceMeasure = linear]: likes(PERSON, MOVIE) && playsIn(ACTOR, MOVIE) => likes(PERSON, ACTOR)
+      	rule [weight = 1]: likes(PERSON, MOVIE-A) && playsIn(ACTOR, MOVIE-A) && playsIn(ACTOR, MOVIE-B) => likes(PERSON, MOVIE-B)
+      	rule [weight = 1, distanceMeasure = linear]: likes(PERSON-A, A) && likes(PERSON-B, A) && likes(PERSON-B, B) => likes(PERSON-A, B)
+      
+      	fact: playsIn(john-travolta, pulp-fiction)
+      	fact: playsIn(samuel-l-jackson, pulp-fiction)
+      	fact: playsIn(ewan-mcgregor, trainspotting)
+      	fact: playsIn(tom-cruise, mission-impossible)
+      	
+      	fact [truthValue = 0.1]: likes(sara, tom-cruise)
+      	fact [truthValue = 0.5]: likes(sara, john-travolta)
+      	fact [truthValue = 0.9]: likes(sara, samuel-l-jackson)
+      	fact [truthValue = 1.0]: likes(sara, ewan-mcgregor)
+      	
+      	fact [truthValue = 0.9]: likes(sara, pulp-fiction)
+      	fact [truthValue = 0.3]: likes(sara, grease)
+      	fact [truthValue = 0.8]: likes(sara, star-wars)
+      	fact [truthValue = 0.8]: likes(sara, transpotting)
+      	fact [truthValue = 0.8]: likes(sara, blade-runner)
+      	
+      	fact [truthValue = 0.9]: likes(philip, pulp-fiction)
+      	fact [truthValue = 0.8]: likes(philip, john-travolta)
+      	fact [truthValue = 1.0]: likes(philip, blade-runner)
+      	
+      	fact [truthValue = 1.0]: likes(fred, trainspotting) 
