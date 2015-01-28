@@ -32,7 +32,7 @@ import com.signalcollect.admm.utils.MinimaExplorer
 class CausalSetsExample extends FlatSpec with Matchers with TestAnnouncements {
 
   val causal = """
-class Variable: u,w,x,y
+class Variable: u,w,x,y,z
 predicate : indep(Variable, Variable, Set[Variable])
 predicate : causes(Variable, Variable)
 
@@ -54,7 +54,7 @@ rule: causes(X,Y)  && causes(Y,Z) => causes(X,Z)
 // 6. If Z makes X and Y conditionally independent, then Z causes either X or Y or both.
 rule: !indep(X,Y,W)  && indep(X,Y,{W, Z}) => causes(Z, X) || causes (Z, Y)
 
-// 7. If Z makes X and Y conditionally dependent, then Z does not cause neither X or Y.
+// 7. If Z makes X and Y conditionally dependent, then Z does not cause neither X or Y, nor any of W.
 rule: indep(X,Y,W)  && !indep(X,Y,{W,Z}) => !causes(Z, X)
 rule: indep(X,Y,W)  && !indep(X,Y,{W,Z}) => !causes(Z, Y)
 
@@ -84,32 +84,22 @@ fact: !indep(u, y, w)
 fact: !indep(y, w, u)
 
 fact: !indep(x, y, {u, w})
-fact: !indep(x, y, {w, u})
-
 fact: !indep(x, w, {y, u})
-fact: !indep(x, w, {u, y})
-
 fact: !indep(x, u, {y, w})
-fact: !indep(x, u, {w, y})
-
 fact: !indep(u, w, {y, x})
-fact: !indep(u, w, {x, y})
 
 fact: indep(u, y, {x, w})
-fact: indep(u, y, {w, x})
-
 fact: indep(w, y, {x, u})
-fact: indep(w, y, {u, x})
-
-
  """
 
   it should "provide a solution consistent for the causal example" in {
     val config = InferencerConfig(
-        computeObjectiveValueOfSolution = true, 
-        lazyThreshold = None, 
-        removeSymmetricConstraints = false,
-        maxIterations = 200000)
+      computeObjectiveValueOfSolution = true,
+      lazyThreshold = None,
+      removeSymmetricConstraints = false,
+      maxIterations = 200000,
+      absoluteEpsilon = 1e-5,
+      relativeEpsilon = 1e-3)
     val results = MinimaExplorer.exploreFromString(causal, config, List("causes"))
     for (result <- results) {
       if (result._3 == 0 && result._4 == 0) {

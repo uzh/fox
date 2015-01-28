@@ -71,7 +71,7 @@ rule: indep(X,Y) => !causes(Y, X)
 //rule: cond-indep(X,Y,Z) => !causes(X, Y)
 //rule: cond-indep(X,Y,Z) => !causes(Y, X)
 
-class Variable: u,w,x,y,z
+class Variable: u,w,x,y
 
 // GroundedPredicate 48: causes[ ] (x, y): unknown  = 0.595 : [0.593,1.0]
 
@@ -106,21 +106,11 @@ fact: !cond-indep(u, y, w)
 fact: !cond-indep(y, w, u)
 
 fact: !cond-indep(x, y, {u, w})
-fact: !cond-indep(x, y, {w, u})
-
 fact: !cond-indep(x, w, {y, u})
-fact: !cond-indep(x, w, {u, y})
-
-fact: !cond-indep(x, u, {y, w})
 fact: !cond-indep(x, u, {w, y})
-
-fact: cond-indep(u, y, {x, w})
-fact: cond-indep(u, y, {w, x})
-
-fact: !cond-indep(u, w, {y, x})
 fact: !cond-indep(u, w, {x, y})
 
-fact: cond-indep(w, y, {x, u})
+fact: cond-indep(u, y, {x, w})
 fact: cond-indep(w, y, {u, x})
 
  """
@@ -240,7 +230,9 @@ GroundedPredicate 40: causes[ ] (w, u) : [0.0050777510230964815, 0.9976288302377
         computeObjectiveValueOfSolution = true, 
         lazyThreshold = None, 
         removeSymmetricConstraints = false,
-        maxIterations = 20000)
+        maxIterations = 20000,
+        absoluteEpsilon = 1e-5,
+        relativeEpsilon = 1e-3)
     val results = MinimaExplorer.exploreFromString(causal, config, List("causes"))
     for (result <- results) {
       if (result._3 == 0 && result._4 == 0) {

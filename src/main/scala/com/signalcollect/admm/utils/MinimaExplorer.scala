@@ -118,7 +118,7 @@ object MinimaExplorer {
             case Some(gcs) => gcs.toString
             case None => ""
           }
-          println(s"Constraint broken: $gr $gc")
+          //println(s"Constraint broken: $gr $gc")
         }
         sum + nextResult
       }
