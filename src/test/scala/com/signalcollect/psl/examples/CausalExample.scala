@@ -32,10 +32,9 @@ import com.signalcollect.admm.utils.MinimaExplorer
 class CausalExample extends FlatSpec with Matchers with TestAnnouncements {
 
   val causal = """
-// The two arguments are independent of each other.
-predicate [Symmetric]: indep(Variable, Variable)
 // The two first arguments are conditionally independent based on the third argument.
-predicate : cond-indep(Variable, Variable, Variable)
+predicate [Symmetric]: indep(Variable, Variable)
+predicate : cond-indep(Variable, Variable, Set[Variable])
 // The first argument causes the second argument.
 // We don’t add not-causes, but instead use !causes, we will add a mechanism to deal if there 
 // is no evidence for neither.
@@ -44,17 +43,9 @@ predicate : causes(Variable, Variable)
 // 0. conditional independence is symmetric in the first two variables.
 rule: cond-indep(X, Y, Z) => cond-indep(Y, X, Z)
 
-// 1. mutual exclusivity of independence and dependence.
-// ! (( X → Y) && (X -/-> Y))
-// We assume it’s implicit by using the negation: !causes(X, Y) \equiv not-causes(X,Y).
-
 // 2. Irreflexivity of causes:
 // !(X → X)
 rule: !causes(X, X)
-
-// 3. Irreflexivity of not causes:
-// X -/-> X
-// We assume it’s implicit by using the negation: !causes(X, Y) \equiv not-causes(X,Y).
 
 // 4. Acyclicity
 // X→ Y => Y-/->X
@@ -80,7 +71,7 @@ rule: indep(X,Y) => !causes(Y, X)
 //rule: cond-indep(X,Y,Z) => !causes(X, Y)
 //rule: cond-indep(X,Y,Z) => !causes(Y, X)
 
-class Variable: u,w,x,y
+class Variable: u,w,x,y,z
 
 // GroundedPredicate 48: causes[ ] (x, y): unknown  = 0.595 : [0.593,1.0]
 
@@ -101,17 +92,36 @@ class Variable: u,w,x,y
  fact: !indep(y, u)
  fact: !indep(y, w)
  fact: indep(w, u)
-fact: !cond-indep(w, u, x)
-fact: !cond-indep(w, u, y)
+ fact: !cond-indep(w, u, x)
+ fact: !cond-indep(w, u, y)
 fact: cond-indep(u, y, x)
 fact: cond-indep(w, y, x)
 fact: !cond-indep(x, w, y)
 fact: !cond-indep(x, w, u)
 fact: !cond-indep(x, y, w)
+fact: !cond-indep(x, y, u)
 fact: !cond-indep(x, u, y)
 fact: !cond-indep(x, u, w)
 fact: !cond-indep(u, y, w)
 fact: !cond-indep(y, w, u)
+
+fact: !cond-indep(x, y, {u, w})
+fact: !cond-indep(x, y, {w, u})
+
+fact: !cond-indep(x, w, {y, u})
+fact: !cond-indep(x, w, {u, y})
+
+fact: !cond-indep(x, u, {y, w})
+fact: !cond-indep(x, u, {w, y})
+
+fact: cond-indep(u, y, {x, w})
+fact: cond-indep(u, y, {w, x})
+
+fact: !cond-indep(u, w, {y, x})
+fact: !cond-indep(u, w, {x, y})
+
+fact: cond-indep(w, y, {x, u})
+fact: cond-indep(w, y, {u, x})
 
  """
 

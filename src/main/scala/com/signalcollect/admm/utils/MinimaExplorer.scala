@@ -45,8 +45,8 @@ import com.signalcollect.psl.model.GroundedRule
  */
 object MinimaExplorer {
 
-  def approxUpperBound = 0.95
-  def approxLowerBound = 0.05
+  def approxUpperBound = 0.9
+  def approxLowerBound = 0.1
 
   def roundUpDouble(value: Double, exponent: Int = 3) = {
     ((math.pow(10, exponent) * value).round / math.pow(10, exponent).toDouble)
@@ -95,24 +95,34 @@ object MinimaExplorer {
     groundedPredicateNames: List[String] = List.empty): List[(String, Double, Double, Double)] = {
     // This is the same as the inferencer, we copy it so we don't have to recreate the functions.
     val (groundedRules, groundedConstraints, idToGpMap) = Grounding.ground(pslData, config)
+    println(s"Grounding completed: ${groundedRules.size} grounded rules, ${groundedConstraints.size} constraints and ${idToGpMap.keys.size} grounded predicates.")
+    //idToGpMap.map(gp => println(s"${gp._2} ${gp._2.truthValue}"))
     val functions = groundedRules.flatMap(_.createOptimizableFunction(config.stepSize, config.tolerance, config.breezeOptimizer))
     val constraints = groundedConstraints.flatMap(_.createOptimizableFunction(config.stepSize, config.tolerance, config.breezeOptimizer))
+    //val (optimizerBaseFunctions, hardFunctions) = divideFunctionsAndConstraints(functions ++ constraints)
     val functionsAndConstraints = functions ++ constraints
-
     val solution = Wolf.solveProblem(
       functionsAndConstraints,
       None,
       config.getWolfConfig)
-
     val objectiveFunctionVal: Double = functionsAndConstraints.foldLeft(0.0) {
       case (sum, nextFunction) => {
         val nextResult = nextFunction.evaluateAt(solution.results)
-        if (nextResult == Double.MaxValue) { println(nextFunction) }
+        if (nextResult == Double.MaxValue) {
+          val gr = groundedRules.filter(_.id == nextFunction.id.getOrElse(0)).headOption match {
+            case Some(grs) => grs.toString
+            case None => ""
+          }
+          val gc = groundedConstraints.filter(_.id == nextFunction.id.getOrElse(0)).headOption match {
+            case Some(gcs) => gcs.toString
+            case None => ""
+          }
+          println(s"Constraint broken: $gr $gc")
+        }
         sum + nextResult
       }
     }
     println(s"First inference completed, objective value: $objectiveFunctionVal")
-    //println(solution.stats)
 
     val groundedPredicatesToTest = if (groundedPredicateNames.isEmpty) {
       idToGpMap.filter(!_._2.truthValue.isDefined)

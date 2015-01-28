@@ -44,7 +44,13 @@ sealed trait VariableOrIndividual {
     }
   }
   override def toString = {
-    if (set) { name } else if (!name.startsWith("Set(")) { name } else { varsOrIndividualsInSet.head }
+    if (set) {
+      name
+    } else if (!name.startsWith("Set(")) {
+      name
+    } else {
+      varsOrIndividualsInSet.head
+    }
 
   }
   override def hashCode(): Int = {
@@ -60,7 +66,7 @@ sealed trait VariableOrIndividual {
 
 object VariableOrIndividual {
   def apply(name: String, classTypes: Set[PslClass] = Set.empty): VariableOrIndividual = {
-    if (name.stripPrefix("Set(")(0).isUpper) {
+    if (name.stripPrefix("Set(").length() > 0 && name.stripPrefix("Set(")(0).isUpper) {
       Variable(name, classTypes)
     } else {
       Individual(name, classTypes)

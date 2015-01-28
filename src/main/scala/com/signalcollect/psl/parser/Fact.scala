@@ -30,29 +30,45 @@ case class Fact(
   truthValue: Option[Double],
   predicate: Option[Predicate] = None) {
 
+  val groundingsAsSingleIndividuals = {
+    variableGroundings.map { singleGrounding =>
+      val orderedIndividuals = if (singleGrounding.size > 1) {
+        // Before creating a single individual with this set, we order the set of individuals,
+        // so we can normalize it.
+        singleGrounding.toList.sortBy(_.name).toSet
+      } else {
+        singleGrounding
+      }
+      Individual(orderedIndividuals.toString)
+    }
+  }
+
   val indsWithClasses = {
     predicate match {
       case Some(p) => {
         p.classes.zipWithIndex.map {
-          case (classType, i) if classType.name == "_" =>
-            variableGroundings(i)
-          case (classType, i) if !classType.set =>
-            assert(variableGroundings(i).size == 1, "Too many variables for an argument that is not a set.")
-            variableGroundings(i).map { ind => Individual(ind.name, Set(classType)) }
           case (classType, i) =>
-            // The argument is a set of a certain class, so the individual constants are each of that class.
-            // Example: symptom (Disease, Set[Symptom]) 
-            // symptom(flu, {cough, fever}) => flu: Disease, cough: Symptom, fever: Symptom.
-            val individualClass = PslClass(classType.name)
-            List(Individual(variableGroundings(i).toString, Set(classType))) ++
-              variableGroundings(i).map { ind => Individual(ind.name, Set(individualClass)) }
+            if (variableGroundings.length <= i) {
+              println(s"Too few arguments for the predicate $p: $variableGroundings")
+              List.empty
+            } else {
+              if (classType.name == "_" || !classType.set) {
+                assert(variableGroundings(i).size == 1, "Too many variables for an argument that is not a set.")
+                List(groundingsAsSingleIndividuals(i))
+              } else {
+                // The argument is a set of a certain class, so the individual constants are each of that class.
+                // Example: symptom (Disease, Set[Symptom]) 
+                // symptom(flu, {cough, fever}) => flu: Disease, cough: Symptom, fever: Symptom.
+                val individualClass = PslClass(classType.name)
+                List(groundingsAsSingleIndividuals(i)) ++
+                  variableGroundings(i).map { ind => Individual(ind.name, Set(individualClass)) }
+              }
+            }
         }.flatten
       }
-      case None => variableGroundings.flatten
+      case None => groundingsAsSingleIndividuals
     }
   }
-  
-  val groundingsAsSingleIndividuals = variableGroundings.map(i => Individual(i.toString))
 
   override def toString = {
     val truth = if (truthValue.isDefined) {
@@ -60,6 +76,6 @@ case class Fact(
     } else {
       ""
     }
-    s"grounding$truth: $name${variableGroundings.mkString("(", ", ", ")")}"
+    s"grounding$truth: $name${groundingsAsSingleIndividuals.mkString("(", ", ", ")")}"
   }
 }

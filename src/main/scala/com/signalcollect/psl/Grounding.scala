@@ -174,8 +174,10 @@ object Grounding {
         if (nonSetIndividualsOfClass.size == 1) {
           val relevantIndividuals = nonSetIndividualsOfClass.head._2
           // Subsets creates all possible subsets of a set.
-          val allPossibleSetsForClass = relevantIndividuals.subsets.map(
-            subset => Individual(subset.toString, Set(setClass))).toSet
+          val allPossibleSetsForClass = relevantIndividuals.subsets.map {
+            subset =>
+              Individual(subset.toString, Set(setClass))
+          }.toSet
           Some(Map(setClass -> allPossibleSetsForClass))
         } else {
           None
@@ -209,7 +211,11 @@ object Grounding {
         rule =>
           if (config.verbose) println(s"Creating grounded predicate keys for rule: $rule")
           val bindings = generateBindings(rule.variables, individuals, config)
-          val parallelMapOfBindings = if (config.parallelizeGrounding) { bindings.par } else { bindings }
+          val parallelMapOfBindings = if (config.parallelizeGrounding) {
+            bindings.par
+          } else {
+            bindings
+          }
           val result = parallelMapOfBindings.flatMap {
             binding =>
               val bodyContribution = rule.body.map(p => (p.predicate.get, p.varsOrIndsWithClasses.map {
@@ -223,7 +229,11 @@ object Grounding {
               val totalContribution = bodyContribution ++ headContribution
               totalContribution
           }
-          if (config.parallelizeGrounding) { result.seq } else { result }
+          if (config.parallelizeGrounding) {
+            result.seq
+          } else {
+            result
+          }
       }.toSet
 
     //Ground predicates in constraints
