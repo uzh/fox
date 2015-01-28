@@ -37,29 +37,29 @@ predicate : indep(Variable, Variable, Set[Variable])
 predicate : causes(Variable, Variable)
 
 // 0. conditional independence is symmetric in the first two variables.
-//rule: indep(X, Y, Z) => indep(Y, X, Z)
+rule: indep(X, Y, Z) => indep(Y, X, Z)
 
 // 2. Irreflexivity of causes:
 // !(X → X)
-//rule: !causes(X, X)
+rule: !causes(X, X)
 
 // 4. Acyclicity
 // X→ Y => Y-/->X
-//rule: causes(X,Y) => !causes(Y,X)
+rule: causes(X,Y) => !causes(Y,X)
 
 // 5. Transitivity:
 // X → Y && Y → Z => X → Z
-//rule: causes(X,Y)  && causes(Y,Z) => causes(X,Z)
+rule: causes(X,Y)  && causes(Y,Z) => causes(X,Z)
 
 // 6. If Z makes X and Y conditionally independent, then Z causes either X or Y or both.
-//rule: !indep(X,Y,W)  && indep(X,Y,{W, Z}) => causes(Z, X) || causes (Z, Y)
+rule: !indep(X,Y,W)  && indep(X,Y,{W, Z}) => causes(Z, X) || causes (Z, Y)
 
 // 7. If Z makes X and Y conditionally dependent, then Z does not cause neither X or Y.
 rule: indep(X,Y,W)  && !indep(X,Y,{W,Z}) => !causes(Z, X)
-//rule: indep(X,Y,W)  && !indep(X,Y,{W,Z}) => !causes(Z, Y)
+rule: indep(X,Y,W)  && !indep(X,Y,{W,Z}) => !causes(Z, Y)
 
 // 8. If X and Y are independent, then they are not causing each other.
-//rule: indep(X,Y, {}) => !causes(X, Y)
+rule: indep(X,Y, {}) => !causes(X, Y)
 //rule: indep(X,Y, {}) => !causes(Y, X)
 
 fact: !indep(x, u, {})

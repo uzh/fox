@@ -73,6 +73,7 @@ object Grounding {
     if (variables.size < 1) {
       return List.empty
     }
+
     // For each variable try all the individuals that are in the intersection of the classes it has.
     //     Need a list of List[Map[String, Individual]], each one representing the value of a variable.
     //     e.g. List (Map(A -> anna), Map(A -> sara)) 	    
@@ -93,6 +94,8 @@ object Grounding {
 
     // Use combine to foldleft the values and get the result.
     val foldedList = allMappingsList.foldLeft(List[Map[String, Individual]]())(combine(_, _))
+
+    //    foldedList.map(println(_))
 
     // Prune all the mappings that have the same individual in more than two variables.
     // Note: this enforces the fact that if you bind an individual to a variable it cannot be bound again.
@@ -190,6 +193,26 @@ object Grounding {
 
   }
 
+  def getBinding(varOrInd: VariableOrIndividual, binding: Map[String, Individual]) = varOrInd match {
+    case v: Variable if !v.set => binding(v.value)
+    case v: Variable if v.set =>
+      // If the variable is a set, we have to join the results of all of the variables in the set.
+      val setVariables = v.varsOrIndividualsInSet.map(VariableOrIndividual(_)).map {
+        case variable: Variable =>
+          binding(variable.value).varsOrIndividualsInSet
+        case individual: Individual =>
+          individual.varsOrIndividualsInSet
+      }.flatten.toList.sorted.toSet
+      if (setVariables.size == 1) {
+        // If there is only one set variable, keep it.
+        Individual(setVariables.toString)
+      } else {
+        // Otherwise, remove the empty set.
+        Individual(setVariables.filter(_ != "").toString)
+      }
+    case i: Individual => Individual(i.value)
+  }
+
   /**
    * Create grounded predicates using the rules.
    * First create all possible grounded predicates using the rules and individuals.
@@ -204,7 +227,7 @@ object Grounding {
     val truthValues = parallelMapOfFacts.map { fact =>
       ((fact.name, fact.groundingsAsSingleIndividuals.map(_.value)), fact.truthValue)
     }.toMap
-    
+
     // Ground predicates in rules.
     val groundedPredicatesKeys =
       rules.flatMap {
@@ -218,13 +241,11 @@ object Grounding {
           }
           val result = parallelMapOfBindings.flatMap {
             binding =>
-              val bodyContribution = rule.body.map(p => (p.predicate.get, p.varsOrIndsWithClasses.map {
-                case v: Variable => binding(v.value)
-                case i: Individual => Individual(i.value)
+              val bodyContribution = rule.body.map(p => (p.predicate.get, p.allVarsOrIndsWithClasses.map {
+                getBinding(_, binding)
               }))
-              val headContribution = rule.head.map(p => (p.predicate.get, p.varsOrIndsWithClasses.map {
-                case v: Variable => binding(v.value)
-                case i: Individual => Individual(i.value)
+              val headContribution = rule.head.map(p => (p.predicate.get, p.allVarsOrIndsWithClasses.map {
+                getBinding(_, binding)
               }))
               val totalContribution = bodyContribution ++ headContribution
               totalContribution

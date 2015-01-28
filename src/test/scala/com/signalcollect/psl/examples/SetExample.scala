@@ -37,7 +37,7 @@ predicate : causes(Variable, Set[Variable])
 //rule: causes(X ,Y) => causes(Y,X)
 rule: causes(X,Y)  && causes(X,{Y,Z}) => causes(Z,X)
 
-class Variable: x,y,z
+class Variable: a,x,y,z
 
 fact: causes(x, y)
 fact: causes(x, {y,z})

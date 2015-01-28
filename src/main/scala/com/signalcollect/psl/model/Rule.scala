@@ -101,7 +101,7 @@ case class PredicateInRule(
     case _ => None
   }.flatten
 
-  override def toString = s"${if (negated) "!" else ""}$name${varsOrIndsWithClasses.mkString("(", ", ", ")")}"
+  override def toString = s"${if (negated) "!" else ""}$name${allVarsOrIndsWithClasses.mkString("(", ", ", ")")}"
 }
 
 
