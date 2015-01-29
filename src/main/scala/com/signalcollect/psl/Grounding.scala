@@ -153,6 +153,8 @@ object Grounding {
   def generateAllPossibleSetsAsIndividuals(rules: List[Rule], individuals: Map[PslClass, Set[Individual]],
     config: InferencerConfig = InferencerConfig()): Map[PslClass, Set[Individual]] = {
     // Find all set classes in predicates mentioned in rules.
+    // TODO: check not to reproduce too many classes.
+    
     val setClasses = rules.flatMap {
       rule =>
         if (config.verbose) println(s"Checking variables in rule: $rule")
@@ -173,7 +175,7 @@ object Grounding {
 
       // For each of the set classes, create all possible combinations using the non set individuals.
       val allPossibleSetsAsIndividuals = setClasses.flatMap { setClass =>
-        val nonSetIndividualsOfClass = nonSetIndividuals.filter(_._1.name == setClass.name)
+        val nonSetIndividualsOfClass = nonSetIndividuals.filter(_._1.id == setClass.id)
         if (nonSetIndividualsOfClass.size == 1) {
           val relevantIndividuals = nonSetIndividualsOfClass.head._2
           // Subsets creates all possible subsets of a set.

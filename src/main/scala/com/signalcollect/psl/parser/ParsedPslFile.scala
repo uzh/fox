@@ -90,6 +90,7 @@ case class ParsedPslFile(
           classesAndIndividualsInFacts.getOrElse(classname, Set.empty) ++
           classesAndIndividualsInRules.getOrElse(classname, Set.empty))
     }.toMap
+    println(allClasses)
     allClasses ++ Map(PslClass("_") -> individuals.toSet)
   }
 

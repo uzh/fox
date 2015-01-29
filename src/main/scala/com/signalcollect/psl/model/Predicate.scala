@@ -36,17 +36,18 @@ case class Predicate(
 }
 
 case class PslClass(
-  id: String) {
-  override def toString = {
-    if (set) { s"Set[${name}]" } else { name }
-  }
+  id: String,
+  set: Boolean = false,
+  minCardinalityOption: Option[Int] = None,
+  maxCardinalityOption: Option[Int] = None) {
 
-  val set = id.startsWith("Set[")
-  val name = id.stripPrefix("Set[").stripSuffix("]")
+  override def toString = {
+    if (set) { s"Set {${minCardinalityOption.toString}, ${maxCardinalityOption.toString}} [${id}]" } else { id }
+  }
 
   override def equals(that: Any) = {
     that match {
-      case v: PslClass => (v.id == id)
+      case v: PslClass => (v.id == id) && (v.set == set)
       case _ => false
     }
   }

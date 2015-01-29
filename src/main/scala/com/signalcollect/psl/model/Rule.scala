@@ -21,7 +21,6 @@
 package com.signalcollect.psl.model
 
 case class Rule(
-  // TODO: rules should have ids (or be indexed in a list).
   id: Int, // change in PslParser.
   body: List[PredicateInRule], // implied conjunction
   head: List[PredicateInRule], // implied disjunction
@@ -77,7 +76,7 @@ case class PredicateInRule(
     predicate match {
       case Some(p) => {
         p.classes.zipWithIndex.map {
-          case (classType, i) if classType.name == "_" =>
+          case (classType, i) if classType.id == "_" =>
             variableOrIndividual(i)
           case (classType, i) =>
             VariableOrIndividual(variableOrIndividual(i).toString, Set(classType))

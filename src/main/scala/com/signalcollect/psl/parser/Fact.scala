@@ -52,7 +52,7 @@ case class Fact(
               println(s"Too few arguments for the predicate $p: $variableGroundings")
               List.empty
             } else {
-              if (classType.name == "_") {
+              if (classType.id == "_") {
                 assert(variableGroundings(i).size == 1, "Too many variables for an argument that is not a set.")
                 variableGroundings(i)
               } else if (!classType.set) {
@@ -62,8 +62,19 @@ case class Fact(
                 // The argument is a set of a certain class, so the individual constants are each of that class.
                 // Example: symptom (Disease, Set[Symptom]) 
                 // symptom(flu, {cough, fever}) => flu: Disease, cough: Symptom, fever: Symptom.
-                val individualClass = PslClass(classType.name)
-                Set(Individual(groundingsAsSingleIndividuals(i).toString, Set(classType))) ++
+                if (classType.minCardinalityOption.isDefined) {
+                  assert(variableGroundings(i).size >= classType.minCardinalityOption.get,
+                    "Too few variables for an argument set with a minimum cardinality.")
+                }
+                if (classType.maxCardinalityOption.isDefined) {
+                  assert(variableGroundings(i).size <= classType.maxCardinalityOption.get,
+                    "Too many variables for an argument set with a maximum cardinality.")
+                }
+                // Get the class of each argument.
+                val individualClass = PslClass(classType.id)
+                // Get the set class without the cardinalities.
+                val setClass = PslClass(classType.id, true)
+                Set(Individual(groundingsAsSingleIndividuals(i).toString, Set(setClass))) ++
                   variableGroundings(i).map { ind => Individual(ind.name, Set(individualClass)) }
               }
             }

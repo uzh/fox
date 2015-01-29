@@ -32,9 +32,10 @@ import com.signalcollect.admm.utils.MinimaExplorer
 class CausalSetsExample extends FlatSpec with Matchers with TestAnnouncements {
 
   val causal = """
-class Variable: u,w,x,y,z
-predicate : indep(Variable, Variable, Set[Variable])
-predicate : causes(Variable, Variable)
+class Variable: u,w,x,y,z,a,b,c
+// TODO predicate : indep(Variable, Variable, Set(3)[Variable])
+predicate : indep(Variable, Variable, Set{3}[Variable])
+predicate : causes(Variable, Set[Variable])
 
 // 0. conditional independence is symmetric in the first two variables.
 rule: indep(X, Y, Z) => indep(Y, X, Z)
@@ -57,10 +58,17 @@ rule: !indep(X,Y,W)  && indep(X,Y,{W, Z}) => causes(Z, X) || causes (Z, Y)
 // 7. If Z makes X and Y conditionally dependent, then Z does not cause neither X or Y, nor any of W.
 rule: indep(X,Y,W)  && !indep(X,Y,{W,Z}) => !causes(Z, X)
 rule: indep(X,Y,W)  && !indep(X,Y,{W,Z}) => !causes(Z, Y)
+rule: indep(X,Y,W)  && !indep(X,Y,{W,Z}) => !causes(Z, W)
+// TODO rule: indep(X,Y,W)  && !indep(X,Y,{W,Z}) => FORALL [W1 in W] !causes(Z, W1)
 
 // 8. If X and Y are independent, then they are not causing each other.
+// Faithfulness assumption.
 rule: indep(X,Y, {}) => !causes(X, Y)
 //rule: indep(X,Y, {}) => !causes(Y, X)
+
+// 9. Tom's new rule. 
+// TODO rule: !indep(X,Y,W)  && indep(X,Y,{W,Z}) && !causes(X, Z) && FORALL [W1 in W] !causes(X, W1) => !causes(X,Y)
+
 
 fact: !indep(x, u, {})
 fact: !indep(x, w, {})
@@ -100,7 +108,7 @@ fact: indep(w, y, {x, u})
       maxIterations = 200000,
       absoluteEpsilon = 1e-5,
       relativeEpsilon = 1e-3)
-    val results = MinimaExplorer.exploreFromString(causal, config, List("causes"))
+    val results = MinimaExplorer.exploreFromString(causal, config, List("none"))
     for (result <- results) {
       if (result._3 == 0 && result._4 == 0) {
         println(s"${result._1}: false = ${result._2} : [${result._3},${result._4}]")

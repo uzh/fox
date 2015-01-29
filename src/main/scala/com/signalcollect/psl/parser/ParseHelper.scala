@@ -59,7 +59,7 @@ abstract class ParseHelper[T] extends RegexParsers {
 
   def identifierOrDash: Parser[String] = "[-a-zA-Z0-9_]*".r
 
-  def identifierOrDashOrSquareBracket: Parser[String] = "[-a-zA-Z0-9_\\[\\]]*".r
+  def identifierOrDashOrBracket: Parser[String] = "[-a-zA-Z0-9_\\[\\]\\{\\}]*".r
 
   def identifierOrBracket: Parser[String] = "[-a-zA-Z0-9\\{\\}\\[\\]]*".r
 

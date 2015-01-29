@@ -171,7 +171,7 @@ object PslParser extends ParseHelper[ParsedPslFile] with ImplicitConversions {
   }
 
   lazy val predicate: Parser[Predicate] = {
-    "predicate" ~> opt(predicateProperties) ~ ":" ~ identifier ~ "(" ~ predicateClasses <~ ")" ^^ {
+    "predicate" ~> opt(predicateProperties) ~ ":" ~ identifier ~ "(" ~ repsep((nonSetPredicateClass|setPredicateClass), ",") <~ ")" ^^ {
       case properties ~ ":" ~ name ~ "(" ~ placeholders =>
          val prior = properties.flatMap(_.get("prior")).map(_.toDouble)
          val parsedProperties: Set[PredicateProperty]= properties match{
@@ -179,19 +179,23 @@ object PslParser extends ParseHelper[ParsedPslFile] with ImplicitConversions {
              p.filter(_._1 != "prior").map{a => PredicateProperty.parse(a._2)}.toSet
            case None => Set.empty
          }
-        Predicate(name, classes = placeholders.map(PslClass(_)), properties = parsedProperties, prior = prior)
+        Predicate(name, classes = placeholders, properties = parsedProperties, prior = prior)
     }
   }
-
-  lazy val predicateClasses: Parser[List[String]]= {
-    repsep(identifierOrDashOrSquareBracket, ",") ^^ {
-      case List("") =>
-        List.empty
-      case placeholders =>
-        placeholders
+  lazy val nonSetPredicateClass: Parser[PslClass]= {
+    not("Set") ~> identifierOrDash ^^ {
+      case  placeholder =>
+        PslClass(placeholder)
     }
   }
-   
+  
+  lazy val setPredicateClass: Parser[PslClass]= {
+    "Set" ~ opt("{") ~> opt(integer <~ ",")  ~ opt(integer) ~ opt("}") ~ "[" ~ identifierOrDash ~ "]" ^^ {
+      case  minCardinality ~ maxCardinality ~ optionalBracket ~ "[" ~ singleClassType ~ "]" =>
+        PslClass(singleClassType, true, minCardinality, maxCardinality)
+    }
+  }
+  
   lazy val truthValue: Parser[Double] = {
     "[" ~> opt("truthValue" ~> "=") ~> double <~ "]" ^^ {
       case truthValue => truthValue
