@@ -26,7 +26,8 @@ case class Rule(
   head: List[PredicateInRule], // implied disjunction
   distanceMeasure: DistanceMeasure,
   weight: Double,
-  existentialVars: Set[String] = Set.empty) {
+  existentialVars: Set[String] = Set.empty,
+  foreachClauseInHead: Set[(String, String)] = Set.empty) {
   override def toString = {
     val conditionsString = body.mkString(" && ")
     val implicationsString = head.mkString(" || ")

@@ -145,8 +145,8 @@ object PslParser extends ParseHelper[ParsedPslFile] with ImplicitConversions {
   val hardRuleWeight = Double.MaxValue
 
   lazy val rule: Parser[Rule] = {
-    "rule" ~> opt(ruleProperties) ~ ":" ~ opt(repsep(predicateInRule, "&" ~ opt("&")) ~ "=>") ~ opt(existentialClause) ~ repsep(predicateInRule, "|" ~ opt("|")) ^^ {
-      case properties ~ ":" ~ bodyClause ~ existClause ~ headClause =>
+    "rule" ~> opt(ruleProperties) ~ ":" ~ opt(repsep(predicateInRule, "&" ~ opt("&")) ~ "=>") ~ opt(existentialClause) ~ opt(foreachClause) ~ repsep(predicateInRule, "|" ~ opt("|")) ^^ {
+      case properties ~ ":" ~ bodyClause ~ existClause ~ foreachClause ~ headClause =>
         // If the properties map contains a 'distanceMeasure' property,
         val distanceMeasure = properties.flatMap(_.get("distanceMeasure")).
           // parse it and use it, else use the default measure.
@@ -160,7 +160,7 @@ object PslParser extends ParseHelper[ParsedPslFile] with ImplicitConversions {
           case Some(x) => x._1 
           case None => List.empty
         }
-        Rule(ruleId, bodyPredicates, headClause, distanceMeasure, weight, existClause.getOrElse(Set.empty))
+        Rule(ruleId, bodyPredicates, headClause, distanceMeasure, weight, existClause.getOrElse(Set.empty), foreachClause.getOrElse(Set.empty))
     }
   }
    
@@ -169,6 +169,20 @@ object PslParser extends ParseHelper[ParsedPslFile] with ImplicitConversions {
       case existVars => existVars.toSet
     }
   }
+  
+  lazy val foreachClause: Parser[Set[(String, String)]] ={
+    "FOREACH" ~ "[" ~> repsep(foreachCouple, ",") <~ "]" ^^ {
+      case foreachCouples => foreachCouples.toSet
+    }
+  }
+  
+  lazy val foreachCouple: Parser[(String, String)] ={
+    identifier ~ "in" ~ identifier ^^ {
+      case iterator ~ "in" ~ iterable =>
+        (iterator, iterable)
+    }
+  }
+
 
   lazy val predicate: Parser[Predicate] = {
     "predicate" ~> opt(predicateProperties) ~ ":" ~ identifier ~ "(" ~ repsep((nonSetPredicateClass|setPredicateClass), ",") <~ ")" ^^ {

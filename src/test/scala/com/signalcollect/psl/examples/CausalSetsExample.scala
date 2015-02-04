@@ -35,13 +35,10 @@ class CausalSetsExample extends FlatSpec with Matchers with TestAnnouncements {
 class Variable: u,w,x,y,z,a,b,c
 
 predicate : indep(Variable, Variable, Set{0,3}[Variable])
-predicate : indep2(Variable, Variable, Set{0,6}[Variable])
 predicate : causes(Variable, Variable)
 
 // 0. conditional independence is symmetric in the first two variables.
 rule: indep(X, Y, Z) => indep(Y, X, Z)
-
-rule: indep2(X, Y, A) => indep2(Y, X, A)
 
 // 2. Irreflexivity of causes:
 // !(X → X)
@@ -62,7 +59,7 @@ rule: !indep(X,Y,W)  && indep(X,Y,{W, Z}) => causes(Z, X) || causes (Z, Y)
 rule: indep(X,Y,W)  && !indep(X,Y,{W,Z}) => !causes(Z, X)
 rule: indep(X,Y,W)  && !indep(X,Y,{W,Z}) => !causes(Z, Y)
 rule: indep(X,Y,W)  && !indep(X,Y,{W,Z}) => !causes(Z, W)
-// TODO rule: indep(X,Y,W)  && !indep(X,Y,{W,Z}) => FORALL [W1 in W] !causes(Z, W1)
+rule: indep(X,Y,W)  && !indep(X,Y,{W,Z}) => FOREACH [W1 in W] !causes(Z, W1)
 
 // 8. If X and Y are independent, then they are not causing each other.
 // Faithfulness assumption.
