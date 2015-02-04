@@ -192,13 +192,17 @@ object PslParser extends ParseHelper[ParsedPslFile] with ImplicitConversions {
   lazy val setPredicateClass: Parser[PslClass]= {
     "Set" ~ opt("{") ~> opt(integer <~ ",")  ~ opt(integer) ~ opt("}") ~ "[" ~ identifierOrDash ~ "]" ^^ {
       case  minCardinality ~ maxCardinality ~ optionalBracket ~ "[" ~ singleClassType ~ "]" =>
+        assert(maxCardinality.getOrElse(100) <= 100, "Maximum cardinality is bound by 100")
+        assert(minCardinality.getOrElse(0) <= maxCardinality.getOrElse(100), "Minimum cardinality should be less than maximum cardinality")
         PslClass(singleClassType, true, minCardinality, maxCardinality)
     }
   }
   
   lazy val truthValue: Parser[Double] = {
     "[" ~> opt("truthValue" ~> "=") ~> double <~ "]" ^^ {
-      case truthValue => truthValue
+      case truthValue => 
+        assert(truthValue <= 1 && truthValue >= 0, "Truth values have to be between 0 and 1")
+        truthValue
     }
   }
 

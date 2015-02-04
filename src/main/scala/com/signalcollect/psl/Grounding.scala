@@ -68,7 +68,7 @@ object Grounding {
    *  (A->demo, B->repub), (A->demo, B->anna).
    *
    */
-  def generateBindings(variables: List[Variable], individuals: Map[PslClass, Set[Individual]],
+  def generateBindings(variables: List[Variable], individuals: Map[(String, Int), Set[Individual]],
     config: InferencerConfig = InferencerConfig()): List[Map[String, Individual]] = {
     if (variables.size < 1) {
       return List.empty
@@ -80,9 +80,19 @@ object Grounding {
     val allMappingsList = variables.map {
       variable =>
         val variableIndividuals = if (variable.classTypes.isEmpty) {
-          individuals(PslClass("_")).map(v => Individual(v.value))
+          individuals(("_", 1)).map(v => Individual(v.value))
         } else {
-          val sets = variable.classTypes.map(individuals(_)).toList
+          val sets = variable.classTypes.map {
+            c =>
+              if (c.set) {
+                val minCard = c.minCardinalityOption.getOrElse(0)
+                val maxCard = c.maxCardinalityOption.getOrElse(100)
+                val range = minCard to maxCard
+                range.flatMap(r => individuals((c.id, r))).toSet
+              } else {
+                individuals((c.id, 1))
+              }
+          }.toList
           val intersection = sets.foldLeft(sets(0))(_ & _)
           intersection.map(v => Individual(v.value))
         }
@@ -151,46 +161,75 @@ object Grounding {
    * Generate all possible sets as individuals, so that they can be grounded where needed.
    */
   def generateAllPossibleSetsAsIndividuals(rules: List[Rule], individuals: Map[PslClass, Set[Individual]],
-    config: InferencerConfig = InferencerConfig()): Map[PslClass, Set[Individual]] = {
+    config: InferencerConfig = InferencerConfig()): Map[(String, Int), Set[Individual]] = {
+    val individualsMap = individuals.map { case (k, v) => (k.id, 1) -> v }
     // Find all set classes in predicates mentioned in rules.
-    // TODO: check not to reproduce too many classes.
-    
     val setClasses = rules.flatMap {
       rule =>
         if (config.verbose) println(s"Checking variables in rule: $rule")
         rule.allPredicatesInRule.flatMap {
           _.variables.flatMap { v =>
             v.classTypes.filter(_.set)
-          }.toSet
-        }.toSet
+          }
+        }.distinct
     }.toSet
 
     if (setClasses.isEmpty) {
       if (config.verbose) println("No variable with set type.")
-      individuals
+      individualsMap
     } else {
+
       if (config.verbose) println("Generating all possible sets of individuals.")
       // Get not set individuals.
       val nonSetIndividuals = individuals.filter(!_._1.set)
 
+      // Group the set classes by their base type and get all the sizes of the sets that we need,
+      // based on min and max cardinality.
+      val sizesOfSetsBySetClass = setClasses.groupBy(_.id).flatMap {
+        case (k, listOfSetClasses) =>
+          var ranges = Set.empty[Int]
+          listOfSetClasses.map {
+            setClass =>
+              val minCard = setClass.minCardinalityOption.getOrElse(0)
+              val maxCard = setClass.maxCardinalityOption.getOrElse(100)
+              if (!ranges.contains(minCard) && !ranges.contains(maxCard)) {
+                val r = minCard to maxCard
+                ranges = ranges ++ r
+              } else if (!ranges.contains(minCard)) {
+                val r = minCard to ranges.min - 1
+                ranges = ranges ++ r
+              } else if (!ranges.contains(maxCard)) {
+                val r = ranges.max + 1 to maxCard
+                ranges = ranges ++ r
+              }
+          }
+          Map(k -> ranges.toList.sorted)
+      }
+
       // For each of the set classes, create all possible combinations using the non set individuals.
-      val allPossibleSetsAsIndividuals = setClasses.flatMap { setClass =>
-        val nonSetIndividualsOfClass = nonSetIndividuals.filter(_._1.id == setClass.id)
-        if (nonSetIndividualsOfClass.size == 1) {
-          val relevantIndividuals = nonSetIndividualsOfClass.head._2
-          // Subsets creates all possible subsets of a set.
-          val allPossibleSetsForClass = relevantIndividuals.subsets.map {
-            subset =>
-              Individual(subset.toString, Set(setClass))
-          }.toSet
-          Some(Map(setClass -> allPossibleSetsForClass))
-        } else {
-          None
-        }
+      val allPossibleSetsAsIndividuals = sizesOfSetsBySetClass.flatMap {
+        case (singularTypeName, sizes) =>
+          val setClass = PslClass(singularTypeName, true)
+          val nonSetIndividualsOfClass = nonSetIndividuals.filter(_._1.id == singularTypeName)
+          if (nonSetIndividualsOfClass.size == 1) {
+            val relevantIndividuals = nonSetIndividualsOfClass.head._2
+            // Subsets creates all possible subsets of a set.
+            sizes.flatMap {
+              size =>
+                val subsetsPerSize = relevantIndividuals.subsets(size).map {
+                  subset =>
+                    val orderedSubset = subset.toList.sortBy(_.name).toSet
+                    Individual(orderedSubset.toString, Set(setClass))
+                }.toSet
+                Some(Map((setClass.id, size) -> subsetsPerSize))
+            }
+          } else {
+            None
+          }
       }.flatten.toMap
 
       // Return original individuals merged with the new individuals for set classes.
-      individuals ++ allPossibleSetsAsIndividuals
+      individualsMap ++ allPossibleSetsAsIndividuals
     }
 
   }
@@ -222,7 +261,7 @@ object Grounding {
    * Then add the truth values that are in the facts and the predicates.
    */
   def createGroundedPredicates(rules: List[Rule], predicates: List[Predicate], facts: List[Fact],
-    individuals: Map[PslClass, Set[Individual]],
+    individuals: Map[(String, Int), Set[Individual]],
     config: InferencerConfig = InferencerConfig()): Map[(String, List[Individual]), GroundedPredicate] = {
     // Collect the truth values in facts.
     val parallelMapOfFacts = if (config.parallelizeGrounding) { facts.par } else { facts }
@@ -343,7 +382,7 @@ object Grounding {
    * We do it in a second time, so we can have a unique id for each grounded predicate.
    */
   def createGroundedRules(rules: List[Rule], groundedPredicates: Map[(String, List[Individual]), GroundedPredicate],
-    individuals: Map[PslClass, Set[Individual]], startingId: Int = 0,
+    individuals: Map[(String, Int), Set[Individual]], startingId: Int = 0,
     config: InferencerConfig = InferencerConfig()): List[GroundedRule] = {
     var id = startingId
     rules.flatMap {
@@ -394,7 +433,7 @@ object Grounding {
    * We do it in a second time, so we can have a unique id for each grounded predicate.
    */
   def createGroundedConstraints(predicates: List[Predicate], groundedPredicates: Map[(String, List[Individual]), GroundedPredicate],
-    individuals: Map[PslClass, Set[Individual]], startingConstraintId: Int = 0,
+    individuals: Map[(String, Int), Set[Individual]], startingConstraintId: Int = 0,
     config: InferencerConfig = InferencerConfig()): (List[GroundedConstraint], Map[(String, List[Individual]), GroundedPredicate]) = {
     // The id of the grounded constraint.
     var id = 1
@@ -434,7 +473,7 @@ object Grounding {
    */
   def createFunctionalConstraints(startingId: Int, ruleId: Int, property: PredicateProperty, predicate: Predicate,
     groundedPredicates: Map[(String, List[Individual]), GroundedPredicate],
-    individuals: Map[PslClass, Set[Individual]],
+    individuals: Map[(String, Int), Set[Individual]],
     config: InferencerConfig = InferencerConfig()): (Int, List[GroundedConstraint], Map[(String, List[Individual]), GroundedPredicate]) = {
 
     // Functional means that the first individual is the same in all the grounded predicates of the same constraint.
@@ -589,7 +628,7 @@ object Grounding {
    * Used only when the hasSymmetricConstraints is true.
    */
   def createSymmetricConstraints(startingId: Int, ruleId: Int, predicate: Predicate, groundedPredicates: Map[(String, List[Individual]), GroundedPredicate],
-    individuals: Map[PslClass, Set[Individual]],
+    individuals: Map[(String, Int), Set[Individual]],
     config: InferencerConfig = InferencerConfig()): (Int, List[GroundedConstraint], Map[(String, List[Individual]), GroundedPredicate]) = {
     // Given all the combinations of individuals, e.g. (a,b), (b,c), (a,c)
     // For each produce the constraint: (a,b) - (b,a) = 0.	  

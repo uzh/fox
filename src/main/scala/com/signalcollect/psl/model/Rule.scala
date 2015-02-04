@@ -74,20 +74,14 @@ case class PredicateInRule(
 
   val allVarsOrIndsWithClasses = {
     predicate match {
-      case Some(p) => {
-        p.classes.zipWithIndex.map {
-          case (classType, i) if classType.id == "_" =>
-            variableOrIndividual(i)
-          case (classType, i) =>
-            VariableOrIndividual(variableOrIndividual(i).toString, Set(classType))
-        }
-      }
+      case Some(p) =>
+        VariableOrIndividualUtils.getVariablesOrIndividualsWithClasses(p, variableOrIndividual)
       case None => variableOrIndividual
     }
   }
 
   val varsOrIndsWithClasses = allVarsOrIndsWithClasses.filter(!_.set)
-    
+
   val setVarsOrIndsWithClasses = allVarsOrIndsWithClasses.filter(_.set)
 
   val variables = varsOrIndsWithClasses.map {

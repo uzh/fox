@@ -96,8 +96,8 @@ object MinimaExplorer {
     // This is the same as the inferencer, we copy it so we don't have to recreate the functions.
     val (groundedRules, groundedConstraints, idToGpMap) = Grounding.ground(pslData, config)
     println(s"Grounding completed: ${groundedRules.size} grounded rules, ${groundedConstraints.size} constraints and ${idToGpMap.keys.size} grounded predicates.")
-    //    idToGpMap.map(gp => println(s"${gp._2} ${gp._2.truthValue}"))
-    //    groundedRules.map(println(_))
+    //idToGpMap.map(gp => println(s"${gp._2} ${gp._2.truthValue}"))
+    //groundedRules.map(println(_))
     val functions = groundedRules.flatMap(_.createOptimizableFunction(config.stepSize, config.tolerance, config.breezeOptimizer))
     val constraints = groundedConstraints.flatMap(_.createOptimizableFunction(config.stepSize, config.tolerance, config.breezeOptimizer))
     //val (optimizerBaseFunctions, hardFunctions) = divideFunctionsAndConstraints(functions ++ constraints)

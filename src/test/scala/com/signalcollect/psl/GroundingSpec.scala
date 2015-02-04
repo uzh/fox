@@ -53,7 +53,8 @@ class GroundingSpec extends FlatSpec with Matchers with TestAnnouncements {
 	""")
     // anna, democrats, republicans, bob
     // Result: Map[(String, List[String]), GroundedPredicate]
-    val groundedPredicates = Grounding.createGroundedPredicates(pslData.rulesWithPredicates, pslData.predicates, pslData.facts, pslData.individualsByClass)
+    val individualsMap = pslData.individualsByClass.map { case (k, v) => (k.id, 1) -> v }
+    val groundedPredicates = Grounding.createGroundedPredicates(pslData.rulesWithPredicates, pslData.predicates, pslData.facts, individualsMap)
     assert(groundedPredicates.values.size == 28)
 
     assert(groundedPredicates(("person", List(anna))).truthValue == Some(1.0))
@@ -109,8 +110,9 @@ class GroundingSpec extends FlatSpec with Matchers with TestAnnouncements {
 
     // anna, republicans, democrats, bob
     // Result: Map[(String, List[String]), GroundedPredicate]
-    val groundedPredicates = Grounding.createGroundedPredicates(pslData.rulesWithPredicates, pslData.predicates, pslData.facts, pslData.individualsByClass)
-    val groundedRules = Grounding.createGroundedRules(pslData.rulesWithPredicates, groundedPredicates, pslData.individualsByClass)
+    val individualsMap = pslData.individualsByClass.map { case (k, v) => (k.id, 1) -> v }
+    val groundedPredicates = Grounding.createGroundedPredicates(pslData.rulesWithPredicates, pslData.predicates, pslData.facts, individualsMap)
+    val groundedRules = Grounding.createGroundedRules(pslData.rulesWithPredicates, groundedPredicates, individualsMap)
     assert(groundedRules.size == 24)
     // TODO: add ids to rules so we can check whether it is the correct rule.
     assert(groundedRules(0).definition.variables.toSet == Set(Variable("A"), Variable("P"), Variable("B")))
