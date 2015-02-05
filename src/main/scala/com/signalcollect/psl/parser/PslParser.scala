@@ -225,7 +225,7 @@ object PslParser extends ParseHelper[ParsedPslFile] with ImplicitConversions {
       case truthValues ~ ":" ~ negation ~ predicateName ~ "(" ~ variableGroundings =>
         assert(truthValues.size <= 2, "Too many truth values for fact.")
         val factTruth1 = if (!negation.isDefined) { Some(truthValues.headOption.getOrElse(1.0)) } else Some(1 - truthValues.headOption.getOrElse(1.0))
-        val factTruth2 = if (truthValues.size == 1){
+        val factTruth2 = if (truthValues.size <= 1){
           None
         } else{
           if (!negation.isDefined) { Some(truthValues(1)) } else Some(1- truthValues(1))

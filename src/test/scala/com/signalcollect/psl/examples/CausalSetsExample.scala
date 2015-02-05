@@ -33,6 +33,7 @@ class CausalSetsExample extends FlatSpec with Matchers with TestAnnouncements {
 
   val causal = """
 class Variable: u,w,x,y,z,a,b,c
+// class SelectionNode: s1,s2,s3
 
 predicate : indep(Variable, Variable, Set{0,3}[Variable])
 predicate : causes(Variable, Variable)
@@ -54,17 +55,19 @@ rule: causes(X,Y)  && causes(Y,Z) => causes(X,Z)
 
 // 6. If Z makes X and Y conditionally independent, then Z causes either X or Y or both.
 rule: !indep(X,Y,W)  && indep(X,Y,{W, Z}) => causes(Z, X) || causes (Z, Y)
+//rule: !indep(X,Y,W)  && indep(X,Y,{W, Z}) =>  FOREACH [S1 in S] causes(Z, X) || causes (Z, Y) || causes(Z, S1)
+
 
 // 7. If Z makes X and Y conditionally dependent, then Z does not cause neither X or Y, nor any of W.
 rule: indep(X,Y,W)  && !indep(X,Y,{W,Z}) => !causes(Z, X)
 rule: indep(X,Y,W)  && !indep(X,Y,{W,Z}) => !causes(Z, Y)
 rule: indep(X,Y,W)  && !indep(X,Y,{W,Z}) => !causes(Z, W)
 rule: indep(X,Y,W)  && !indep(X,Y,{W,Z}) => FOREACH [W1 in W] !causes(Z, W1)
+//rule: indep(X,Y,W)  && !indep(X,Y,{W,Z}) => FOREACH [S1 in S] !causes(Z, S1)
 
 // 8. If X and Y are independent, then they are not causing each other.
 // Faithfulness assumption.
 rule: indep(X,Y, {}) => !causes(X, Y)
-//rule: indep(X,Y, {}) => !causes(Y, X)
 
 // 9. Tom's new rule. 
 // TODO rule: !indep(X,Y,W)  && indep(X,Y,{W,Z}) && !causes(X, Z) && FORALL [W1 in W] !causes(X, W1) => !causes(X,Y)
