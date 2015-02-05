@@ -410,21 +410,61 @@ object Grounding {
         } else { rule.head }
         val newRule = Rule(rule.id, rule.body, newHead, rule.distanceMeasure, rule.weight, Set.empty)
 
+        // For each quantified vars: FOREACH [V1 in V] where V1 is the iterator and V the iterable variable.
+        // TODO; both can be sets, in which case V1 represents all of the subsets of V.
+        val forEachQuantifiedVariables = rule.foreachClauseInHead.map {
+          case (iterator, iterable) =>
+            (rule.variables.filter(_.name == iterator).head, rule.variables.filter(_.name == iterable).head)
+        }
+        val forEachQuantifiedIteratorVariables = forEachQuantifiedVariables.map(_._1)
+        val forEachQuantifiedIterableVariables = forEachQuantifiedVariables.map(_._2)
+
         // Normal vars.
         // Treat the rule as a normal rule.
-        val bindings = generateBindings(newRule.variables, individuals, config)
-        bindings.map {
+        val normalVars = newRule.variables.filter(!forEachQuantifiedIteratorVariables.contains(_))
+        val bindings = generateBindings(normalVars, individuals, config)
+        bindings.flatMap {
           binding =>
-            val groundedBody = newRule.body.map(getGroundedPredicate(groundedPredicates, _, binding)).flatten
-            val groundedHead = newRule.head.map(getGroundedPredicate(groundedPredicates, _, binding)).flatten
-            val unboundGroundedPredicates = groundedHead.filter(!_.truthValue.isDefined) ::: groundedBody.filter(!_.truthValue.isDefined)
-            if (unboundGroundedPredicates.size > 0) {
-              Some(GroundedRule({ id += 1; id }, newRule, groundedBody, groundedHead))
+            if (forEachQuantifiedVariables.size == 0) {
+              // Standard execution.
+              val groundedBody = newRule.body.map(getGroundedPredicate(groundedPredicates, _, binding)).flatten
+              val groundedHead = newRule.head.map(getGroundedPredicate(groundedPredicates, _, binding)).flatten
+              val unboundGroundedPredicates = groundedHead.filter(!_.truthValue.isDefined) ::: groundedBody.filter(!_.truthValue.isDefined)
+              if (unboundGroundedPredicates.size > 0) {
+                List(GroundedRule({ id += 1; id }, newRule, groundedBody, groundedHead))
+              } else {
+                List.empty
+              }
             } else {
-              None
+              // Bind the FOREACH iterator variables a posteriori with the individuals bound in the iterable variables.
+              assert(forEachQuantifiedVariables.size <= 1, "Currently we support only FOREACH with one variable.")
+              val (iterator, iterable) = forEachQuantifiedVariables.head
+              val iterableBinding = binding(iterable.name)
+              val individualsOfSubsets = iterator.classTypes.flatMap {
+                c =>
+                  // TODO: currently only subsets of size 1.
+                  val subsetsOfIterableBoundVar = iterableBinding.varsOrIndividualsInSet.subsets(1)
+                  val key = (c.id, 1)
+                  val values = subsetsOfIterableBoundVar.flatMap { v =>
+                    individuals(key).filter(_.name == v.toString)
+                  }.toSet
+                  Map(key -> values)
+              }.toMap
+              val newBindings = generateBindings(List(iterator), individualsOfSubsets)
+              newBindings.flatMap {
+                newBinding =>
+                  val groundedBody = newRule.body.map(getGroundedPredicate(groundedPredicates, _, newBinding ++ binding)).flatten
+                  val groundedHead = newRule.head.map(getGroundedPredicate(groundedPredicates, _, newBinding ++ binding)).flatten
+                  val unboundGroundedPredicates = groundedHead.filter(!_.truthValue.isDefined) ::: groundedBody.filter(!_.truthValue.isDefined)
+                  if (unboundGroundedPredicates.size > 0) {
+                    Some(GroundedRule({ id += 1; id }, newRule, groundedBody, groundedHead))
+                  } else {
+                    None
+                  }
+              }
             }
         }
-    }.flatten
+    }
   }
 
   /**

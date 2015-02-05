@@ -108,7 +108,7 @@ fact: indep(w, y, {x, u})
       maxIterations = 200000,
       absoluteEpsilon = 1e-5,
       relativeEpsilon = 1e-3)
-    val results = MinimaExplorer.exploreFromString(causal, config, List("none"))
+    val results = MinimaExplorer.exploreFromString(causal, config, List("causes"))
     for (result <- results) {
       if (result._3 == 0 && result._4 == 0) {
         println(s"${result._1}: false = ${result._2} : [${result._3},${result._4}]")
