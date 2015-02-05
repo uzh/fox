@@ -29,7 +29,8 @@ case class Fact(
   name: String,
   variableGroundings: List[Set[Individual]],
   truthValue: Option[Double],
-  predicate: Option[Predicate] = None) {
+  predicate: Option[Predicate] = None,
+  maxTruthValue: Option[Double] = None) {
 
   val groundingsAsSingleIndividuals =
     VariableOrIndividualUtils.groundingsAsSingleIndividuals(variableGroundings)
@@ -49,6 +50,6 @@ case class Fact(
     } else {
       ""
     }
-    s"grounding$truth: $name${groundingsAsSingleIndividuals.mkString("(", ", ", ")")}"
+    s"grounding [$truth, $maxTruthValue]: $name${groundingsAsSingleIndividuals.mkString("(", ", ", ")")}"
   }
 }

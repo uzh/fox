@@ -221,10 +221,16 @@ object PslParser extends ParseHelper[ParsedPslFile] with ImplicitConversions {
   }
 
   lazy val fact: Parser[Fact] = {
-    "fact" ~> opt(truthValue) ~ ":" ~ opt("!") ~ identifier ~ "(" ~ individualsInFact <~ ")" ^^ {
-      case truthValue ~ ":" ~ negation ~ predicateName ~ "(" ~ variableGroundings =>
-        val factTruth = if (!negation.isDefined) { truthValue.getOrElse(1.0) } else 1 - truthValue.getOrElse(1.0)
-        Fact(predicateName, variableGroundings, Some(factTruth))
+    "fact" ~> repsep(truthValue, ",") ~ ":" ~ opt("!") ~ identifier ~ "(" ~ individualsInFact <~ ")" ^^ {
+      case truthValues ~ ":" ~ negation ~ predicateName ~ "(" ~ variableGroundings =>
+        assert(truthValues.size <= 2, "Too many truth values for fact.")
+        val factTruth1 = if (!negation.isDefined) { Some(truthValues.headOption.getOrElse(1.0)) } else Some(1 - truthValues.headOption.getOrElse(1.0))
+        val factTruth2 = if (truthValues.size == 1){
+          None
+        } else{
+          if (!negation.isDefined) { Some(truthValues(1)) } else Some(1- truthValues(1))
+        }
+        Fact(predicateName, variableGroundings, factTruth1, maxTruthValue = factTruth2)
     }
   }
 
