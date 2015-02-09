@@ -422,7 +422,11 @@ object Grounding {
         // Normal vars.
         // Treat the rule as a normal rule.
         val normalVars = newRule.variables.filter(!forEachQuantifiedIteratorVariables.contains(_))
-        val bindings = generateBindings(normalVars, individuals, config)
+        val bindings = if (normalVars.size == 0) {
+          List(Map.empty[String, Individual])
+        } else {
+          generateBindings(normalVars, individuals, config)
+        }
         bindings.flatMap {
           binding =>
             if (forEachQuantifiedVariables.size == 0) {
