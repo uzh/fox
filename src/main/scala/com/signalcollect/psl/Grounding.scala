@@ -266,7 +266,7 @@ object Grounding {
     // Collect the truth values in facts.
     val parallelMapOfFacts = if (config.parallelizeGrounding) { facts.par } else { facts }
     val truthValues = parallelMapOfFacts.map { fact =>
-      ((fact.name, fact.groundingsAsSingleIndividuals.map(_.value)), fact.truthValue)
+      ((fact.name, fact.groundingsAsSingleIndividuals.map(_.value)), (fact.truthValue, fact.minTruthValue, fact.maxTruthValue))
     }.toMap
 
     // Ground predicates in rules.
@@ -339,8 +339,8 @@ object Grounding {
     // Create the grounded constraint predicates by merging the truth values.
     val groundedPredicates = allGroundedPredicatesKeys.map {
       case (pr, grounding) =>
-        val gp = GroundedPredicate({ id += 1; id }, pr, grounding,
-          truthValues.getOrElse((pr.name, grounding.map(_.value)), None))
+        val (truthValue, minTruthValue, maxTruthValue) = truthValues.getOrElse((pr.name, grounding.map(_.value)), (None, None, None))
+        val gp = GroundedPredicate({ id += 1; id }, pr, grounding, truthValue, minTruthValue.getOrElse(0.0), maxTruthValue.getOrElse(1.0))
         ((pr.name, grounding), gp)
     }.toMap
 
@@ -370,7 +370,7 @@ object Grounding {
             case None =>
               ((predicateName, newgroundings), otherGp)
             case Some(t) =>
-              ((predicateName, newgroundings), GroundedPredicate(otherGp.id, otherGp.definition, newgroundings, Some(t)))
+              ((predicateName, newgroundings), GroundedPredicate(otherGp.id, otherGp.definition, newgroundings, Some(t), math.max(otherGp.lowerBound, gp.lowerBound), math.min(otherGp.upperBound, gp.upperBound)))
           }
         }
     }
@@ -598,8 +598,8 @@ object Grounding {
     // Keep the grounded predicates that have no truth value (for the others the constraints are useless). 
     val bounds = unboundedGroundedPredicates.map {
       gp =>
-        val newLowerBound = if (pushBoundsInNodes) { math.max(0, math.min(gp.lowerBound, 1.0)) } else { 1.0 }
-        val newUpperBound = if (pushBoundsInNodes) { math.max(0, math.min(gp.upperBound, 1.0)) } else { 0.0 }
+        val newLowerBound = math.max(0, math.min(gp.lowerBound, 1.0))
+        val newUpperBound = math.max(0, math.min(gp.upperBound, 1.0))
         val leqUpperBound = GroundedConstraint({ id += 1; id }, { ruleId += 1; ruleId }, LessOrEqual, List(gp), Array(1.0), newUpperBound)
         val geqLowerBound = GroundedConstraint({ id += 1; id }, { ruleId }, GreaterOrEqual, List(gp), Array(1.0), newLowerBound)
         List(leqUpperBound, geqLowerBound)

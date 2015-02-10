@@ -212,25 +212,48 @@ object PslParser extends ParseHelper[ParsedPslFile] with ImplicitConversions {
     }
   }
   
-  lazy val truthValue: Parser[Double] = {
-    "[" ~> opt("truthValue" ~> "=") ~> double <~ "]" ^^ {
-      case truthValue => 
-        assert(truthValue <= 1 && truthValue >= 0, "Truth values have to be between 0 and 1")
-        truthValue
+  lazy val truthValues: Parser[List[Double]] = {
+    "[" ~> opt("truthValue" ~> "=") ~> repsep(double, ",") <~ "]" ^^ {
+      case truthValues => 
+        assert(truthValues.size <= 2, "Too many truth values for fact.")
+        truthValues.foreach(t => assert(t <= 1 && t >= 0, "Truth values have to be between 0 and 1"))
+        truthValues
     }
   }
 
   lazy val fact: Parser[Fact] = {
-    "fact" ~> repsep(truthValue, ",") ~ ":" ~ opt("!") ~ identifier ~ "(" ~ individualsInFact <~ ")" ^^ {
+    "fact" ~> opt(truthValues) ~ ":" ~ opt("!") ~ identifier ~ "(" ~ individualsInFact <~ ")" ^^ {
       case truthValues ~ ":" ~ negation ~ predicateName ~ "(" ~ variableGroundings =>
-        assert(truthValues.size <= 2, "Too many truth values for fact.")
-        val factTruth1 = if (!negation.isDefined) { Some(truthValues.headOption.getOrElse(1.0)) } else Some(1 - truthValues.headOption.getOrElse(1.0))
-        val factTruth2 = if (truthValues.size <= 1){
+        val factTruth = if (truthValues.isDefined && truthValues.get.size == 1 ){
+          if (!negation.isDefined) {
+            Some(truthValues.get(0))
+          } else {
+              Some(1.0- truthValues.get(0))
+            }
+          } else if (!truthValues.isDefined ||  truthValues.get.size == 0 ){
+            Some(1.0)
+          } else {
+            None
+          }
+        val normalizedFactTruth1 = if (!truthValues.isDefined || truthValues.get.size <= 1){
           None
         } else{
-          if (!negation.isDefined) { Some(truthValues(1)) } else Some(1- truthValues(1))
+          if (!negation.isDefined) {
+            Some(truthValues.get(0)) 
+          } else {
+            Some(1 - truthValues.get(0)) 
+          }
+        }   
+        val normalizedFactTruth2 = if (!truthValues.isDefined || truthValues.get.size <= 1){
+          None
+        } else{
+          if (!negation.isDefined) {
+            Some(truthValues.get(1)) 
+          } else {
+            Some(1 - truthValues.get(1)) 
+          }
         }
-        Fact(predicateName, variableGroundings, factTruth1, maxTruthValue = factTruth2)
+        Fact(predicateName, variableGroundings, factTruth, minTruthValue = normalizedFactTruth1, maxTruthValue = normalizedFactTruth2)
     }
   }
 

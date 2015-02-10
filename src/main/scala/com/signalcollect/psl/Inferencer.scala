@@ -284,7 +284,7 @@ object Inferencer {
     } else {
       Map.empty
     }
-    println(s"Problem converted to consensus optimization with ${functions.size} functions and ${constraints.size} constraints.")
+    println(s"Problem converted to consensus optimization with ${functions.size} functions,  ${constraints.size} constraints and ${boundsForConsensusVariables.size} bounds.")
     (functions, constraints, boundsForConsensusVariables)
   }
 
