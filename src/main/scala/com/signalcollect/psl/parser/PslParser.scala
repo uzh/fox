@@ -224,15 +224,24 @@ object PslParser extends ParseHelper[ParsedPslFile] with ImplicitConversions {
   lazy val fact: Parser[Fact] = {
     "fact" ~> opt(truthValues) ~ ":" ~ opt("!") ~ identifier ~ "(" ~ individualsInFact <~ ")" ^^ {
       case truthValues ~ ":" ~ negation ~ predicateName ~ "(" ~ variableGroundings =>
-        val factTruth = if (truthValues.isDefined && truthValues.get.size == 1 ){
-          if (!negation.isDefined) {
-            Some(truthValues.get(0))
-          } else {
+        val factTruth = 
+          if (truthValues.isDefined && truthValues.get.size == 1 ){
+          // fact [ 0.1]: votes(anna, demo)
+            if (!negation.isDefined) {
+              Some(truthValues.get(0))
+            } else {
               Some(1.0- truthValues.get(0))
             }
-          } else if (!truthValues.isDefined ||  truthValues.get.size == 0 ){
-            Some(1.0)
+          } else if (!truthValues.isDefined || truthValues.get.size == 0 ){
+            // fact : votes(anna, demo)
+            if (!negation.isDefined) {
+              Some(1.0)
+            } else {
+              Some(0.0)
+            }
           } else {
+            // fact [0.1, 0.3]: votes(anna, demo)
+            // an interval fact, we will take care of it in normalizedFactTruth1 and normalizedFactTruth2
             None
           }
         val normalizedFactTruth1 = if (!truthValues.isDefined || truthValues.get.size <= 1){
