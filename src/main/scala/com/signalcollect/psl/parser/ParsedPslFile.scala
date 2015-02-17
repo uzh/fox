@@ -54,8 +54,8 @@ case class ParsedPslFile(
   constants: Set[Individual] = Set.empty) {
 
   def individualsInFacts = factsWithPredicates.flatMap(_.indsWithClasses).distinct
-  def individualsInRules = rulesWithPredicates.flatMap(_.body.flatMap(p => p.individuals)) ++
-    rulesWithPredicates.flatMap(_.head.flatMap(p => p.individuals))
+  def individualsInRules = rulesWithPredicates.flatMap(_.body.flatMap(p => p.singleIndividuals)) ++
+    rulesWithPredicates.flatMap(_.head.flatMap(p => p.singleIndividuals))
 
   def individuals: List[Individual] = {
     val individualsInClasses = explicitClasses.map(_._2).flatten

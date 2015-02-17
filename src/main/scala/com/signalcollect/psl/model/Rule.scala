@@ -81,19 +81,31 @@ case class PredicateInRule(
     }
   }
 
-  val varsOrIndsWithClasses = allVarsOrIndsWithClasses.filter(!_.set)
+  //val varsOrIndsWithClasses = allVarsOrIndsWithClasses.filter(!_.set)
 
-  val setVarsOrIndsWithClasses = allVarsOrIndsWithClasses.filter(_.set)
+  //val setVarsOrIndsWithClasses = allVarsOrIndsWithClasses.filter(_.set)
 
-  val variables = varsOrIndsWithClasses.map {
+  val variables = allVarsOrIndsWithClasses.filter(!_.set).flatMap {
     case v: Variable => Some(v)
     case _ => None
-  }.flatten
+  }
 
-  val individuals = varsOrIndsWithClasses.map {
+  val individuals = allVarsOrIndsWithClasses.flatMap {
     case i: Individual => Some(i)
     case _ => None
-  }.flatten
+  }
+
+  val singleIndividuals = predicate match {
+    case Some(p) =>
+      VariableOrIndividualUtils.getVariablesOrSingleIndividualsWithClasses(p, variableOrIndividual).flatMap {
+        case i: Individual => Some(i)
+        case _ => None
+      }
+    case None => variableOrIndividual.flatMap {
+      case i: Individual => Some(i)
+      case _ => None
+    }
+  }
 
   override def toString = s"${if (negated) "!" else ""}$name${allVarsOrIndsWithClasses.mkString("(", ", ", ")")}"
 }

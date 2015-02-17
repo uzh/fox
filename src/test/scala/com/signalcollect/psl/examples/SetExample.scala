@@ -36,12 +36,11 @@ predicate : causes(Set{1,1}[Variable], Set {1, 4} [Variable])
 
 //rule: !causes(X, X)
 //rule: causes(X ,Y) => causes(Y,X)
-rule : causes(X,Y) => causes(Y,X)
+rule : !causes(X,Y)
 
 class Variable: x,y,z
 
-rule [8, distanceMeasure = linear]: causes(x, y)
-rule [5, distanceMeasure = linear]: !causes(y, x)
+rule [8, distanceMeasure = linear]: causes(x, {y,z})
 rule [100, distanceMeasure = linear]: !causes(x, z)
 
 
