@@ -40,6 +40,8 @@ case class PslClass(
   set: Boolean = false,
   minCardinalityOption: Option[Int] = None,
   maxCardinalityOption: Option[Int] = None) {
+  
+  def maxPossibleCardinality = 10
 
   override def toString = {
     if (set) {

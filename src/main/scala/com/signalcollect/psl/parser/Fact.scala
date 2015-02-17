@@ -39,7 +39,8 @@ case class Fact(
   val indsWithClasses = {
     predicate match {
       case Some(p) => {
-        VariableOrIndividualUtils.getIndividualsWithClasses(p, variableGroundings, groundingsAsSingleIndividuals)
+        VariableOrIndividualUtils.getIndividualsReusingGroundingsAsSingleIndividuals(p, variableGroundings, 
+            groundingsAsSingleIndividuals, getSingleIndividuals = true)
       }
       case None => variableGroundings.flatten
     }

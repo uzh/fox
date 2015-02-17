@@ -41,7 +41,7 @@ abstract class ParseHelper[T] extends RegexParsers {
 
   def defaultParser: Parser[T]
 
-  def parse(files: List[File]): T 
+  def parse(files: List[File]): T
 
   def parse(f: File): T = {
     parseFile(f, defaultParser)
@@ -57,11 +57,16 @@ abstract class ParseHelper[T] extends RegexParsers {
 
   def identifier: Parser[String] = "[-a-zA-Z0-9]+".r
 
+  // Classes can be anything or dash.
   def identifierOrDash: Parser[String] = "[-a-zA-Z0-9_]*".r
 
-  def identifierOrDashOrBracket: Parser[String] = "[-a-zA-Z0-9_\\[\\]\\{\\}]*".r
+  //def identifierOrDashOrBracket: Parser[String] = "[-a-zA-Z0-9_\\[\\]\\{\\}]*".r
 
+  // Variables or individuals of sets of vars/individuals.
   def identifierOrBracket: Parser[String] = "[-a-zA-Z0-9\\{\\}\\[\\]]*".r
+
+  // Urls inside quotes.
+  def regexUrl: Parser[String] = """<http://[A-Za-z0-9-_]+.[A-Za-z0-9-_:%&?/.=]+>""".r
 
   /**
    * Helper function for better error messages.

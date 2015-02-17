@@ -59,7 +59,7 @@ import com.signalcollect.psl.model.VariableOrIndividual
  */
 object PslParser extends ParseHelper[ParsedPslFile] with ImplicitConversions {
 
-  lexical.delimiters ++= List("(", ")", "&", "|", "=>", "=", "!", ",", ":", "_")
+  lexical.delimiters ++= List("(", ")", "&", "|", "=>", "=", "!", ",", ":", "[", "]")
   protected override val whiteSpace = """(\s|//.*|#.*|(?m)/\*(\*(?!/)|[^*])*\*/)+""".r
 
   def defaultParser = pslFile
@@ -87,7 +87,7 @@ object PslParser extends ParseHelper[ParsedPslFile] with ImplicitConversions {
   var ruleId = 0
 
   lazy val predicateInRule: Parser[PredicateInRule] = {
-    opt("!") ~ identifier ~ "(" ~ repsep(varOrIndividualsInSet|varOrIndividualsNotInSet, ",") <~ ")" ^^ {
+    opt("!") ~ (identifier|regexUrl) ~ "(" ~ repsep(varOrIndividualsInSet|varOrIndividualsNotInSet, ",") <~ ")" ^^ {
       case negation ~ predicateName ~ "(" ~ variablesOrIndividuals =>
         PredicateInRule(predicateName, variablesOrIndividuals.map(v => VariableOrIndividual(v.toString)), negation.isDefined)
     }
@@ -185,8 +185,8 @@ object PslParser extends ParseHelper[ParsedPslFile] with ImplicitConversions {
 
 
   lazy val predicate: Parser[Predicate] = {
-    "predicate" ~> opt(predicateProperties) ~ ":" ~ identifier ~ "(" ~ repsep((nonSetPredicateClass|setPredicateClass), ",") <~ ")" ^^ {
-      case properties ~ ":" ~ name ~ "(" ~ placeholders =>
+    "predicate" ~> opt(predicateProperties) ~ ":" ~ (identifier|regexUrl) ~ "(" ~ repsep(nonSetPredicateClass|setPredicateClass, ",") ~ ")" ^^ {
+      case properties ~ ":" ~ name ~ "(" ~ placeholders ~")" =>
          val prior = properties.flatMap(_.get("prior")).map(_.toDouble)
          val parsedProperties: Set[PredicateProperty]= properties match{
            case Some(p) => 
@@ -197,17 +197,17 @@ object PslParser extends ParseHelper[ParsedPslFile] with ImplicitConversions {
     }
   }
   lazy val nonSetPredicateClass: Parser[PslClass]= {
-    not("Set") ~> identifierOrDash ^^ {
-      case  placeholder =>
+    not("Set") ~> (regexUrl|identifierOrDash)^^ {
+      case placeholder =>
         PslClass(placeholder)
     }
   }
   
   lazy val setPredicateClass: Parser[PslClass]= {
-    "Set" ~ opt("{") ~> opt(integer <~ ",")  ~ opt(integer) ~ opt("}") ~ "[" ~ identifierOrDash ~ "]" ^^ {
+    "Set" ~ opt("{") ~> opt(integer <~ ",")  ~ opt(integer) ~ opt("}") ~ "[" ~ (identifierOrDash|regexUrl) ~ "]" ^^ {
       case  minCardinality ~ maxCardinality ~ optionalBracket ~ "[" ~ singleClassType ~ "]" =>
-        assert(maxCardinality.getOrElse(100) <= 100, "Maximum cardinality is bound by 100")
-        assert(minCardinality.getOrElse(0) <= maxCardinality.getOrElse(100), "Minimum cardinality should be less than maximum cardinality")
+        assert(maxCardinality.getOrElse(10) <= 10, "Maximum cardinality is bound by 100")
+        assert(minCardinality.getOrElse(0) <= maxCardinality.getOrElse(10), "Minimum cardinality should be less than maximum cardinality")
         PslClass(singleClassType, true, minCardinality, maxCardinality)
     }
   }
@@ -222,7 +222,7 @@ object PslParser extends ParseHelper[ParsedPslFile] with ImplicitConversions {
   }
 
   lazy val fact: Parser[Fact] = {
-    "fact" ~> opt(truthValues) ~ ":" ~ opt("!") ~ identifier ~ "(" ~ individualsInFact <~ ")" ^^ {
+    "fact" ~> opt(truthValues) ~ ":" ~ opt("!") ~ (identifier|regexUrl) ~ "(" ~ individualsInFact <~ ")" ^^ {
       case truthValues ~ ":" ~ negation ~ predicateName ~ "(" ~ variableGroundings =>
         val factTruth = 
           if (truthValues.isDefined && truthValues.get.size == 1 ){
@@ -272,9 +272,8 @@ object PslParser extends ParseHelper[ParsedPslFile] with ImplicitConversions {
         List.empty
       case variableGroundings =>
         for (individuals <- variableGroundings) {
-          for (individual <- individuals) {
-            assert(individual.forall(c => !c.isUpper),
-              s"Individuals that appear in facts have to be all lowercase, $individual contains at least one uppercase character.")
+          for (ind <- individuals) {
+            assert(!ind.charAt(0).isUpper, s"Individuals cannot start with an uppercase letter.")
           }
         }
         variableGroundings.map( i => i.map(Individual(_)))
@@ -282,14 +281,14 @@ object PslParser extends ParseHelper[ParsedPslFile] with ImplicitConversions {
   }
   
   lazy val varOrIndividualsNotInSet: Parser[Set[String]] = {
-    identifierOrDash ^^ {
+    (regexUrl|identifierOrDash) ^^ {
       case indNonInSet =>
         Set(indNonInSet)
     }
   }
   lazy val varOrIndividualsInSet : Parser[Set[String]] = {
-    ("{"|"[") ~> repsep(identifier, ",")  <~ ("}"|"]") ^^ {
-       case indInSet =>
+    ("{"|"[") ~> repsep(identifier|regexUrl, ",")  <~ ("}"|"]") ^^ {
+       case  indInSet =>
          indInSet.toSet
     } 
   }
@@ -341,7 +340,7 @@ object PslParser extends ParseHelper[ParsedPslFile] with ImplicitConversions {
   }
     
   lazy val individuals: Parser[Set[Individual]] = {
-    "individuals" ~> ":" ~ repsep(identifier, ",") ^^ {
+    "individuals" ~> ":" ~ repsep(identifier|regexUrl, ",") ^^ {
       case ":" ~ individuals =>
         for (ind <- individuals){
             assert(ind.forall(c => !c.isUpper),
@@ -353,7 +352,7 @@ object PslParser extends ParseHelper[ParsedPslFile] with ImplicitConversions {
   
     
   lazy val classType: Parser[(PslClass, Set[Individual])] = {
-    "class" ~> identifier ~ opt(":" ~ repsep(identifier, ",")) ^^ {
+    "class" ~> (identifier|regexUrl) ~ opt(":" ~ repsep(identifier|regexUrl, ",")) ^^ {
       case classType ~ optionalList =>
         if(!optionalList.isDefined){
           (PslClass(classType), Set.empty)
@@ -361,7 +360,7 @@ object PslParser extends ParseHelper[ParsedPslFile] with ImplicitConversions {
           val individuals = optionalList.get._2
           for (ind <- individuals){
             assert(!ind.charAt(0).isUpper,
-            s"Individuals that appear in facts must start with a lowercase character.")
+            s"Individuals cannot start with an uppercase letter.")
           }
           (PslClass(classType), individuals.map(Individual(_, Set(PslClass(classType)))).toSet)
         }

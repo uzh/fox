@@ -97,7 +97,7 @@ case class PredicateInRule(
 
   val singleIndividuals = predicate match {
     case Some(p) =>
-      VariableOrIndividualUtils.getVariablesOrSingleIndividualsWithClasses(p, variableOrIndividual).flatMap {
+      VariableOrIndividualUtils.getVariablesOrIndividualsWithClasses(p, variableOrIndividual, getSingleIndividuals = true).flatMap {
         case i: Individual => Some(i)
         case _ => None
       }

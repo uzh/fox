@@ -86,7 +86,7 @@ object Grounding {
             c =>
               if (c.set) {
                 val minCard = c.minCardinalityOption.getOrElse(0)
-                val maxCard = c.maxCardinalityOption.getOrElse(100)
+                val maxCard = c.maxCardinalityOption.getOrElse(c.maxPossibleCardinality)
                 val range = minCard to maxCard
                 range.flatMap(r => individuals((c.id, r))).toSet
               } else {
@@ -191,7 +191,7 @@ object Grounding {
           listOfSetClasses.map {
             setClass =>
               val minCard = setClass.minCardinalityOption.getOrElse(0)
-              val maxCard = setClass.maxCardinalityOption.getOrElse(100)
+              val maxCard = setClass.maxCardinalityOption.getOrElse(setClass.maxPossibleCardinality)
               if (!ranges.contains(minCard) && !ranges.contains(maxCard)) {
                 val r = minCard to maxCard
                 ranges = ranges ++ r

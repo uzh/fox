@@ -90,7 +90,8 @@ case class ParsedPslFile(
           classesAndIndividualsInFacts.getOrElse(classname, Set.empty) ++
           classesAndIndividualsInRules.getOrElse(classname, Set.empty))
     }.toMap
-    allClasses ++ Map(PslClass("_") -> individuals.toSet)
+    val allIndividualsByClass  = allClasses ++ Map(PslClass("_") -> individuals.toSet)
+    allIndividualsByClass
   }
 
   val rulesWithPredicates = {
