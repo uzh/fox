@@ -412,7 +412,7 @@ object Grounding {
 
         // For each quantified vars: FOREACH [V1 in V] where V1 is the iterator and V the iterable variable.
         // TODO; both can be sets, in which case V1 represents all of the subsets of V.
-        val forEachQuantifiedVariables = rule.foreachClauseInHead.map {
+        val forEachQuantifiedVariables = rule.foreachInSetClauseInHead.map {
           case (iterator, iterable) =>
             (rule.variables.filter(_.name == iterator).head, rule.variables.filter(_.name == iterable).head)
         }

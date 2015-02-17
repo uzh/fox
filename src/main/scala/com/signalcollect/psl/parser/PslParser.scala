@@ -227,8 +227,8 @@ object PslParser extends ParseHelper[ParsedPslFile] with ImplicitConversions {
   }
 
   lazy val rule: Parser[Rule] = {
-    "rule" ~> opt(ruleProperties) ~ ":" ~ opt(repsep(predicateInRule, "&" ~ opt("&")) ~ "=>") ~ opt(existentialClause) ~ opt(foreachClause) ~ repsep(predicateInRule, "|" ~ opt("|")) ^^ {
-      case properties ~ ":" ~ bodyClause ~ existClause ~ foreachClause ~ headClause =>
+    "rule" ~> opt(ruleProperties) ~ ":" ~ opt(existsInSetClause) ~ opt( bodyClauses <~ "=>") ~ opt(foreachInSetClause) ~ headClauses ^^ {
+      case properties ~ ":" ~ existsInSetClauseInBody ~ bodyClause ~ foreachInSetClauseInHead ~ headClause =>
         // If the properties map contains a 'distanceMeasure' property,
         val distanceMeasure = properties.flatMap(_.get("distanceMeasure")).
           // parse it and use it, else use the default measure.
@@ -238,27 +238,73 @@ object PslParser extends ParseHelper[ParsedPslFile] with ImplicitConversions {
           //  parse it and use that weight, else use weight 'hardRuleWeight' to simulate a hard rule.
           map(_.toDouble).getOrElse(hardRuleWeight)
         ruleId += 1
-        val bodyPredicates = bodyClause match {
-          case Some(x) => x._1 
-          case None => List.empty
+        val (bodyPredicates, foreachInSetClauseInBody) = bodyClause match {
+          case Some(x) => (x._1, x._2)
+          case None => (List.empty, Set.empty[(String, String)])
         }
-        Rule(ruleId, bodyPredicates, headClause, distanceMeasure, weight, existClause.getOrElse(Set.empty), foreachClause.getOrElse(Set.empty))
+        Rule(ruleId, bodyPredicates, headClause._1, distanceMeasure, weight, headClause._2, 
+            foreachInSetClauseInHead.getOrElse(List.empty).toSet, headClause._3.toSet, 
+            foreachInSetClauseInBody, existsInSetClauseInBody.getOrElse(List.empty).toSet)
     }
   }
+  
+   lazy val headClauses: Parser[(List[PredicateInRule], Set[String], List[(String,String)])] ={
+     repsep(headClause, "|" ~ opt("|")) ^^ {
+       case clauses =>
+        val predicatesInRules = clauses.flatMap(_._1)
+        val setOfExistentialVars = clauses.map(_._2).flatten.toSet
+        val existsInSetInHeadClauses =  clauses.flatMap(_._3)
+        (predicatesInRules, setOfExistentialVars, existsInSetInHeadClauses )
+     }
+   }
    
+  lazy val headClause: Parser[(Option[PredicateInRule], Set[String], List[(String,String)])] ={
+    opt(existentialClause|existsInSetClause) ~ opt(predicateInRule) ^^ {
+      case None ~ p =>
+       (p, Set.empty, List.empty)
+      case Some(exist) ~ p =>
+        exist match{
+          case s : Set[String] => (p, s, List.empty)
+          case s : List[(String,String)] => (p, Set.empty, s)      
+        }
+    }
+  }
+  
+  lazy val bodyClause: Parser[(Option[PredicateInRule], Set[(String,String)])] ={
+    opt(foreachInSetClause) ~ opt(predicateInRule) ^^ {
+      case None ~ p => (p, Set.empty)
+      case Some(s) ~ p => (p, s.toSet)
+    }
+  }
+  
+   lazy val bodyClauses: Parser[(List[PredicateInRule], Set[(String,String)])] ={
+     repsep(bodyClause, "&" ~ opt("&")) ^^ {
+       case clauses =>
+         val predicatesInRules = clauses.flatMap(_._1)
+         val foreachInSetInBodyClauses = clauses.map(_._2).flatten.toSet
+        (predicatesInRules, foreachInSetInBodyClauses )
+     }
+   }
+  
   lazy val existentialClause: Parser[Set[String]] ={
     "EXISTS" ~ "[" ~> repsep(identifier, ",") <~ "]" ^^ {
-      case existVars => existVars.toSet
+      case  existVars => existVars.toSet
     }
   }
   
-  lazy val foreachClause: Parser[Set[(String, String)]] ={
-    "FOREACH" ~ "[" ~> repsep(foreachCouple, ",") <~ "]" ^^ {
-      case foreachCouples => foreachCouples.toSet
+  lazy val foreachInSetClause: Parser[List[(String, String)]] ={
+    "FOREACH" ~ "[" ~> repsep(scopedVariableCouple, ",") <~ "]" ^^ {
+      case foreachCouples => foreachCouples
     }
   }
   
-  lazy val foreachCouple: Parser[(String, String)] ={
+  lazy val existsInSetClause: Parser[List[(String, String)]] ={
+    "EXISTS" ~ "[" ~> repsep(scopedVariableCouple, ",") <~ "]" ^^ {
+      case existsCouples => existsCouples
+    }
+  }
+  
+  lazy val scopedVariableCouple: Parser[(String, String)] ={
     identifier ~ "in" ~ identifier ^^ {
       case iterator ~ "in" ~ iterable =>
         (iterator, iterable)

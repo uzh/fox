@@ -98,7 +98,7 @@ case class ParsedPslFile(
     val standardRulesWithPredicates = rules.map {
       rule =>
         Rule(rule.id, rule.body.map(mergePredicateInRule(_)),
-          rule.head.map(mergePredicateInRule(_)), rule.distanceMeasure, rule.weight, rule.existentialVars, rule.foreachClauseInHead)
+          rule.head.map(mergePredicateInRule(_)), rule.distanceMeasure, rule.weight, rule.existentialVars, rule.foreachInSetClauseInHead)
     }
     // Create rules for predicates that have prior values defined.
     val priorRules = predicates.filter(_.prior.isDefined).flatMap {

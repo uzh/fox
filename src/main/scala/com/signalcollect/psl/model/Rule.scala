@@ -26,8 +26,12 @@ case class Rule(
   head: List[PredicateInRule], // implied disjunction
   distanceMeasure: DistanceMeasure,
   weight: Double,
-  existentialVars: Set[String] = Set.empty,
-  foreachClauseInHead: Set[(String, String)] = Set.empty) {
+  existentialVars: Set[String] = Set.empty, // Only in head.
+  foreachInSetClauseInHead: Set[(String, String)] = Set.empty, // Warning: this is not standard Lukasiewicz.
+  existsInSetClauseInHead: Set[(String, String)] = Set.empty,
+  foreachInSetClauseInBody: Set[(String, String)] = Set.empty,
+  existsInSetClauseInBody: Set[(String, String)] = Set.empty // Warning: this is not standard Lukasiewicz.
+  ) {
   override def toString = {
     val conditionsString = body.mkString(" && ")
     val implicationsString = head.mkString(" || ")
