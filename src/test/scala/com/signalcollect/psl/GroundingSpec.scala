@@ -46,7 +46,7 @@ class GroundingSpec extends FlatSpec with Matchers with TestAnnouncements {
         predicate: 	mentor(_, _)
         predicate: 	idol( _, _)
         rule [weight = 0.5, distanceMeasure = linear]: 	person(A) && votes(A,P) && idol(B,A)  => !votes(B,P) 
-        fact: !votes(anna, republicans)
+        fact [0]: votes(anna, republicans)
         fact: person(anna)
         fact [truthValue = 0.5]: votes(anna, democrats)
         fact [truthValue = 0.666]: votes(bob, republicans)

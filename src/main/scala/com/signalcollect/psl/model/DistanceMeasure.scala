@@ -24,7 +24,8 @@ object DistanceMeasure {
   val defaultMeasure: DistanceMeasure = Squared
   val validMeasures = Set(Linear, Squared)
   def parse(s: String): DistanceMeasure = {
-    s match {
+    val lower = s.toLowerCase
+    lower match {
       case Linear(_) => Linear
       case Squared(_) => Squared
       case other => throw new Exception(

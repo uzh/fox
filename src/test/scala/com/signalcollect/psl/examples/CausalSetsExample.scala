@@ -73,7 +73,7 @@ rule: indep(X,Y, {}) => !causes(X, Y)
 // TODO rule: !indep(X,Y,W)  && indep(X,Y,{W,Z}) && !causes(X, Z) && FORALL [W1 in W] !causes(X, W1) => !causes(X,Y)
 
 
-fact: !indep(x, u, {})
+rule [weight = 0.8, distanceMeasure = linear]: !indep(x, u, {})
 fact: !indep(x, w, {})
 fact: !indep(x, y, {})
 fact: !indep(y, u, {})
@@ -176,7 +176,7 @@ GroundedPredicate 1812: causes[ ] (x, a): unknown  = 0.0 : [0.0,0.855]
       maxIterations = 200000,
       absoluteEpsilon = 1e-5,
       relativeEpsilon = 1e-3)
-    val results = MinimaExplorer.exploreFromString(causal, config, List("causes"))
+    val results = MinimaExplorer.exploreFromString(causal, config, List("causes [ ] (x, y)"))
     for (result <- results) {
       if (result._3 == 0 && result._4 == 0) {
         println(s"${result._1}: false = ${result._2} : [${result._3},${result._4}]")

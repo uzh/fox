@@ -27,20 +27,22 @@ import com.signalcollect.psl.Inferencer
 import com.signalcollect.psl.InferencerConfig
 import com.signalcollect.psl.parser.PslParser
 import com.signalcollect.util.TestAnnouncements
+import com.signalcollect.admm.utils.MinimaExplorer
 
 class SetExample extends FlatSpec with Matchers with TestAnnouncements {
 
   val causal = """
-predicate : causes(Set{1,1}[Variable], Set {1, 2} [Variable])
+predicate : causes(Set{1,1}[Variable], Set {1, 4} [Variable])
 
 //rule: !causes(X, X)
 //rule: causes(X ,Y) => causes(Y,X)
-rule [1]: causes(X,Y)
+rule : causes(X,Y) => causes(Y,X)
 
-class Variable: x,y,z,w
+class Variable: x,y,z
 
-fact: causes(x, y)
-fact [0.4, 0.6]: causes(x, {y,z})
+rule [8, distanceMeasure = linear]: causes(x, y)
+rule [5, distanceMeasure = linear]: !causes(y, x)
+rule [100, distanceMeasure = linear]: !causes(x, z)
 
 
 //fact[0.3]: !causes(y, {w, u})
@@ -48,9 +50,22 @@ fact [0.4, 0.6]: causes(x, {y,z})
   """
 
   it should "provide a solution consistent for the set example" in {
-    val config = InferencerConfig(computeObjectiveValueOfSolution = true, lazyThreshold = None, isBounded = true)
-    val results = Inferencer.runInferenceFromString(causal, config = config)
-    println(results)
-    (results.idToGpMap.size should be (75))
+    val config = InferencerConfig(
+      computeObjectiveValueOfSolution = true,
+      lazyThreshold = None,
+      removeSymmetricConstraints = false,
+      maxIterations = 20000,
+      absoluteEpsilon = 1e-5,
+      relativeEpsilon = 1e-3)
+    val results = MinimaExplorer.exploreFromString(causal, config, List("causes"))
+    for (result <- results) {
+      if (result._3 == 0 && result._4 == 0) {
+        println(s"${result._1}: false = ${result._2} : [${result._3},${result._4}]")
+      } else if (result._3 == 1 && result._4 == 1) {
+        println(s"${result._1}: true  = ${result._2} : [${result._3},${result._4}]")
+      } else {
+        println(s"${result._1}: unknown  = ${result._2} : [${result._3},${result._4}]")
+      }
+    }
   }
 }
