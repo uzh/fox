@@ -85,33 +85,46 @@ object PslParser extends ParseHelper[ParsedPslFile] with ImplicitConversions {
   }
   
   var ruleId = 0
-
-  lazy val predicateInRule: Parser[PredicateInRule] = {
-    opt("!") ~ (identifier|regexUrl) ~ "(" ~ repsep(varOrIndividualsInSet|varOrIndividualsNotInSet, ",") <~ ")" ^^ {
-      case negation ~ predicateName ~ "(" ~ variablesOrIndividuals =>
-        PredicateInRule(predicateName, variablesOrIndividuals.map(v => VariableOrIndividual(v.toString)), negation.isDefined)
-    }
-  }
-
-  val validRuleProperties = Set("weight", "distanceMeasure")
-  val validPredicateProperties = Set("prior")
-
-  val ruleProperty: Parser[(String, String)] = {
-    opt(identifier <~ "=") ~ "[a-zA-Z0-9\\-\\.]*".r ^^ {
-      case propertyNameOpt ~ propertyValue =>
-        if (propertyNameOpt.isDefined) {
-          val propertyName = propertyNameOpt.get
-          assert(validRuleProperties.contains(propertyName),
-            s"$propertyName is not a valid rule property. Valid rule properties are:\n" +
-              validRuleProperties.mkString(", "))
-          (propertyName, propertyValue)
+  
+  
+  /**
+   * Class types and individuals. 
+   */
+  
+  lazy val classType: Parser[(PslClass, Set[Individual])] = {
+    "class" ~> (identifier|regexUrl) ~ opt(":" ~ repsep(identifier|regexUrl, ",")) ^^ {
+      case classType ~ optionalList =>
+        if(!optionalList.isDefined){
+          (PslClass(classType), Set.empty)
         } else {
-          ("weight", propertyValue)
+          val individuals = optionalList.get._2
+          for (ind <- individuals){
+            assert(!ind.charAt(0).isUpper,
+            s"Individuals cannot start with an uppercase letter.")
+          }
+          (PslClass(classType), individuals.map(Individual(_, Set(PslClass(classType)))).toSet)
         }
     }
   }
+    
+  lazy val individuals: Parser[Set[Individual]] = {
+    "individuals" ~> ":" ~ repsep(identifier|regexUrl, ",") ^^ {
+      case ":" ~ individuals =>
+        for (ind <- individuals){
+            assert(ind.forall(c => !c.isUpper),
+            s"Individuals that appear in facts have to be all lowercase, ind contains at least one uppercase character.")
+        }
+        individuals.map(Individual(_)).toSet
+    }
+  }
   
-  val predicateProperty: Parser[(String, String)] = {
+  /**
+   * Predicates and their properties
+   */
+  
+  val validPredicateProperties = Set("prior", "closedWorld")
+    
+  lazy val predicateProperty: Parser[(String, String)] = {
     opt(identifier <~ "=") ~ "[a-zA-Z0-9\\-\\.]*".r ^^ {
       case propertyNameOpt ~ propertyValue =>
         if (propertyNameOpt.isDefined) {
@@ -121,7 +134,15 @@ object PslParser extends ParseHelper[ParsedPslFile] with ImplicitConversions {
               validPredicateProperties.mkString(", "))
           (propertyName, propertyValue)
         } else{
-          (propertyValue, propertyValue)
+          if (propertyValue.exists(_.isDigit)){
+            ("prior", propertyValue)
+          } else if (propertyValue.contains("closed")){
+            println("[WARNING]: closed world not implemented yet.")
+            ("closedWorld", "true")
+          } else {
+            // Functional, PartialFunctional, etc.
+            (propertyValue, propertyValue)
+          }
         }
     }
   }
@@ -132,6 +153,60 @@ object PslParser extends ParseHelper[ParsedPslFile] with ImplicitConversions {
         properties.toMap
     }
   }
+  
+  lazy val predicate: Parser[Predicate] = {
+    "predicate" ~> opt(predicateProperties) ~ ":" ~ (identifier|regexUrl) ~ "(" ~ repsep(nonSetPredicateClass|setPredicateClass, ",") ~ ")" ^^ {
+      case properties ~ ":" ~ name ~ "(" ~ placeholders ~")" =>
+         val prior = properties.flatMap(_.get("prior")).map(_.toDouble)
+         val parsedProperties: Set[PredicateProperty]= properties match{
+           case Some(p) => 
+             p.filter(_._1 != "prior").map{a => PredicateProperty.parse(a._2)}.toSet
+           case None => Set.empty
+         }
+        Predicate(name, classes = placeholders, properties = parsedProperties, prior = prior)
+    }
+  }
+  lazy val nonSetPredicateClass: Parser[PslClass]= {
+    not("Set") ~> (regexUrl|identifierOrDash)^^ {
+      case placeholder =>
+        PslClass(placeholder)
+    }
+  }
+  
+  lazy val setPredicateClass: Parser[PslClass]= {
+    "Set" ~ opt("{") ~> opt(integer <~ ",")  ~ opt(integer) ~ opt("}") ~ "[" ~ (identifierOrDash|regexUrl) ~ "]" ^^ {
+      case  minCardinality ~ maxCardinality ~ optionalBracket ~ "[" ~ singleClassType ~ "]" =>
+        assert(maxCardinality.getOrElse(10) <= 10, "Maximum cardinality is bound by 100")
+        assert(minCardinality.getOrElse(0) <= maxCardinality.getOrElse(10), "Minimum cardinality should be less than maximum cardinality")
+        PslClass(singleClassType, true, minCardinality, maxCardinality)
+    }
+  }
+  
+  /**
+   * Rules and their properties.
+   */
+
+  val validRuleProperties = Set("weight", "distanceMeasure")
+
+  lazy val ruleProperty: Parser[(String, String)] = {
+    opt(identifier <~ "=") ~ "[a-zA-Z0-9\\-\\.]*".r ^^ {
+      case propertyNameOpt ~ propertyValue =>
+        if (propertyNameOpt.isDefined) {
+          val propertyName = propertyNameOpt.get
+          assert(validRuleProperties.contains(propertyName),
+            s"$propertyName is not a valid rule property. Valid rule properties are:\n" +
+              validRuleProperties.mkString(", "))
+          (propertyName, propertyValue)
+        } else {
+          if (propertyValue.exists(_.isDigit)){
+            ("weight", propertyValue)
+          } else {
+            ("distanceMeasure", propertyValue)
+          }
+        }
+    }
+  }
+
 
   lazy val ruleProperties: Parser[Map[String, String]] = {
     "[" ~> repsep(ruleProperty, ",") <~ "]" ^^ {
@@ -143,6 +218,13 @@ object PslParser extends ParseHelper[ParsedPslFile] with ImplicitConversions {
   // The hard rule weight is ~ infinite. 
   // It doesn't matter for overflow, since we use linear constraints for their implementation instead of standard hingeloss.
   val hardRuleWeight = Double.MaxValue
+  
+  lazy val predicateInRule: Parser[PredicateInRule] = {
+    opt("!") ~ (identifier|regexUrl) ~ "(" ~ repsep(varOrIndividualsInSet|varOrIndividualsNotInSet, ",") <~ ")" ^^ {
+      case negation ~ predicateName ~ "(" ~ variablesOrIndividuals =>
+        PredicateInRule(predicateName, variablesOrIndividuals.map(v => VariableOrIndividual(v.toString)), negation.isDefined)
+    }
+  }
 
   lazy val rule: Parser[Rule] = {
     "rule" ~> opt(ruleProperties) ~ ":" ~ opt(repsep(predicateInRule, "&" ~ opt("&")) ~ "=>") ~ opt(existentialClause) ~ opt(foreachClause) ~ repsep(predicateInRule, "|" ~ opt("|")) ^^ {
@@ -184,33 +266,6 @@ object PslParser extends ParseHelper[ParsedPslFile] with ImplicitConversions {
   }
 
 
-  lazy val predicate: Parser[Predicate] = {
-    "predicate" ~> opt(predicateProperties) ~ ":" ~ (identifier|regexUrl) ~ "(" ~ repsep(nonSetPredicateClass|setPredicateClass, ",") ~ ")" ^^ {
-      case properties ~ ":" ~ name ~ "(" ~ placeholders ~")" =>
-         val prior = properties.flatMap(_.get("prior")).map(_.toDouble)
-         val parsedProperties: Set[PredicateProperty]= properties match{
-           case Some(p) => 
-             p.filter(_._1 != "prior").map{a => PredicateProperty.parse(a._2)}.toSet
-           case None => Set.empty
-         }
-        Predicate(name, classes = placeholders, properties = parsedProperties, prior = prior)
-    }
-  }
-  lazy val nonSetPredicateClass: Parser[PslClass]= {
-    not("Set") ~> (regexUrl|identifierOrDash)^^ {
-      case placeholder =>
-        PslClass(placeholder)
-    }
-  }
-  
-  lazy val setPredicateClass: Parser[PslClass]= {
-    "Set" ~ opt("{") ~> opt(integer <~ ",")  ~ opt(integer) ~ opt("}") ~ "[" ~ (identifierOrDash|regexUrl) ~ "]" ^^ {
-      case  minCardinality ~ maxCardinality ~ optionalBracket ~ "[" ~ singleClassType ~ "]" =>
-        assert(maxCardinality.getOrElse(10) <= 10, "Maximum cardinality is bound by 100")
-        assert(minCardinality.getOrElse(0) <= maxCardinality.getOrElse(10), "Minimum cardinality should be less than maximum cardinality")
-        PslClass(singleClassType, true, minCardinality, maxCardinality)
-    }
-  }
   
   lazy val truthValues: Parser[List[Double]] = {
     "[" ~> opt("truthValue" ~> "=") ~> repsep(double, ",") <~ "]" ^^ {
@@ -336,34 +391,6 @@ object PslParser extends ParseHelper[ParsedPslFile] with ImplicitConversions {
     (classType|predicate|rule|fact|individuals) ^^ {
       case line =>
         line
-    }
-  }
-    
-  lazy val individuals: Parser[Set[Individual]] = {
-    "individuals" ~> ":" ~ repsep(identifier|regexUrl, ",") ^^ {
-      case ":" ~ individuals =>
-        for (ind <- individuals){
-            assert(ind.forall(c => !c.isUpper),
-            s"Individuals that appear in facts have to be all lowercase, ind contains at least one uppercase character.")
-        }
-        individuals.map(Individual(_)).toSet
-    }
-  }
-  
-    
-  lazy val classType: Parser[(PslClass, Set[Individual])] = {
-    "class" ~> (identifier|regexUrl) ~ opt(":" ~ repsep(identifier|regexUrl, ",")) ^^ {
-      case classType ~ optionalList =>
-        if(!optionalList.isDefined){
-          (PslClass(classType), Set.empty)
-        } else {
-          val individuals = optionalList.get._2
-          for (ind <- individuals){
-            assert(!ind.charAt(0).isUpper,
-            s"Individuals cannot start with an uppercase letter.")
-          }
-          (PslClass(classType), individuals.map(Individual(_, Set(PslClass(classType)))).toSet)
-        }
     }
   }
 }
