@@ -105,8 +105,6 @@ object Grounding {
     // Use combine to foldleft the values and get the result.
     val foldedList = allMappingsList.foldLeft(List[Map[String, Individual]]())(combine(_, _))
 
-    //    foldedList.map(println(_))
-
     // Prune all the mappings that have the same individual in more than two variables.
     // Note: this enforces the fact that if you bind an individual to a variable it cannot be bound again.
     // Example: A-> anna, B-> cannot be anna.
@@ -378,6 +376,36 @@ object Grounding {
   }
 
   /**
+   * Create the new rule based on the existential quantifiers on the right side.
+   */
+
+  def createExistentiallyGroundedRule(rule: Rule, individuals: Map[(String, Int), Set[Individual]], config: InferencerConfig) = {
+    val existentialVariables = rule.variables.filter(v => rule.existentialVars.contains(v.name))
+    //println(s"existentialVariables : $existentialVariables")
+    val existentialBindings = generateBindings(existentialVariables, individuals, config)
+    // Expand the eventual existential quantified variables in the head to a GP for each existential binding of each predicate in rule.
+    val newHead = if (existentialBindings.length > 0) {
+      existentialBindings.flatMap {
+        // For each possible binding of the existentially qualified variables.
+        existBinding =>
+          rule.head.map {
+            // For each predicate in rule in the head, substitute the affected variables with this binding.
+            pInR =>
+              val newVars = pInR.variableOrIndividual.map {
+                v =>
+                  if (existBinding.contains(v.value)) {
+                    existBinding(v.value)
+                  } else { v }
+              }
+              PredicateInRule(pInR.name, newVars, pInR.negated, pInR.predicate)
+          }
+      }.distinct
+    } else { rule.head }
+    Rule(rule.id, rule.body, newHead, rule.distanceMeasure, rule.weight, existentialVars = Set.empty,
+      rule.foreachInSetClauseInHead, rule.existsInSetClauseInHead, rule.foreachInSetClauseInBody, rule.existsInSetClauseInBody)
+  }
+
+  /**
    * Create the grounded rules using the grounded predicates.
    * We do it in a second time, so we can have a unique id for each grounded predicate.
    */
@@ -388,40 +416,36 @@ object Grounding {
     rules.flatMap {
       rule =>
         // Existentially quantified vars.
-        val existentialVariables = rule.variables.filter(v => rule.existentialVars.contains(v.name))
-        val existentialBindings = generateBindings(existentialVariables, individuals, config)
-        // Expand the eventual existential quantified variables in the head to a GP for each existential binding of each predicate in rule.
-        val newHead = if (existentialBindings.length > 0) {
-          existentialBindings.flatMap {
-            // For each possible binding of the existentially qualified variables.
-            existBinding =>
-              rule.head.map {
-                // For each predicate in rule in the head, substitute the affected variables with this binding.
-                pInR =>
-                  val newVars = pInR.variableOrIndividual.map {
-                    v =>
-                      if (existBinding.contains(v.value)) {
-                        existBinding(v.value)
-                      } else { v }
-                  }
-                  PredicateInRule(pInR.name, newVars, pInR.negated, pInR.predicate)
-              }
-          }.distinct
-        } else { rule.head }
-        val newRule = Rule(rule.id, rule.body, newHead, rule.distanceMeasure, rule.weight, Set.empty)
+        val newRule = createExistentiallyGroundedRule(rule, individuals, config)
 
-        // For each quantified vars: FOREACH [V1 in V] where V1 is the iterator and V the iterable variable.
-        // TODO; both can be sets, in which case V1 represents all of the subsets of V.
-        val forEachQuantifiedVariables = rule.foreachInSetClauseInHead.map {
+        // For each quantified vars in head: FOREACH [V1 in V] where V1 is the iterator and V the iterable variable.
+        val forEachQuantifiedVariablesInHead = rule.foreachInSetClauseInHead.map {
           case (iterator, iterable) =>
-            (rule.variables.filter(_.name == iterator).head, rule.variables.filter(_.name == iterable).head)
+            val iteratorVariable = rule.variables.filter(_.name == iterator).head
+            // TODO; both can be sets, in which case V1 represents all of the subsets of V.
+            // At the moment we constrain the iterator to a cardinality 1 variable.
+            val constrainIteratorVariableCardinality = iteratorVariable.classTypes.map(c => PslClass(c.id))
+            val iterableVariable = rule.variables.filter(_.name == iterable).head
+            (new Variable(iteratorVariable.name, constrainIteratorVariableCardinality), iterableVariable)
         }
-        val forEachQuantifiedIteratorVariables = forEachQuantifiedVariables.map(_._1)
-        val forEachQuantifiedIterableVariables = forEachQuantifiedVariables.map(_._2)
+
+        // For each quantified vars in body: FOREACH [V1 in V] where V1 is the iterator and V the iterable variable.
+        val forEachQuantifiedVariablesInBody = rule.foreachInSetClauseInBody.map {
+          case (iterator, iterable) =>
+            val iteratorVariable = rule.variables.filter(_.name == iterator).head
+            // TODO; both can be sets, in which case V1 represents all of the subsets of V.
+            // At the moment we constrain the iterator to a cardinality 1 variable.
+            val constrainIteratorVariableCardinality = iteratorVariable.classTypes.map(c => PslClass(c.id))
+            val iterableVariable = rule.variables.filter(_.name == iterable).head
+            (new Variable(iteratorVariable.name, constrainIteratorVariableCardinality), iterableVariable)
+        }
+
+        val iteratorVariables = (forEachQuantifiedVariablesInBody ++ forEachQuantifiedVariablesInHead).map(_._1)
 
         // Normal vars.
         // Treat the rule as a normal rule.
-        val normalVars = newRule.variables.filter(!forEachQuantifiedIteratorVariables.contains(_))
+        val normalVars = newRule.variables.filter(!iteratorVariables.contains(_))
+        //println(s"normalVars : ${normalVars}")
         val bindings = if (normalVars.size == 0) {
           List(Map.empty[String, Individual])
         } else {
@@ -429,7 +453,7 @@ object Grounding {
         }
         bindings.flatMap {
           binding =>
-            if (forEachQuantifiedVariables.size == 0) {
+            if (iteratorVariables.size == 0) {
               // Standard execution.
               val groundedBody = newRule.body.map(getGroundedPredicate(groundedPredicates, _, binding)).flatten
               val groundedHead = newRule.head.map(getGroundedPredicate(groundedPredicates, _, binding)).flatten
@@ -440,35 +464,56 @@ object Grounding {
                 List.empty
               }
             } else {
+              // Bind the FOREACH iterator variables in the body directly.
+              
+              // Bind the EXISTS iterator variables in the head directly.
+              
               // Bind the FOREACH iterator variables a posteriori with the individuals bound in the iterable variables.
-              assert(forEachQuantifiedVariables.size <= 1, "Currently we support only FOREACH with one variable.")
-              val (iterator, iterable) = forEachQuantifiedVariables.head
-              val iterableBinding = binding(iterable.name)
-              val individualsOfSubsets = iterator.classTypes.flatMap {
-                c =>
-                  // TODO: currently only subsets of size 1.
-                  val subsetsOfIterableBoundVar = iterableBinding.varsOrIndividualsInSet.subsets(1)
-                  val key = (c.id, 1)
-                  val values = subsetsOfIterableBoundVar.flatMap { v =>
-                    individuals(key).filter(_.name == v.toString)
-                  }.toSet
-                  Map(key -> values)
-              }.toMap
-              val newBindings = generateBindings(List(iterator), individualsOfSubsets)
-              newBindings.flatMap {
-                newBinding =>
-                  val groundedBody = newRule.body.map(getGroundedPredicate(groundedPredicates, _, newBinding ++ binding)).flatten
-                  val groundedHead = newRule.head.map(getGroundedPredicate(groundedPredicates, _, newBinding ++ binding)).flatten
-                  val unboundGroundedPredicates = groundedHead.filter(!_.truthValue.isDefined) ::: groundedBody.filter(!_.truthValue.isDefined)
-                  if (unboundGroundedPredicates.size > 0) {
-                    Some(GroundedRule({ id += 1; id }, newRule, groundedBody, groundedHead))
-                  } else {
-                    None
-                  }
-              }
+              val (newId, newGroundedRules) = createNewRuleForeachIteratorInHead(forEachQuantifiedVariablesInHead, binding, newRule, id, 
+                  groundedPredicates, individuals)
+              id += newId
+              newGroundedRules
             }
         }
     }
+  }
+
+  /**
+   * Create a new rule for each iterator variable in head.
+   */
+
+  def createNewRuleForeachIteratorInHead(forEachQuantifiedVariables: Set[(Variable, Variable)], binding: Map[String, Individual], newRule: Rule, startingId: Int,
+    groundedPredicates: Map[(String, List[Individual]), GroundedPredicate], individuals: Map[(String, Int), Set[Individual]]): (Int, List[GroundedRule]) = {
+    var id = startingId
+    val allMappingsList = forEachQuantifiedVariables.map {
+      case (iterator, iterable) =>
+        val individualsOfSubsets = iterator.classTypes.flatMap {
+          c =>
+            // TODO: currently only subsets of size 1.
+            val subsetsOfIterableBoundVar = binding(iterable.name).varsOrIndividualsInSet.subsets(1)
+            val key = (c.id, 1)
+            val values = subsetsOfIterableBoundVar.flatMap { v =>
+              individuals(key).filter(_.name == v.toString)
+            }.toSet
+            Map(key -> values)
+        }.toMap
+        generateBindings(List(iterator), individualsOfSubsets)
+    }
+    val foldedList = allMappingsList.foldLeft(List[Map[String, Individual]]())(combine(_, _))
+    //println(foldedList)
+
+    val newGroundedRules = foldedList.flatMap {
+      newBinding =>
+        val groundedBody = newRule.body.map(getGroundedPredicate(groundedPredicates, _, newBinding ++ binding)).flatten
+        val groundedHead = newRule.head.map(getGroundedPredicate(groundedPredicates, _, newBinding ++ binding)).flatten
+        val unboundGroundedPredicates = groundedHead.filter(!_.truthValue.isDefined) ::: groundedBody.filter(!_.truthValue.isDefined)
+        if (unboundGroundedPredicates.size > 0) {
+          Some(GroundedRule({ id += 1; id }, newRule, groundedBody, groundedHead))
+        } else {
+          None
+        }
+    }
+    (id, newGroundedRules)
   }
 
   /**

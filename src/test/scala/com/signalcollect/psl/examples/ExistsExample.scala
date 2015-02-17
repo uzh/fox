@@ -87,4 +87,31 @@ class ExistsExample extends FlatSpec with Matchers with TestAnnouncements {
     assert(objectiveFunctionValOption.isDefined)
     objectiveFunctionValOption.foreach(_ should be(0.0 +- 5e-4))
   }
+
+  val existsInSet = """
+class Variable
+
+predicate : indep(Variable, Variable, Set{1,3}[Variable])
+predicate : causes(Variable, Variable)
+
+rule [10]: !indep(X,Y,W)
+rule: indep(X,Y,W)  => FOREACH [W1 in W, W2 in W] indep(X,W2,W1)
+//rule: indep(X,Y,W)  && !indep(X,Y,{W,Z}) => FOREACH [W1 in W] !causes(Z, W1)
+
+fact: indep(x, y, {w, z, a})
+//fact: indep(y, u, {z})
+//fact: !indep(y, u, {w, z})
+"""
+
+  "ExistsExample" should "provide a solution for sets." in {
+    val config = InferencerConfig(
+      computeObjectiveValueOfSolution = true,
+      lazyThreshold = None,
+      removeSymmetricConstraints = false,
+      maxIterations = 200000,
+      absoluteEpsilon = 1e-5,
+      relativeEpsilon = 1e-3)
+    val inferenceResults = Inferencer.runInferenceFromString(existsInSet, config = config)
+    println(inferenceResults.printSelectedResultsAndFacts(List("causes", "indep")))
+  }
 }
