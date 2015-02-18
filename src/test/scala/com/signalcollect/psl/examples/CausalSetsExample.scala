@@ -73,7 +73,7 @@ rule: indep(X,Y, {}) => !causes(X, Y)
 // TODO rule: !indep(X,Y,W)  && indep(X,Y,{W,Z}) && !causes(X, Z) && FORALL [W1 in W] !causes(X, W1) => !causes(X,Y)
 
 
-rule [weight = 0.8, distanceMeasure = linear]: !indep(x, u, {})
+fact: !indep(x, u, {})
 fact: !indep(x, w, {})
 fact: !indep(x, y, {})
 fact: !indep(y, u, {})
