@@ -123,11 +123,48 @@ GroundedPredicate 118: indep[ ] (y, a, z) has truth value 0.8565016130054439""".
     val indepXWZ = inferenceResults.getGp("indep", "x", "w", "z").get
     inferenceResults.solution.results.get(indepXWZ.id) should be(0.85 +- 0.1)
     val indepXZW = inferenceResults.getGp("indep", "x", "z", "w").get
-        inferenceResults.solution.results.get(indepXZW.id) should be(0.85 +- 0.1)
+    inferenceResults.solution.results.get(indepXZW.id) should be(0.85 +- 0.1)
     val indepYAZ = inferenceResults.getGp("indep", "y", "a", "z").get
     inferenceResults.solution.results.get(indepYAZ.id) should be(0.48 +- 0.1)
     val indepYAW = inferenceResults.getGp("indep", "y", "a", "w").get
     inferenceResults.solution.results.get(indepYAW.id) should be(0.48 +- 0.1)
+  }
 
+  val foreachInBody = """
+class Variable
+
+predicate : indep(Variable, Variable, Set{1,3}[Variable])
+predicate : dep(Variable, Variable, Set{1,3}[Variable])
+predicate : causes(Variable, Variable)
+
+rule [0.1]: !dep(X,Y,W)
+rule [0.1]: !indep(X,Y,W)
+rule [2]: indep(X,Y,W) && FOREACH [W1 in W] dep(X,Y,W1) => causes(X, Y)
+
+// Minimally independent.
+fact: indep(x, y, {w, z})
+fact: dep(x, y, w)
+fact: dep(x, y, z)
+// Not minimially independent.
+// Missing dep(a, b, {x, w})
+fact: indep(a, b, {x, w, z})
+fact: dep(a, b, z)
+fact: dep(a, b, w)
+"""
+
+  "ExistsExample" should "provide a solution for foreach clauses in body." in {
+    val config = InferencerConfig(
+      computeObjectiveValueOfSolution = true,
+      lazyThreshold = None,
+      removeSymmetricConstraints = false,
+      maxIterations = 20000,
+      absoluteEpsilon = 1e-12,
+      relativeEpsilon = 1e-8)
+    val inferenceResults = Inferencer.runInferenceFromString(foreachInBody, config = config)
+    //println(inferenceResults.printSelectedResultsAndFacts())
+    val causesXY = inferenceResults.getGp("causes", "x", "y").get
+    inferenceResults.solution.results.get(causesXY.id) should be(0.83 +- 0.1)
+    val causesAB = inferenceResults.getGp("causes", "a", "b").get
+    inferenceResults.solution.results.get(causesAB.id) should be(0.0 +- 0.1)
   }
 }
