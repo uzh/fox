@@ -221,8 +221,13 @@ object PslParser extends ParseHelper[ParsedPslFile] with ImplicitConversions {
   
   lazy val predicateInRule: Parser[PredicateInRule] = {
     opt("!") ~ (identifier|regexUrl) ~ "(" ~ repsep(varOrIndividualsInSet|varOrIndividualsNotInSet, ",") <~ ")" ^^ {
-      case negation ~ predicateName ~ "(" ~ variablesOrIndividuals =>
-        PredicateInRule(predicateName, variablesOrIndividuals.map(v => VariableOrIndividual(v.toString)), negation.isDefined)
+      case negation ~ predicateName ~ "(" ~ variableOrIndividualNames =>
+        val variablesOrIndividuals = variableOrIndividualNames.map{
+          v => 
+            val orderedV = v.toList.sorted.toSet 
+            VariableOrIndividual(orderedV.toString)
+        }
+        PredicateInRule(predicateName, variablesOrIndividuals , negation.isDefined)
     }
   }
 

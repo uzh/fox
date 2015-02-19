@@ -438,9 +438,14 @@ object Grounding {
       }.distinct
       val existsInSetRule = Rule(rule.id, rule.body, newHead, rule.distanceMeasure, rule.weight, existentialVars = rule.existentialVars,
         rule.foreachInSetClauseInHead, existsInSetClauseInHead = Set.empty, rule.foreachInSetClauseInBody, rule.existsInSetClauseInBody)
-      existsInSetRule
+      Some(existsInSetRule)
     } else {
-      rule
+      if (rule.existsInSetClauseInHead.size > 0) {
+        // Something went wrong, ignore.
+        None
+      } else {
+        Some(rule)
+      }
     }
   }
 
@@ -469,9 +474,14 @@ object Grounding {
       val foreachInBodyRule = Rule(rule.id, newBody, rule.head, rule.distanceMeasure, rule.weight, existentialVars = rule.existentialVars,
         rule.foreachInSetClauseInHead, rule.existsInSetClauseInHead, foreachInSetClauseInBody = Set.empty, rule.existsInSetClauseInBody)
       //println(foreachInBodyRule)
-      foreachInBodyRule
+      Some(foreachInBodyRule)
     } else {
-      rule
+      if (rule.foreachInSetClauseInBody.size > 0) {
+        // Something went wrong, ignore.
+        None
+      } else {
+        Some(rule)
+      }
     }
   }
 
@@ -517,7 +527,7 @@ object Grounding {
         // Normal vars.
         // Treat the rule as a normal rule.
         val normalVars = newRule.variables.filter(!iteratorVariables.contains(_))
-        //println(s"normalVars : ${normalVars}")
+        // println(s"normalVars : ${normalVars}")
         val bindings = if (normalVars.size == 0) {
           List(Map.empty[String, Individual])
         } else {
@@ -536,19 +546,28 @@ object Grounding {
                 List.empty
               }
             } else {
+              assert(newRule.existsInSetClauseInBody.size == 0, "Exists in body are not implemented yet.")
               // Bind the FOREACH iterator variables in the body directly.
               val foreachInBodyRule = createForeachInBodyGroundedRule(forEachQuantifiedVariablesInBody, binding,
                 newRule, individuals, config)
 
-              // Bind the EXISTS iterator variables in the head directly.
-              val existsInSetRule = createExistsInSetInHeadGroundedRule(existsInSetVariablesInHead, binding,
-                foreachInBodyRule, individuals, config)
+              if (foreachInBodyRule.isDefined) {
+                // Bind the EXISTS iterator variables in the head directly.
+                val existsInSetRule = createExistsInSetInHeadGroundedRule(existsInSetVariablesInHead, binding,
+                  foreachInBodyRule.get, individuals, config)
+                if (existsInSetRule.isDefined) {
+                  // Bind the FOREACH iterator variables a posteriori with the individuals bound in the iterable variables.
+                  val (newId, newGroundedRules) = createNewRuleForeachIteratorInHead(forEachQuantifiedVariablesInHead, binding,
+                    existsInSetRule.get, id, groundedPredicates, individuals)
+                  id = newId
+                  newGroundedRules
+                } else {
+                  List.empty
+                }
+              } else {
+                List.empty
+              }
 
-              // Bind the FOREACH iterator variables a posteriori with the individuals bound in the iterable variables.
-              val (newId, newGroundedRules) = createNewRuleForeachIteratorInHead(forEachQuantifiedVariablesInHead, binding, existsInSetRule, id,
-                groundedPredicates, individuals)
-              id = newId
-              newGroundedRules
             }
         }
     }

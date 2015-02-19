@@ -33,6 +33,10 @@ case class Rule(
   existsInSetClauseInBody: Set[(String, String)] = Set.empty // Warning: this is not standard Lukasiewicz.
   ) {
   override def toString = {
+    val foreachInHeadString = if (foreachInSetClauseInHead.size > 0) "FOREACH" + foreachInSetClauseInHead.mkString(", ") else ""
+    val foreachInBodyString = if (foreachInSetClauseInBody.size > 0) "FOREACH" + foreachInSetClauseInBody.mkString(", ") else ""
+    val existInHeadString = if (existsInSetClauseInHead.size > 0) "EXISTS" + existsInSetClauseInHead.mkString(", ") else ""
+    val existInBodyString = if (existsInSetClauseInBody.size > 0) "EXISTS" + existsInSetClauseInBody.mkString(", ") else ""
     val conditionsString = body.mkString(" && ")
     val implicationsString = head.mkString(" || ")
     val properties = (weight, distanceMeasure) match {
@@ -41,7 +45,7 @@ case class Rule(
       case (w, Squared) => s" [weight = $w]"
       case (w, Linear) => s" [weight = $w, distanceMeasure = $Linear]"
     }
-    s"rule$properties: $conditionsString => $implicationsString"
+    s"rule$properties: $foreachInBodyString $existInBodyString $conditionsString => $foreachInHeadString $existInHeadString $implicationsString"
   }
 
   val allVariables: List[Variable] = {
