@@ -412,7 +412,7 @@ object Grounding {
    * Create the new rule based on the exists in set quantifiers in the head.
    */
 
-  def createExistsInSetInHeadGroundedRule(existsInSetVariablesInHead: Set[(Variable, Variable)], binding: Map[String, Individual],
+  def createExistsInSetInHeadGroundedRule(existsInSetVariablesInHead: Set[(Variable, Variable, String)], binding: Map[String, Individual],
     rule: Rule, individuals: Map[(String, Int), Set[Individual]], config: InferencerConfig) = {
     val foldedList = generateBindingForIteratorsGivenIterables(existsInSetVariablesInHead, binding, individuals)
     // Expand the eventual existential quantified variables in the head to a GP for each existential binding of each predicate in rule.
@@ -426,7 +426,7 @@ object Grounding {
               val newVars = pInR.allVarsOrIndsWithClasses.map {
                 v =>
                   if (existBinding.contains(v.value)) {
-                   existBinding(v.value)
+                    existBinding(v.value)
                   } else {
                     v
                   }
@@ -451,7 +451,7 @@ object Grounding {
    * Create the new rule based on the foreach in set quantifiers in the body.
    */
 
-  def createForeachInBodyGroundedRule(foreachVariablesInBody: Set[(Variable, Variable)], binding: Map[String, Individual],
+  def createForeachInBodyGroundedRule(foreachVariablesInBody: Set[(Variable, Variable, String)], binding: Map[String, Individual],
     rule: Rule, individuals: Map[(String, Int), Set[Individual]], config: InferencerConfig) = {
     val foldedList = generateBindingForIteratorsGivenIterables(foreachVariablesInBody, binding, individuals)
     if (foldedList.length > 0) {
@@ -487,20 +487,30 @@ object Grounding {
    * Given a rule and a set of iterator and iterable names, get the related Variables with the classtypes and
    * restrict the cardinality to 1.
    */
-  def getIteratorVariablesInRuleFromNames(rule: Rule, iteratorIterableNames: Set[(String, String, Int, Int)]) = {
+  def getIteratorVariablesInRuleFromNames(rule: Rule, iteratorIterableNames: Set[(String, String, Int, Int, String)]) = {
     iteratorIterableNames.map {
-      case (iterator, iterable, minCardinality, maxCardinality) =>
+      case (iterator, iterable, minCardinality, maxCardinality, containmentOption) =>
         val iteratorVariable = rule.variables.filter(_.name == iterator).head
-        // TODO; both can be sets, in which case V1 represents all of the subsets of V.
-        // At the moment we constrain the iterator to a cardinality 1 variable.
         val constrainedCardinalityClasses = iteratorVariable.classTypes.map { c =>
-          val joinedMinCardinality = math.max(minCardinality, c.minCardinality)
-          val joinedMaxCardinality = math.min(maxCardinality, c.maxCardinality)
-          PslClass(c.id, joinedMinCardinality != 1 && joinedMaxCardinality != 1, Some(joinedMinCardinality), Some(joinedMaxCardinality))
-
+          if (containmentOption == "in") {
+            // Classic iterator, iterating over a single element in a list of elements (iterable).
+            PslClass(c.id)
+          } else {
+            // Containment option is either subsetOf or strictSubsetOf:
+            // - subsetOf gets all subsets of the iterable
+            // - strictSubsetOf get all strict subsets of the iterable, thus has a smaller max cardinality.
+            val joinedMinCardinality = math.max(minCardinality, c.minCardinality)
+            val joinedMaxCardinality = if (containmentOption == "strictSubsetOf") {
+              math.min(maxCardinality, c.maxCardinality - 1)
+            } else {
+              math.min(maxCardinality, c.maxCardinality)
+            }
+            assert(joinedMinCardinality <= joinedMaxCardinality)
+            PslClass(c.id, joinedMinCardinality != 1 && joinedMaxCardinality != 1, Some(joinedMinCardinality), Some(joinedMaxCardinality))
+          }
         }
         val iterableVariable = rule.variables.filter(_.name == iterable).head
-        (new Variable(iteratorVariable.name, constrainedCardinalityClasses), iterableVariable)
+        (new Variable(iteratorVariable.name, constrainedCardinalityClasses), iterableVariable, containmentOption)
     }
   }
 
@@ -580,9 +590,10 @@ object Grounding {
    * Generate bindings for iterators given a binding of iterables.
    */
 
-  def generateBindingForIteratorsGivenIterables(iteratorIterableSet: Set[(Variable, Variable)], binding: Map[String, Individual], individuals: Map[(String, Int), Set[Individual]]) = {
+  def generateBindingForIteratorsGivenIterables(iteratorIterableSet: Set[(Variable, Variable, String)],
+    binding: Map[String, Individual], individuals: Map[(String, Int), Set[Individual]]) = {
     val allMappingsList = iteratorIterableSet.map {
-      case (iterator, iterable) =>
+      case (iterator, iterable, containmentOption) =>
         val iterableBinding = binding(iterable.name)
         if (iterableBinding.value == "") {
           List.empty
@@ -590,17 +601,31 @@ object Grounding {
           val individualsOfSubsets = iterator.classTypes.flatMap {
             c =>
               val iterableBindingVarsOrInds = iterableBinding.varsOrIndividualsInSet
-              val boundedMaxCardinality = math.min(c.maxCardinality, iterableBindingVarsOrInds.size)
-              // TODO: currently only subsets of size 1.
-              val range = c.minCardinality to boundedMaxCardinality
-              range.flatMap {
-                r =>
-                  val subsetsOfIterableBoundVar = iterableBindingVarsOrInds.subsets(r)
-                  val key = (c.id, r)
-                  val values = subsetsOfIterableBoundVar.flatMap { v =>
-                    individuals(key).filter(_.name == v.toString)
-                  }.toSet
-                  Map(key -> values)
+              // Decide the appropriate subsets based on the containment options:
+              // - "in" : one element at a time
+              // - "subsetOf" : subsets of any size, including 0 to the whole set, unless min and max cardinality
+              // - "strictSubsetOf" : strict subsets, same as subset of, except for the whole set.
+              val (boundedMinCardinality, boundedMaxCardinality) = if (containmentOption == "in") {
+                (1, 1)
+              } else if (containmentOption == "strictSubsetOf") {
+                (c.minCardinality, math.min(c.maxCardinality, iterableBindingVarsOrInds.size - 1))
+              } else {
+                (c.minCardinality, math.min(c.maxCardinality, iterableBindingVarsOrInds.size))
+              }
+              // println(s"$iterator $iterableBindingVarsOrInds $containmentOption: $boundedMinCardinality : $boundedMaxCardinality")
+              if (boundedMinCardinality > boundedMaxCardinality) {
+                Map.empty
+              } else {
+                val range = boundedMinCardinality to boundedMaxCardinality
+                range.flatMap {
+                  r =>
+                    val subsetsOfIterableBoundVar = iterableBindingVarsOrInds.subsets(r)
+                    val key = (c.id, r)
+                    val values = subsetsOfIterableBoundVar.flatMap { v =>
+                      individuals(key).filter(_.name == v.toString)
+                    }.toSet
+                    Map(key -> values)
+                }
               }
           }.toMap
           generateBindings(List(iterator), individualsOfSubsets)
@@ -614,7 +639,8 @@ object Grounding {
    * Create a new rule for each iterator variable in head.
    */
 
-  def createNewRuleForeachIteratorInHead(forEachQuantifiedVariables: Set[(Variable, Variable)], binding: Map[String, Individual], newRule: Rule, startingId: Int,
+  def createNewRuleForeachIteratorInHead(forEachQuantifiedVariables: Set[(Variable, Variable, String)],
+    binding: Map[String, Individual], newRule: Rule, startingId: Int,
     groundedPredicates: Map[(String, List[Individual]), GroundedPredicate], individuals: Map[(String, Int), Set[Individual]]): (Int, List[GroundedRule]) = {
     var id = startingId
     val foldedList = if (forEachQuantifiedVariables.size == 0) {

@@ -247,7 +247,7 @@ object PslParser extends ParseHelper[ParsedPslFile] with ImplicitConversions {
         ruleId += 1
         val (bodyPredicates, foreachInSetClauseInBody) = bodyClause match {
           case Some(x) => (x._1, x._2)
-          case None => (List.empty, Set.empty[(String, String, Int, Int)])
+          case None => (List.empty, Set.empty[(String, String, Int, Int, String)])
         }
         Rule(ruleId, bodyPredicates, headClause._1, distanceMeasure, weight, headClause._2, 
             foreachInSetClauseInHead.getOrElse(List.empty).toSet, headClause._3.toSet, 
@@ -255,7 +255,7 @@ object PslParser extends ParseHelper[ParsedPslFile] with ImplicitConversions {
     }
   }
   
-   lazy val headClauses: Parser[(List[PredicateInRule], Set[String], List[(String,String, Int, Int)])] ={
+   lazy val headClauses: Parser[(List[PredicateInRule], Set[String], List[(String,String, Int, Int,String)])] ={
      repsep(headClause, "|" ~ opt("|")) ^^ {
        case clauses =>
         val predicatesInRules = clauses.flatMap(_._1)
@@ -265,26 +265,26 @@ object PslParser extends ParseHelper[ParsedPslFile] with ImplicitConversions {
      }
    }
    
-  lazy val headClause: Parser[(Option[PredicateInRule], Set[String], List[(String,String, Int, Int)])] ={
+  lazy val headClause: Parser[(Option[PredicateInRule], Set[String], List[(String,String, Int, Int, String)])] ={
     opt(existentialClause|existsInSetClause) ~ opt(predicateInRule) ^^ {
       case None ~ p =>
        (p, Set.empty, List.empty)
       case Some(exist) ~ p =>
         exist match{
           case s : Set[String] => (p, s, List.empty)
-          case s : List[(String,String,Int, Int)] => (p, Set.empty, s)      
+          case s : List[(String,String,Int, Int, String)] => (p, Set.empty, s)      
         }
     }
   }
   
-  lazy val bodyClause: Parser[(Option[PredicateInRule], Set[(String, String, Int, Int)])] ={
+  lazy val bodyClause: Parser[(Option[PredicateInRule], Set[(String, String, Int, Int, String)])] ={
     opt(foreachInSetClause) ~ opt(predicateInRule) ^^ {
       case None ~ p => (p, Set.empty)
       case Some(s) ~ p => (p, s.toSet)
     }
   }
   
-   lazy val bodyClauses: Parser[(List[PredicateInRule], Set[(String,String, Int, Int)])] ={
+   lazy val bodyClauses: Parser[(List[PredicateInRule], Set[(String,String, Int, Int, String)])] ={
      repsep(bodyClause, "&" ~ opt("&")) ^^ {
        case clauses =>
          val predicatesInRules = clauses.flatMap(_._1)
@@ -299,28 +299,34 @@ object PslParser extends ParseHelper[ParsedPslFile] with ImplicitConversions {
     }
   }
   
-  lazy val foreachInSetClause: Parser[List[(String, String, Int, Int)]] ={
-    "FOREACH" ~ "[" ~> repsep(scopedVariableCouple, ",") <~ "]" ^^ {
+  lazy val foreachInSetClause: Parser[List[(String, String, Int, Int, String)]] ={
+    ("FORALL"|"FOREACH") ~ "[" ~> repsep(scopedVariableCouple, ",") <~ "]" ^^ {
       case foreachCouples => foreachCouples
     }
   }
   
-  lazy val existsInSetClause: Parser[List[(String, String, Int, Int)]] ={
+  lazy val existsInSetClause: Parser[List[(String, String, Int, Int, String)]] ={
     "EXISTS" ~ "[" ~> repsep(scopedVariableCouple, ",") <~ "]" ^^ {
       case existsCouples => existsCouples
     }
   }
   
-  lazy val scopedVariableCouple: Parser[(String, String, Int, Int)] ={
-    identifier ~ opt ("(") ~ opt(integer <~ ",")  ~ opt(integer) ~ opt(")") ~ "in" ~ identifier ^^ {
-      case iterator ~ optBracket ~ minCardinality ~ maxCardinality ~ optClosingBracket~ "in" ~ iterable =>
+  lazy val scopedVariableCouple: Parser[(String, String, Int, Int, String)] ={
+    identifier ~ opt ("(") ~ opt(integer <~ ",")  ~ opt(integer) ~ opt(")") ~ containmentOperator ~ identifier ^^ {
+      case iterator ~ optBracket ~ minCardinality ~ maxCardinality ~ optClosingBracket~ containmentOption ~ iterable =>
         assert(maxCardinality.getOrElse(maxPossibleCardinality) <= maxPossibleCardinality, s"Maximum cardinality is bound by $maxPossibleCardinality")
         assert(minCardinality.getOrElse(0) <= maxCardinality.getOrElse(maxPossibleCardinality), "Minimum cardinality should be less than maximum cardinality")
-        (iterator, iterable, minCardinality.getOrElse(0), maxCardinality.getOrElse(maxPossibleCardinality))
+        (iterator, iterable, minCardinality.getOrElse(0), maxCardinality.getOrElse(maxPossibleCardinality), containmentOption)
     }
   }
 
-
+  lazy val containmentOperator: Parser[String] = {
+    ("in"|"subsetOf"|"strictSubsetOf"|"IN"|"SUBSET"|"STRICTSUBSET"| "SUBSETOF"| "STRICTSUBSETOF"|"subset"|"strictsubset"|"strictSubset"|"strictsubsetof") ^^ {
+      case "in"|"IN" => "in"
+      case "subsetOf"|"SUBSET"|"SUBSETOF"|"subset" => "subsetOf"
+      case _ => "strictSubsetOf"
+    }
+  }
   
   lazy val truthValues: Parser[List[Double]] = {
     "[" ~> opt("truthValue" ~> "=") ~> repsep(double, ",") <~ "]" ^^ {

@@ -32,7 +32,7 @@ import com.signalcollect.admm.utils.MinimaExplorer
 class CausalSetsExample extends FlatSpec with Matchers with TestAnnouncements {
 
   val causal = """
-class Variable: z
+class Variable
 // class SelectionNode: s1,s2,s3
 
 predicate : indep(Variable, Variable, Set{0,3}[Variable])
@@ -54,14 +54,14 @@ rule: causes(X,Y) => !causes(Y,X)
 rule: causes(X,Y)  && causes(Y,Z) => causes(X,Z)
 
 // 6. If Z makes X and Y conditionally independent, then Z causes either X or Y or both.
-rule [100000]: !indep(X,Y,W)  && indep(X,Y,{W, Z}) => causes(Z, X) || causes (Z, Y) || EXISTS [W1(1,1) in W] causes (Z, W1)
+rule: !indep(X,Y,W)  && indep(X,Y,{W, Z}) => causes(Z, X) || causes (Z, Y) || EXISTS [W1 in W] causes (Z, W1)
 // 6b. W cannot be empty, as we cannot do EXISTS on an empty set, so we need to add extra rule.
 rule: !indep(X,Y,{})  && indep(X,Y,Z) => causes(Z, X) || causes (Z, Y) 
 
 // 7. If Z makes X and Y conditionally dependent, then Z does not cause neither X or Y, nor any of W.
 rule: indep(X,Y,W)  && !indep(X,Y,{W,Z}) => !causes(Z, X)
 rule: indep(X,Y,W)  && !indep(X,Y,{W,Z}) => !causes(Z, Y)
-rule: indep(X,Y,W)  && !indep(X,Y,{W,Z}) => FOREACH [W1(1,1) in W] !causes(Z, W1)
+rule: indep(X,Y,W)  && !indep(X,Y,{W,Z}) => FOREACH [W1 in W] !causes(Z, W1)
 
 // 8. If X and Y are independent, then they are not causing each other.
 // Faithfulness assumption.
@@ -71,8 +71,7 @@ rule: indep(X,Y,{}) => !causes(X, Y)
 // W is a Variable (causes (X, W) makes it a single variable) and cannot be empty.
 // Z is a Set [Variable] and cannot be empty.
 // X and Y become independent when we add W to Z.
-//rule: !indep(X,Y,Z) && !indep(X,Y,W) && indep(X,Y,{Z,W}) && FOREACH [Z1 in Z] !causes(X, Z1) && !causes(X, W) => !causes(X,Y)
-rule: indep(X,Y,Z) && FOREACH [Z1(0, 2) in Z] !indep(X,Y,Z1) && FOREACH [Z2(1,1) in Z] !causes(X, Z2) => !causes(X,Y)
+rule: indep(X,Y,Z) && FOREACH [Z1 strictSubsetOf Z] !indep(X,Y,Z1) && FOREACH [Z2 in Z] !causes(X, Z2) => !causes(X,Y)
 // 9b. Take care of empty set.
 rule: !indep(X,Y,{}) && indep(X,Y,W) && !causes(X, W) => !causes(X,Y)
 
