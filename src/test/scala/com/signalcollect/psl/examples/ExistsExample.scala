@@ -97,8 +97,8 @@ predicate : causes(Variable, Variable)
 
 rule [0.1]: !indep(X,Y,W)
 rule [0.1]: !dep(X,Y,W)
-rule [2]: indep(X,Y,W)  => FOREACH [W1 in W, W2 in W] indep(X,W2,W1)
-rule [2]: dep(X,Y,W) => EXISTS [W1 in W] indep(X,Y,W1)
+rule [2]: indep(X,Y,W)  => FOREACH [W1(1,) in W, W2(1,1) in W] indep(X,W2,W1)
+rule [2]: dep(X,Y,W) => EXISTS [W1(1,) in W] indep(X,Y,W1)
 
 fact: indep(x, y, {w, z})
 fact: dep(y, a, {z, w})
@@ -139,7 +139,7 @@ predicate : causes(Variable, Variable)
 
 rule [0.1]: !dep(X,Y,W)
 rule [0.1]: !indep(X,Y,W)
-rule [2]: indep(X,Y,W) && FOREACH [W1 in W] dep(X,Y,W1) => causes(X, Y)
+rule [2]: indep(X,Y,W) && FOREACH [W1(1,) in W] dep(X,Y,W1) => causes(X, Y)
 
 // Minimally independent.
 fact: indep(x, y, {w, z})

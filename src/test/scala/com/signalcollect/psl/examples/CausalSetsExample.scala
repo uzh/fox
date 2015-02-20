@@ -32,7 +32,7 @@ import com.signalcollect.admm.utils.MinimaExplorer
 class CausalSetsExample extends FlatSpec with Matchers with TestAnnouncements {
 
   val causal = """
-class Variable
+class Variable: z
 // class SelectionNode: s1,s2,s3
 
 predicate : indep(Variable, Variable, Set{0,3}[Variable])
@@ -54,53 +54,126 @@ rule: causes(X,Y) => !causes(Y,X)
 rule: causes(X,Y)  && causes(Y,Z) => causes(X,Z)
 
 // 6. If Z makes X and Y conditionally independent, then Z causes either X or Y or both.
-rule: !indep(X,Y,W)  && indep(X,Y,{W, Z}) => causes(Z, X) || causes (Z, Y) || EXISTS [W1 in W] causes (Z, W1)
+rule [100000]: !indep(X,Y,W)  && indep(X,Y,{W, Z}) => causes(Z, X) || causes (Z, Y) || EXISTS [W1(1,1) in W] causes (Z, W1)
+// 6b. W cannot be empty, as we cannot do EXISTS on an empty set, so we need to add extra rule.
+rule: !indep(X,Y,{})  && indep(X,Y,Z) => causes(Z, X) || causes (Z, Y) 
 
 // 7. If Z makes X and Y conditionally dependent, then Z does not cause neither X or Y, nor any of W.
 rule: indep(X,Y,W)  && !indep(X,Y,{W,Z}) => !causes(Z, X)
 rule: indep(X,Y,W)  && !indep(X,Y,{W,Z}) => !causes(Z, Y)
-rule: indep(X,Y,W)  && !indep(X,Y,{W,Z}) => !causes(Z, W)
-rule: indep(X,Y,W)  && !indep(X,Y,{W,Z}) => FOREACH [W1 in W] !causes(Z, W1)
+rule: indep(X,Y,W)  && !indep(X,Y,{W,Z}) => FOREACH [W1(1,1) in W] !causes(Z, W1)
 
 // 8. If X and Y are independent, then they are not causing each other.
 // Faithfulness assumption.
-rule: indep(X,Y, {}) => !causes(X, Y)
+rule: indep(X,Y,{}) => !causes(X, Y)
 
 // 9. Tom's new rule. 
-// W is a Variable (causes (X, W) makes it a single variable).
-// Z is a Set [Variable]
+// W is a Variable (causes (X, W) makes it a single variable) and cannot be empty.
+// Z is a Set [Variable] and cannot be empty.
 // X and Y become independent when we add W to Z.
-rule: !indep(X,Y,Z) && !indep(X,Y,W) && indep(X,Y,{Z,W}) && FOREACH [Z1 in Z] !causes(X, Z1) && !causes(X, W) => !causes(X,Y)
+//rule: !indep(X,Y,Z) && !indep(X,Y,W) && indep(X,Y,{Z,W}) && FOREACH [Z1 in Z] !causes(X, Z1) && !causes(X, W) => !causes(X,Y)
+rule: indep(X,Y,Z) && FOREACH [Z1(0, 2) in Z] !indep(X,Y,Z1) && FOREACH [Z2(1,1) in Z] !causes(X, Z2) => !causes(X,Y)
+// 9b. Take care of empty set.
+rule: !indep(X,Y,{}) && indep(X,Y,W) && !causes(X, W) => !causes(X,Y)
+
+// True causal structure:
+// w -> x <- u
+//      x -> y
+
+fact: !indep(x, u, {})
+fact: !indep(x, w, {})
+fact: !indep(x, y, {})
+fact: !indep(y, u, {})
+fact: !indep(y, w, {})
+fact: indep(w, u, {})
+
+fact: indep(u, y, x)
+fact: indep(w, y, x)
+fact: !indep(w, u, x)
+
+fact: !indep(w, u, y)
+fact: !indep(x, w, y)
+fact: !indep(x, u, y)
+
+fact: !indep(x, w, u)
+fact: !indep(x, y, u)
+fact: !indep(y, w, u)
+
+fact: !indep(x, y, w)
+fact: !indep(x, u, w)
+fact: !indep(u, y, w)
+
+fact: !indep(x, y, {u, w})
+fact: !indep(x, w, {y, u})
+fact: !indep(x, u, {y, w})
+fact: !indep(u, w, {y, x})
+
+fact: indep(u, y, {x, w})
+fact: indep(w, y, {x, u})
+
+//rule [1]:!indep(x, u, {})
+//rule [1]:!indep(x, w, {})
+//rule [1]:!indep(x, y, {})
+//rule [1]:!indep(y, u, {})
+//rule [1]:!indep(y, w, {})
+//rule [0.1]: indep(w, u, {})
+//
+//rule [0.1]: indep(u, y, x)
+//rule [0.1]: indep(w, y, x)
+//rule [1]:!indep(w, u, x)
+//
+//rule [1]:!indep(w, u, y)
+//rule [1]:!indep(x, w, y)
+//rule [1]:!indep(x, u, y)
+//
+//rule [1]:!indep(x, w, u)
+//rule [1]:!indep(x, y, u)
+//rule [1]:!indep(y, w, u)
+//
+//rule [1]:!indep(x, y, w)
+//rule [1]:!indep(x, u, w)
+//rule [1]:!indep(u, y, w)
+//
+//rule [1]:!indep(x, y, {u, w})
+//rule [1]:!indep(x, w, {y, u})
+//rule [1]:!indep(x, u, {y, w})
+//rule [1]:!indep(u, w, {y, x})
+//
+//rule [0.1]: indep(u, y, {x, w})
+//rule [0.1]: indep(w, y, {x, u})
 
 
-rule [1]: !indep(x, u, {})
-rule [1]: !indep(x, w, {})
-rule [1]: !indep(x, y, {})
-rule [1]: !indep(y, u, {})
-rule [1]: !indep(y, w, {})
-rule [1]: indep(w, u, {})
-
-rule [1]: indep(u, y, x)
-rule [1]: indep(w, y, x)
-
-rule [1]: !indep(w, u, x)
-rule [1]: !indep(w, u, y)
-rule [1]: !indep(x, w, y)
-rule [1]: !indep(x, w, u)
-rule [1]: !indep(x, y, w)
-rule [1]: !indep(x, y, u)
-rule [1]: !indep(x, u, y)
-rule [1]: !indep(x, u, w)
-rule [1]: !indep(u, y, w)
-rule [1]: !indep(y, w, u)
-
-rule [1]: !indep(x, y, {u, w})
-rule [1]: !indep(x, w, {y, u})
-rule [1]: !indep(x, u, {y, w})
-rule [1]: !indep(u, w, {y, x})
-
-rule [1]: indep(u, y, {x, w})
-rule [1]: indep(w, y, {x, u})
+//// Symmetric
+//rule [1]:!indep(u, x, {})
+//rule [1]:!indep(w, x, {})
+//rule [1]:!indep(y, x, {})
+//rule [1]:!indep(u, y, {})
+//rule [1]:!indep(w, y, {})
+//rule [0.1]: indep(u, w, {})
+//
+//rule [0.1]: indep(y, u, x)
+//rule [0.1]: indep(y, w, x)
+//rule [1]:!indep(u, w, x)
+//
+//rule [1]:!indep(u, w, y)
+//rule [1]:!indep(w, x, y)
+//rule [1]:!indep(u, x, y)
+//
+//rule [1]:!indep(w, x, u)
+//rule [1]:!indep(y, x, u)
+//rule [1]:!indep(w, y, u)
+//
+//rule [1]:!indep(y, x, w)
+//rule [1]:!indep(u, x, w)
+//rule [1]:!indep(y, u, w)
+//
+//rule [1]:!indep(y, x, {u, w})
+//rule [1]:!indep(w, x, {y, u})
+//rule [1]:!indep(u, x, {y, w})
+//rule [1]:!indep(w, u, {y, x})
+//
+//rule [0.1]: indep(y, u, {x, w})
+//rule [0.1]: indep(y, w, {x, u})
  """
 
   it should "provide a solution consistent for the causal example" in {
@@ -108,10 +181,12 @@ rule [1]: indep(w, y, {x, u})
       computeObjectiveValueOfSolution = true,
       lazyThreshold = None,
       removeSymmetricConstraints = false,
+      breezeOptimizer = false,
       maxIterations = 200000,
-      absoluteEpsilon = 1e-5,
+      absoluteEpsilon = 1e-8,
       relativeEpsilon = 1e-3)
     val inferenceResults = Inferencer.runInferenceFromString(causal, config = config)
+    println(inferenceResults.objectiveFun)
     println(inferenceResults.printSelected(List.empty))
     // Experimental.
     //    val results = MinimaExplorer.exploreFromString(causal, config, List("none"))

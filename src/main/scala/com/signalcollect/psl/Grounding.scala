@@ -85,12 +85,10 @@ object Grounding {
           val sets = variable.classTypes.map {
             c =>
               if (c.set) {
-                val minCard = c.minCardinalityOption.getOrElse(0)
-                val maxCard = c.maxCardinalityOption.getOrElse(c.maxPossibleCardinality)
-                val range = minCard to maxCard
-                range.flatMap(r => individuals((c.id, r))).toSet
+                val range = c.minCardinality to c.maxCardinality
+                range.flatMap(r => individuals.get((c.id, r))).flatten.toSet
               } else {
-                individuals((c.id, 1))
+                individuals.getOrElse((c.id, 1), Set.empty)
               }
           }.toList
           val intersection = sets.foldLeft(sets(0))(_ & _)
@@ -193,16 +191,14 @@ object Grounding {
           var ranges = Set.empty[Int]
           listOfSetClasses.map {
             setClass =>
-              val minCard = setClass.minCardinalityOption.getOrElse(0)
-              val maxCard = setClass.maxCardinalityOption.getOrElse(setClass.maxPossibleCardinality)
-              if (!ranges.contains(minCard) && !ranges.contains(maxCard)) {
-                val r = minCard to maxCard
+              if (!ranges.contains(setClass.minCardinality) && !ranges.contains(setClass.maxCardinality)) {
+                val r = setClass.minCardinality to setClass.maxCardinality
                 ranges = ranges ++ r
-              } else if (!ranges.contains(minCard)) {
-                val r = minCard to ranges.min - 1
+              } else if (!ranges.contains(setClass.minCardinality)) {
+                val r = setClass.minCardinality to ranges.min - 1
                 ranges = ranges ++ r
-              } else if (!ranges.contains(maxCard)) {
-                val r = ranges.max + 1 to maxCard
+              } else if (!ranges.contains(setClass.maxCardinality)) {
+                val r = ranges.max + 1 to setClass.maxCardinality
                 ranges = ranges ++ r
               }
           }
@@ -427,11 +423,13 @@ object Grounding {
           rule.head.map {
             // For each predicate in rule in the head, substitute the affected variables with this binding.
             pInR =>
-              val newVars = pInR.variableOrIndividual.map {
+              val newVars = pInR.allVarsOrIndsWithClasses.map {
                 v =>
                   if (existBinding.contains(v.value)) {
-                    existBinding(v.value)
-                  } else { v }
+                   existBinding(v.value)
+                  } else {
+                    v
+                  }
               }
               PredicateInRule(pInR.name, newVars, pInR.negated, pInR.predicate)
           }
@@ -489,15 +487,20 @@ object Grounding {
    * Given a rule and a set of iterator and iterable names, get the related Variables with the classtypes and
    * restrict the cardinality to 1.
    */
-  def getIteratorVariablesInRuleFromNames(rule: Rule, iteratorIterableNames: Set[(String, String)]) = {
+  def getIteratorVariablesInRuleFromNames(rule: Rule, iteratorIterableNames: Set[(String, String, Int, Int)]) = {
     iteratorIterableNames.map {
-      case (iterator, iterable) =>
+      case (iterator, iterable, minCardinality, maxCardinality) =>
         val iteratorVariable = rule.variables.filter(_.name == iterator).head
         // TODO; both can be sets, in which case V1 represents all of the subsets of V.
         // At the moment we constrain the iterator to a cardinality 1 variable.
-        val constrainIteratorVariableCardinality = iteratorVariable.classTypes.map(c => PslClass(c.id))
+        val constrainedCardinalityClasses = iteratorVariable.classTypes.map { c =>
+          val joinedMinCardinality = math.max(minCardinality, c.minCardinality)
+          val joinedMaxCardinality = math.min(maxCardinality, c.maxCardinality)
+          PslClass(c.id, joinedMinCardinality != 1 && joinedMaxCardinality != 1, Some(joinedMinCardinality), Some(joinedMaxCardinality))
+
+        }
         val iterableVariable = rule.variables.filter(_.name == iterable).head
-        (new Variable(iteratorVariable.name, constrainIteratorVariableCardinality), iterableVariable)
+        (new Variable(iteratorVariable.name, constrainedCardinalityClasses), iterableVariable)
     }
   }
 
@@ -580,17 +583,28 @@ object Grounding {
   def generateBindingForIteratorsGivenIterables(iteratorIterableSet: Set[(Variable, Variable)], binding: Map[String, Individual], individuals: Map[(String, Int), Set[Individual]]) = {
     val allMappingsList = iteratorIterableSet.map {
       case (iterator, iterable) =>
-        val individualsOfSubsets = iterator.classTypes.flatMap {
-          c =>
-            // TODO: currently only subsets of size 1.
-            val subsetsOfIterableBoundVar = binding(iterable.name).varsOrIndividualsInSet.subsets(1)
-            val key = (c.id, 1)
-            val values = subsetsOfIterableBoundVar.flatMap { v =>
-              individuals(key).filter(_.name == v.toString)
-            }.toSet
-            Map(key -> values)
-        }.toMap
-        generateBindings(List(iterator), individualsOfSubsets)
+        val iterableBinding = binding(iterable.name)
+        if (iterableBinding.value == "") {
+          List.empty
+        } else {
+          val individualsOfSubsets = iterator.classTypes.flatMap {
+            c =>
+              val iterableBindingVarsOrInds = iterableBinding.varsOrIndividualsInSet
+              val boundedMaxCardinality = math.min(c.maxCardinality, iterableBindingVarsOrInds.size)
+              // TODO: currently only subsets of size 1.
+              val range = c.minCardinality to boundedMaxCardinality
+              range.flatMap {
+                r =>
+                  val subsetsOfIterableBoundVar = iterableBindingVarsOrInds.subsets(r)
+                  val key = (c.id, r)
+                  val values = subsetsOfIterableBoundVar.flatMap { v =>
+                    individuals(key).filter(_.name == v.toString)
+                  }.toSet
+                  Map(key -> values)
+              }
+          }.toMap
+          generateBindings(List(iterator), individualsOfSubsets)
+        }
     }.toList
 
     combineListOfBindingsAndPruneRepeatedIndividuals(allMappingsList)

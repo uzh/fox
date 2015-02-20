@@ -27,10 +27,10 @@ case class Rule(
   distanceMeasure: DistanceMeasure,
   weight: Double,
   existentialVars: Set[String] = Set.empty, // Only in head.
-  foreachInSetClauseInHead: Set[(String, String)] = Set.empty, // Warning: this is not standard Lukasiewicz.
-  existsInSetClauseInHead: Set[(String, String)] = Set.empty,
-  foreachInSetClauseInBody: Set[(String, String)] = Set.empty,
-  existsInSetClauseInBody: Set[(String, String)] = Set.empty // Warning: this is not standard Lukasiewicz.
+  foreachInSetClauseInHead: Set[(String, String, Int, Int)] = Set.empty, // Warning: this is not standard Lukasiewicz.
+  existsInSetClauseInHead: Set[(String, String, Int, Int)] = Set.empty,
+  foreachInSetClauseInBody: Set[(String, String, Int, Int)] = Set.empty,
+  existsInSetClauseInBody: Set[(String, String, Int, Int)] = Set.empty // Warning: this is not standard Lukasiewicz.
   ) {
   override def toString = {
     val foreachInHeadString = if (foreachInSetClauseInHead.size > 0) "FOREACH" + foreachInSetClauseInHead.mkString(", ") else ""

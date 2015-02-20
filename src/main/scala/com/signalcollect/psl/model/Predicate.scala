@@ -41,8 +41,11 @@ case class PslClass(
   minCardinalityOption: Option[Int] = None,
   maxCardinalityOption: Option[Int] = None) {
   
-  def maxPossibleCardinality = 10
+  val maxPossibleCardinality = 10
 
+  val minCardinality =  minCardinalityOption.getOrElse(0)
+  val maxCardinality =  maxCardinalityOption.getOrElse(maxPossibleCardinality)
+  
   override def toString = {
     if (set) {
       if (!minCardinalityOption.isDefined && !maxCardinalityOption.isDefined) {
