@@ -30,6 +30,11 @@ case class GroundedPredicate(
   upperBound: Double = 1.0) {
 
   override def toString() = {
-    s"GroundedPredicate $id: ${definition.name}${definition.properties.mkString("[ ", ", ", "]")} ${groundings.mkString("(", ", ", ")")}"
+    s"GroundedPredicate $id: ${definition.name}${definition.properties.mkString("[ ", ", ", "]")} ${groundings.mkString("(", ", ", ")")}${
+      truthValue match {
+        case Some(t) => ": " + t.toString
+        case None => ""
+      }
+    }"
   }
 }

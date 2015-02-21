@@ -72,43 +72,49 @@ rule: indep(X,Y,{}) => !causes(X, Y)
 // Z is a Set [Variable] and cannot be empty.
 // X and Y become independent when we add W to Z.
 rule: indep(X,Y,Z) && FOREACH [Z1 strictSubsetOf Z] !indep(X,Y,Z1) && FOREACH [Z2 in Z] !causes(X, Z2) => !causes(X,Y)
-// 9b. Take care of empty set.
-rule: !indep(X,Y,{}) && indep(X,Y,W) && !causes(X, W) => !causes(X,Y)
 
 // True causal structure:
 // w -> x <- u
 //      x -> y
 
-fact: !indep(x, u, {})
-fact: !indep(x, w, {})
-fact: !indep(x, y, {})
-fact: !indep(y, u, {})
-fact: !indep(y, w, {})
 fact: indep(w, u, {})
-
-fact: indep(u, y, x)
-fact: indep(w, y, x)
 fact: !indep(w, u, x)
+fact: !indep(w, y, {})
+fact: indep(w, y, x)
+fact: !indep(u, y, {})
+fact: indep(u, y, x)
 
-fact: !indep(w, u, y)
-fact: !indep(x, w, y)
-fact: !indep(x, u, y)
 
-fact: !indep(x, w, u)
-fact: !indep(x, y, u)
-fact: !indep(y, w, u)
-
-fact: !indep(x, y, w)
-fact: !indep(x, u, w)
-fact: !indep(u, y, w)
-
-fact: !indep(x, y, {u, w})
-fact: !indep(x, w, {y, u})
-fact: !indep(x, u, {y, w})
-fact: !indep(u, w, {y, x})
-
-fact: indep(u, y, {x, w})
-fact: indep(w, y, {x, u})
+//fact: !indep(x, u, {})
+//fact: !indep(x, w, {})
+//fact: !indep(x, y, {})
+//fact: !indep(y, u, {})
+//fact: !indep(y, w, {})
+//fact: indep(w, u, {})
+//
+//fact: indep(u, y, x)
+//fact: indep(w, y, x)
+//fact: !indep(w, u, x)
+//
+//fact: !indep(w, u, y)
+//fact: !indep(x, w, y)
+//fact: !indep(x, u, y)
+//
+//fact: !indep(x, w, u)
+//fact: !indep(x, y, u)
+//fact: !indep(y, w, u)
+//
+//fact: !indep(x, y, w)
+//fact: !indep(x, u, w)
+//fact: !indep(u, y, w)
+//
+//fact: !indep(x, y, {u, w})
+//fact: !indep(x, w, {y, u})
+//fact: !indep(x, u, {y, w})
+//fact: !indep(u, w, {y, x})
+//
+//fact: indep(u, y, {x, w})
+//fact: indep(w, y, {x, u})
 
 //rule [1]:!indep(x, u, {})
 //rule [1]:!indep(x, w, {})
@@ -180,15 +186,16 @@ fact: indep(w, y, {x, u})
       computeObjectiveValueOfSolution = true,
       lazyThreshold = None,
       removeSymmetricConstraints = false,
-      breezeOptimizer = false,
+      //breezeOptimizer = false,
       maxIterations = 200000,
       absoluteEpsilon = 1e-8,
       relativeEpsilon = 1e-3)
     val inferenceResults = Inferencer.runInferenceFromString(causal, config = config)
-    println(inferenceResults.objectiveFun)
-    println(inferenceResults.printSelected(List.empty))
+//    println(inferenceResults.objectiveFun)
+//    println(inferenceResults.printSelected(List.empty))
+
     // Experimental.
-    //    val results = MinimaExplorer.exploreFromString(causal, config, List("none"))
+    //    val results = MinimaExplorer.exploreFromString(causal, config, List("causes"))
     //    for (result <- results) {
     //      if (result._3 == 0 && result._4 == 0) {
     //        println(s"${result._1}: false = ${result._2} : [${result._3},${result._4}]")

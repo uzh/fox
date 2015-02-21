@@ -173,19 +173,24 @@ object VariableOrIndividualUtils {
               assert(variableGroundings(i).size <= classType.maxCardinalityOption.get,
                 "Too many variables for an argument set with a maximum cardinality.")
             }
+
             // Get the class of each argument.
             val individualClass = PslClass(classType.id)
             // Get the set class without the cardinalities.
             val isSetClassAnActualSet = classType.minCardinalityOption.getOrElse(0) != 1 || classType.maxCardinalityOption.getOrElse(classType.maxPossibleCardinality) != 1
             val setClass = PslClass(classType.id, isSetClassAnActualSet)
             val individual = Set(Individual(groundingsAsSingleIndividuals(i).toString, Set(setClass)))
+
             if (getSingleIndividuals && isSetClassAnActualSet) {
-              individual ++
-                variableGroundings(i).map { ind => Individual(ind.name, Set(individualClass)) }
+              val singleIndividuals = variableGroundings(i).map { ind => Individual(ind.name, Set(individualClass)) }
+              if (singleIndividuals.size == 1) {
+                singleIndividuals
+              } else {
+                individual ++ singleIndividuals
+              }
             } else {
               individual
             }
-
           }
         }
     }.flatten

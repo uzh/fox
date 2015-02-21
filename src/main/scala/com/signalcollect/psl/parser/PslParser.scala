@@ -226,8 +226,7 @@ object PslParser extends ParseHelper[ParsedPslFile] with ImplicitConversions {
       case negation ~ predicateName ~ "(" ~ variableOrIndividualNames =>
         val variablesOrIndividuals = variableOrIndividualNames.map{
           v => 
-            val orderedV = v.toList.sorted.toSet 
-            VariableOrIndividual(orderedV.toString)
+            VariableOrIndividual(v.toString)
         }
         PredicateInRule(predicateName, variablesOrIndividuals , negation.isDefined)
     }
@@ -405,7 +404,7 @@ object PslParser extends ParseHelper[ParsedPslFile] with ImplicitConversions {
   lazy val varOrIndividualsInSet : Parser[Set[String]] = {
     ("{"|"[") ~> repsep(identifier|regexUrl, ",")  <~ ("}"|"]") ^^ {
        case  indInSet =>
-         indInSet.toSet
+         indInSet.toList.sorted.toSet 
     } 
   }
     
