@@ -115,8 +115,35 @@ fact: indep(u, y, x)
 //
 //fact: indep(u, y, {x, w})
 //fact: indep(w, y, {x, u})
+ """
 
-//rule [1]:!indep(x, u, {})
+  it should "provide a solution consistent for the causal example" in {
+    val config = InferencerConfig(
+      computeObjectiveValueOfSolution = true,
+      lazyThreshold = None,
+      removeSymmetricConstraints = false,
+      //breezeOptimizer = false,
+      maxIterations = 200000,
+      absoluteEpsilon = 1e-8,
+      relativeEpsilon = 1e-3)
+//    val inferenceResults = Inferencer.runInferenceFromString(causalSimpleExampleSetsExact, config = config)
+//    println(inferenceResults.objectiveFun)
+//    println(inferenceResults.printSelected(List.empty))
+
+    // Experimental.
+        val results = MinimaExplorer.exploreFromString(causalSimpleExampleSetsExact, config, List("causes"))
+        for (result <- results) {
+          if (result._3 == 0 && result._4 == 0) {
+            println(s"${result._1}: false = ${result._2} : [${result._3},${result._4}]")
+          } else if (result._3 == 1 && result._4 == 1) {
+            println(s"${result._1}: true  = ${result._2} : [${result._3},${result._4}]")
+          } else {
+            println(s"${result._1}: unknown  = ${result._2} : [${result._3},${result._4}]")
+          }
+        }
+  }
+  
+  //rule [1]:!indep(x, u, {})
 //rule [1]:!indep(x, w, {})
 //rule [1]:!indep(x, y, {})
 //rule [1]:!indep(y, u, {})
@@ -179,31 +206,60 @@ fact: indep(u, y, x)
 //
 //rule [0.1]: indep(y, u, {x, w})
 //rule [0.1]: indep(y, w, {x, u})
- """
+  
+  
+  val causalSimpleExampleSetsExact = """
+predicate : indep(Variable, Variable, Set{0,1}[Variable])
+predicate : causes(Variable, Variable)
 
-  it should "provide a solution consistent for the causal example" in {
-    val config = InferencerConfig(
-      computeObjectiveValueOfSolution = true,
-      lazyThreshold = None,
-      removeSymmetricConstraints = false,
-      //breezeOptimizer = false,
-      maxIterations = 200000,
-      absoluteEpsilon = 1e-8,
-      relativeEpsilon = 1e-3)
-    val inferenceResults = Inferencer.runInferenceFromString(causal, config = config)
-//    println(inferenceResults.objectiveFun)
-//    println(inferenceResults.printSelected(List.empty))
+// 0. conditional independence is symmetric in the first two variables.
+rule: indep(X, Y, Z) => indep(Y, X, Z)
 
-    // Experimental.
-    //    val results = MinimaExplorer.exploreFromString(causal, config, List("causes"))
-    //    for (result <- results) {
-    //      if (result._3 == 0 && result._4 == 0) {
-    //        println(s"${result._1}: false = ${result._2} : [${result._3},${result._4}]")
-    //      } else if (result._3 == 1 && result._4 == 1) {
-    //        println(s"${result._1}: true  = ${result._2} : [${result._3},${result._4}]")
-    //      } else {
-    //        println(s"${result._1}: unknown  = ${result._2} : [${result._3},${result._4}]")
-    //      }
-    //    }
-  }
+rule: !causes(X, X)
+rule: causes(X,Y) => !causes(Y,X)
+rule: causes(X,Y)  && causes(Y,Z) => causes(X,Z)
+
+// 6. If Z makes X and Y conditionally independent in the context of W, then Z causes X, or Y, or W
+// rule: !indep(X,Y,W)  && indep(X,Y,{W, Z}) => causes(Z, X) || causes (Z, Y) || !FOREACH [W1 in W] !causes (Z, W1)
+rule: !indep(X,Y,W) && indep(X,Y,{W, Z}) => causes(Z, X) || causes (Z, Y) || EXISTS [W1 in W] causes (Z, W1)
+// Missing: rule: !indep(X,Y,{})  && indep(X,Y,Z) => causes(Z, X) || causes (Z, Y) 
+
+// 7. If Z makes X and Y conditionally dependent, then Z does not cause neither X or Y, nor any of W.
+rule: indep(X,Y,W)  && !indep(X,Y,{W,Z}) => !causes(Z, X)
+rule: indep(X,Y,W)  && !indep(X,Y,{W,Z}) => !causes(Z, Y)
+rule: indep(X,Y,W)  && !indep(X,Y,{W,Z}) => FOREACH [W1 in W] !causes(Z, W1)
+
+// 8. If X and Y are independent, then they are not causing each other.
+// Faithfulness assumption.
+rule: indep(X,Y,{}) => !causes(X, Y)
+
+// 9. Tom's new rule. 
+// W is a Variable (causes (X, W) makes it a single variable) and cannot be empty.
+// Z is a Set [Variable] and cannot be empty.
+// X and Y become independent when we add W to Z.
+rule: indep(X,Y,Z) && FOREACH [Z1 strictSubsetOf Z] !indep(X,Y,Z1) && FOREACH [Z2 in Z] !causes(X, Z2) => !causes(X,Y)
+
+// fact: indep(w, u, {})
+// fact: !indep(w, u, x)
+// fact: !indep(w, y, {})
+// fact: indep(w, y, x)
+// fact: !indep(u, y, {})
+// fact: indep(u, y, x)
+
+class Variable: u,w,x,y
+
+fact: indep(w, u, {})
+fact: !indep(w, u, x)
+fact: !indep(w, y, {})
+fact: indep(w, y, x)
+fact: !indep(u, y, {})
+fact: indep(u, y, x)
+
+//rule : indep(w, u, {})
+//rule : !indep(w, u, x)
+//rule : !indep(w, y, {})
+//rule : indep(w, y, x)
+//rule : !indep(u, y, {})
+//rule : indep(u, y, x)
+"""
 }
