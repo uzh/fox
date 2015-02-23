@@ -28,8 +28,11 @@ object CommandLinePslInferencer extends App {
   }
 
   val config = InferencerConfig(
-    absoluteEpsilon = mapOfArgs.get("--absEps").getOrElse("1e-5").toDouble,
-    relativeEpsilon = mapOfArgs.get("--relEps").getOrElse("1e-3").toDouble)
+    lazyThreshold = None,
+    removeSymmetricConstraints = false,
+    maxIterations = 200000,
+    absoluteEpsilon = mapOfArgs.get("--absEps").getOrElse("1e-8").toDouble,
+    relativeEpsilon = mapOfArgs.get("--relEps").getOrElse("1e-5").toDouble)
 
   if (!mapOfArgs.get("--multipleMinima").isDefined) {
     val inferenceResults = Inferencer.runInferenceFromFile(
@@ -42,8 +45,8 @@ object CommandLinePslInferencer extends App {
       lazyThreshold = None,
       removeSymmetricConstraints = false,
       maxIterations = 200000,
-      absoluteEpsilon = 1e-5,
-      relativeEpsilon = 1e-3)
+      absoluteEpsilon = 1e-8,
+      relativeEpsilon = 1e-5)
 
     val results = MinimaExplorer.exploreFromFile(pslFile, minimaConfig, queryList)
     if (mapOfArgs.get("--threeValuedLogic").isDefined) {

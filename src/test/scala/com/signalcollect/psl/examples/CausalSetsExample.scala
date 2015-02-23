@@ -28,11 +28,12 @@ import com.signalcollect.psl.InferencerConfig
 import com.signalcollect.psl.parser.PslParser
 import com.signalcollect.util.TestAnnouncements
 import com.signalcollect.admm.utils.MinimaExplorer
+import com.signalcollect.psl.model.PSLToCvxConverter
 
 class CausalSetsExample extends FlatSpec with Matchers with TestAnnouncements {
 
   val causal = """
-class Variable
+class Variable: x
 // class SelectionNode: s1,s2,s3
 
 predicate : indep(Variable, Variable, Set{0,3}[Variable])
@@ -77,12 +78,12 @@ rule: indep(X,Y,Z) && FOREACH [Z1 strictSubsetOf Z] !indep(X,Y,Z1) && FOREACH [Z
 // w -> x <- u
 //      x -> y
 
-fact: indep(w, u, {})
-fact: !indep(w, u, x)
-fact: !indep(w, y, {})
-fact: indep(w, y, x)
-fact: !indep(u, y, {})
-fact: indep(u, y, x)
+rule [100]: indep(w, u, {})
+rule [100]: !indep(w, u, x)
+rule [100]: !indep(w, y, {})
+rule [100]: indep(w, y, x)
+rule [100]: !indep(u, y, {})
+rule [100]: indep(u, y, x)
 
 
 //fact: !indep(x, u, {})
@@ -113,8 +114,8 @@ fact: indep(u, y, x)
 //fact: !indep(x, u, {y, w})
 //fact: !indep(u, w, {y, x})
 //
-//fact: indep(u, y, {x, w})
-//fact: indep(w, y, {x, u})
+////fact: indep(u, y, {x, w})
+////fact: indep(w, y, {x, u})
  """
 
   it should "provide a solution consistent for the causal example" in {
@@ -125,22 +126,23 @@ fact: indep(u, y, x)
       //breezeOptimizer = false,
       maxIterations = 200000,
       absoluteEpsilon = 1e-8,
-      relativeEpsilon = 1e-3)
-//    val inferenceResults = Inferencer.runInferenceFromString(causalSimpleExampleSetsExact, config = config)
-//    println(inferenceResults.objectiveFun)
-//    println(inferenceResults.printSelected(List.empty))
+      relativeEpsilon = 1e-5)
+    val inferenceResults = Inferencer.runInferenceFromString(causal, config = config)
+    println(inferenceResults.objectiveFun)
+    println(inferenceResults.printSelected(List.empty))
+    //println(PSLToCvxConverter.toCvx(causal))
 
-    // Experimental.
-        val results = MinimaExplorer.exploreFromString(causalSimpleExampleSetsExact, config, List("causes"))
-        for (result <- results) {
-          if (result._3 == 0 && result._4 == 0) {
-            println(s"${result._1}: false = ${result._2} : [${result._3},${result._4}]")
-          } else if (result._3 == 1 && result._4 == 1) {
-            println(s"${result._1}: true  = ${result._2} : [${result._3},${result._4}]")
-          } else {
-            println(s"${result._1}: unknown  = ${result._2} : [${result._3},${result._4}]")
-          }
-        }
+//    // Experimental.
+//        val results = MinimaExplorer.exploreFromString(causalSimpleExampleSetsExact, config, List("causes"))
+//        for (result <- results) {
+//          if (result._3 == 0 && result._4 == 0) {
+//            println(s"${result._1}: false = ${result._2} : [${result._3},${result._4}]")
+//          } else if (result._3 == 1 && result._4 == 1) {
+//            println(s"${result._1}: true  = ${result._2} : [${result._3},${result._4}]")
+//          } else {
+//            println(s"${result._1}: unknown  = ${result._2} : [${result._3},${result._4}]")
+//          }
+//        }
   }
   
   //rule [1]:!indep(x, u, {})
