@@ -34,7 +34,7 @@ object Grounding {
   def ground(pslData: ParsedPslFile, config: InferencerConfig = InferencerConfig()) = {
     val allPossibleSetsAndIndividuals = generateAllPossibleSetsAsIndividuals(pslData.rulesWithPredicates,
       pslData.individualsByClass, config)
-    if (config.verbose) println(s"Generated all classes of individuals: ${allPossibleSetsAndIndividuals.size}.")
+    if (config.verbose) println(s"Generated all possible sets of individuals: ${allPossibleSetsAndIndividuals.size}.")
     val groundedPredicates = createGroundedPredicates(pslData.rulesWithPredicates, pslData.predicates, pslData.facts,
       allPossibleSetsAndIndividuals, config)
     if (config.verbose) println(s"Created ${groundedPredicates.size} grounded predicates.")
@@ -167,7 +167,7 @@ object Grounding {
     // Find all set classes in predicates mentioned in rules.
     val setClasses = rules.flatMap {
       rule =>
-        if (config.verbose) println(s"Checking variables in rule: $rule")
+        if (config.verbose) println(s"Search for all set classes in rule: $rule")
         rule.allPredicatesInRule.flatMap {
           _.variables.flatMap { v =>
             v.classTypes.filter(_.set)
@@ -230,27 +230,47 @@ object Grounding {
       // Return original individuals merged with the new individuals for set classes.
       individualsMap ++ allPossibleSetsAsIndividuals
     }
+  }
 
+  def getBindingOfRule(rule: Rule, binding: Map[String, Individual]) = {
+    (rule.head ++ rule.body).flatMap {
+      p =>
+        val key = p.predicate.get
+        val value = p.allVarsOrIndsWithClasses.flatMap(getBinding(_, binding))
+        if (key.arity != value.size) {
+          None
+        } else {
+          Some((key, value))
+        }
+    }.distinct
   }
 
   def getBinding(varOrInd: VariableOrIndividual, binding: Map[String, Individual]) = varOrInd match {
-    case v: Variable if !v.set => binding(v.value)
+    case v: Variable if !v.set =>
+      Some(binding(v.value))
     case v: Variable if v.set =>
-      // If the variable is a set, we have to join the results of all of the variables in the set.
+      // If the variable is a set of variables, we have to join the results of all of the variables in the set.
       val setVariables = v.varsOrIndividualsInSet.map(VariableOrIndividual(_)).map {
         case variable: Variable =>
           binding(variable.value).varsOrIndividualsInSet
         case individual: Individual =>
           individual.varsOrIndividualsInSet
       }.flatten.toList.sorted.toSet
-      if (setVariables.size == 1) {
+      val boundIndividual = if (setVariables.size == 1) {
         // If there is only one set variable, keep it.
         Individual(setVariables.toString)
       } else {
         // Otherwise, remove the empty set.
         Individual(setVariables.filter(_ != "").toString)
       }
-    case i: Individual => Individual(i.value)
+      if (boundIndividual.numberOfIndividualsInSet >= v.classTypes.map(_.minCardinality).max &&
+        boundIndividual.numberOfIndividualsInSet <= v.classTypes.map(_.maxCardinality).min) {
+        Some(boundIndividual)
+      } else {
+        //println(s"$v (${v.classTypes.map(_.minCardinality).min}, ${v.classTypes.map(_.maxCardinality).max}): $binding (${boundIndividual.numberOfIndividualsInSet})")
+        None
+      }
+    case i: Individual => Some(Individual(i.value))
   }
 
   /**
@@ -272,23 +292,20 @@ object Grounding {
     val groundedPredicatesKeys =
       rules.flatMap {
         rule =>
-          if (config.verbose) println(s"Creating grounded predicate keys for rule: $rule")
           val bindings = generateBindings(rule.variables, individuals, config)
+          if (config.verbose) {
+            println(s"Creating grounded predicate keys for rule: $rule")
+            rule.variables.map(v => println(s"- $v : ${v.classTypes}"))
+            println("Bindings for grounded predicates:")
+            bindings.map { m => println(s"- $m") }
+          }
           val parallelMapOfBindings = if (config.parallelizeGrounding) {
             bindings.par
           } else {
             bindings
           }
           val result = parallelMapOfBindings.flatMap {
-            binding =>
-              val bodyContribution = rule.body.map(p => (p.predicate.get, p.allVarsOrIndsWithClasses.map {
-                getBinding(_, binding)
-              }))
-              val headContribution = rule.head.map(p => (p.predicate.get, p.allVarsOrIndsWithClasses.map {
-                getBinding(_, binding)
-              }))
-              val totalContribution = bodyContribution ++ headContribution
-              totalContribution
+            binding => getBindingOfRule(rule, binding)
           }
           if (config.parallelizeGrounding) {
             result.seq
@@ -853,7 +870,7 @@ object Grounding {
       }
 
       // No grounded predicate.
-      println(s"[Warning] Predicate ${key._1} with binding ${key._2} is not in grounded predicates. ")
+      //println(s"[Warning] Predicate ${key._1} with binding ${key._2} is not in grounded predicates. ")
       return None
     }
     Some(groundedPredicates(key))

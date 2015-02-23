@@ -36,7 +36,7 @@ class CausalSetsExample extends FlatSpec with Matchers with TestAnnouncements {
 class Variable: x
 // class SelectionNode: s1,s2,s3
 
-predicate : indep(Variable, Variable, Set{0,3}[Variable])
+predicate : indep(Variable, Variable, Set{0,1}[Variable])
 predicate : causes(Variable, Variable)
 
 // 0. conditional independence is symmetric in the first two variables.
@@ -124,6 +124,7 @@ rule [100]: indep(u, y, x)
       lazyThreshold = None,
       removeSymmetricConstraints = false,
       //breezeOptimizer = false,
+      //verbose =  true,
       maxIterations = 200000,
       absoluteEpsilon = 1e-8,
       relativeEpsilon = 1e-5)
@@ -132,84 +133,82 @@ rule [100]: indep(u, y, x)
     println(inferenceResults.printSelected(List.empty))
     //println(PSLToCvxConverter.toCvx(causal))
 
-//    // Experimental.
-//        val results = MinimaExplorer.exploreFromString(causalSimpleExampleSetsExact, config, List("causes"))
-//        for (result <- results) {
-//          if (result._3 == 0 && result._4 == 0) {
-//            println(s"${result._1}: false = ${result._2} : [${result._3},${result._4}]")
-//          } else if (result._3 == 1 && result._4 == 1) {
-//            println(s"${result._1}: true  = ${result._2} : [${result._3},${result._4}]")
-//          } else {
-//            println(s"${result._1}: unknown  = ${result._2} : [${result._3},${result._4}]")
-//          }
-//        }
+    //    // Experimental.
+    //        val results = MinimaExplorer.exploreFromString(causalSimpleExampleSetsExact, config, List("causes"))
+    //        for (result <- results) {
+    //          if (result._3 == 0 && result._4 == 0) {
+    //            println(s"${result._1}: false = ${result._2} : [${result._3},${result._4}]")
+    //          } else if (result._3 == 1 && result._4 == 1) {
+    //            println(s"${result._1}: true  = ${result._2} : [${result._3},${result._4}]")
+    //          } else {
+    //            println(s"${result._1}: unknown  = ${result._2} : [${result._3},${result._4}]")
+    //          }
+    //        }
   }
-  
+
   //rule [1]:!indep(x, u, {})
-//rule [1]:!indep(x, w, {})
-//rule [1]:!indep(x, y, {})
-//rule [1]:!indep(y, u, {})
-//rule [1]:!indep(y, w, {})
-//rule [0.1]: indep(w, u, {})
-//
-//rule [0.1]: indep(u, y, x)
-//rule [0.1]: indep(w, y, x)
-//rule [1]:!indep(w, u, x)
-//
-//rule [1]:!indep(w, u, y)
-//rule [1]:!indep(x, w, y)
-//rule [1]:!indep(x, u, y)
-//
-//rule [1]:!indep(x, w, u)
-//rule [1]:!indep(x, y, u)
-//rule [1]:!indep(y, w, u)
-//
-//rule [1]:!indep(x, y, w)
-//rule [1]:!indep(x, u, w)
-//rule [1]:!indep(u, y, w)
-//
-//rule [1]:!indep(x, y, {u, w})
-//rule [1]:!indep(x, w, {y, u})
-//rule [1]:!indep(x, u, {y, w})
-//rule [1]:!indep(u, w, {y, x})
-//
-//rule [0.1]: indep(u, y, {x, w})
-//rule [0.1]: indep(w, y, {x, u})
+  //rule [1]:!indep(x, w, {})
+  //rule [1]:!indep(x, y, {})
+  //rule [1]:!indep(y, u, {})
+  //rule [1]:!indep(y, w, {})
+  //rule [0.1]: indep(w, u, {})
+  //
+  //rule [0.1]: indep(u, y, x)
+  //rule [0.1]: indep(w, y, x)
+  //rule [1]:!indep(w, u, x)
+  //
+  //rule [1]:!indep(w, u, y)
+  //rule [1]:!indep(x, w, y)
+  //rule [1]:!indep(x, u, y)
+  //
+  //rule [1]:!indep(x, w, u)
+  //rule [1]:!indep(x, y, u)
+  //rule [1]:!indep(y, w, u)
+  //
+  //rule [1]:!indep(x, y, w)
+  //rule [1]:!indep(x, u, w)
+  //rule [1]:!indep(u, y, w)
+  //
+  //rule [1]:!indep(x, y, {u, w})
+  //rule [1]:!indep(x, w, {y, u})
+  //rule [1]:!indep(x, u, {y, w})
+  //rule [1]:!indep(u, w, {y, x})
+  //
+  //rule [0.1]: indep(u, y, {x, w})
+  //rule [0.1]: indep(w, y, {x, u})
 
+  //// Symmetric
+  //rule [1]:!indep(u, x, {})
+  //rule [1]:!indep(w, x, {})
+  //rule [1]:!indep(y, x, {})
+  //rule [1]:!indep(u, y, {})
+  //rule [1]:!indep(w, y, {})
+  //rule [0.1]: indep(u, w, {})
+  //
+  //rule [0.1]: indep(y, u, x)
+  //rule [0.1]: indep(y, w, x)
+  //rule [1]:!indep(u, w, x)
+  //
+  //rule [1]:!indep(u, w, y)
+  //rule [1]:!indep(w, x, y)
+  //rule [1]:!indep(u, x, y)
+  //
+  //rule [1]:!indep(w, x, u)
+  //rule [1]:!indep(y, x, u)
+  //rule [1]:!indep(w, y, u)
+  //
+  //rule [1]:!indep(y, x, w)
+  //rule [1]:!indep(u, x, w)
+  //rule [1]:!indep(y, u, w)
+  //
+  //rule [1]:!indep(y, x, {u, w})
+  //rule [1]:!indep(w, x, {y, u})
+  //rule [1]:!indep(u, x, {y, w})
+  //rule [1]:!indep(w, u, {y, x})
+  //
+  //rule [0.1]: indep(y, u, {x, w})
+  //rule [0.1]: indep(y, w, {x, u})
 
-//// Symmetric
-//rule [1]:!indep(u, x, {})
-//rule [1]:!indep(w, x, {})
-//rule [1]:!indep(y, x, {})
-//rule [1]:!indep(u, y, {})
-//rule [1]:!indep(w, y, {})
-//rule [0.1]: indep(u, w, {})
-//
-//rule [0.1]: indep(y, u, x)
-//rule [0.1]: indep(y, w, x)
-//rule [1]:!indep(u, w, x)
-//
-//rule [1]:!indep(u, w, y)
-//rule [1]:!indep(w, x, y)
-//rule [1]:!indep(u, x, y)
-//
-//rule [1]:!indep(w, x, u)
-//rule [1]:!indep(y, x, u)
-//rule [1]:!indep(w, y, u)
-//
-//rule [1]:!indep(y, x, w)
-//rule [1]:!indep(u, x, w)
-//rule [1]:!indep(y, u, w)
-//
-//rule [1]:!indep(y, x, {u, w})
-//rule [1]:!indep(w, x, {y, u})
-//rule [1]:!indep(u, x, {y, w})
-//rule [1]:!indep(w, u, {y, x})
-//
-//rule [0.1]: indep(y, u, {x, w})
-//rule [0.1]: indep(y, w, {x, u})
-  
-  
   val causalSimpleExampleSetsExact = """
 predicate : indep(Variable, Variable, Set{0,1}[Variable])
 predicate : causes(Variable, Variable)
