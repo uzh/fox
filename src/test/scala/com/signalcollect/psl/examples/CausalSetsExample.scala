@@ -152,12 +152,12 @@ rule [1, linear]: indep(w, y, {x, u})
       tolerance = 0,
       breezeOptimizer = false,
       //verbose =  true,
-      maxIterations = 200000,
+      maxIterations = 10,
       absoluteEpsilon = 1e-8,
       relativeEpsilon = 1e-5)
-//    val inferenceResults = Inferencer.runInferenceFromString(causal, config = config)
-//    println(inferenceResults.objectiveFun)
-//    println(inferenceResults.printSelected(List.empty))
+    val inferenceResults = Inferencer.runInferenceFromString(causal, config = config)
+    println(inferenceResults.objectiveFun)
+    println(inferenceResults.printSelected(List.empty))
 
     //    // Experimental.
     //    val results = MinimaExplorer.exploreFromString(causal, config, List("causes"))
