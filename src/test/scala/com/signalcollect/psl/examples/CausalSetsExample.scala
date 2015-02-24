@@ -29,6 +29,7 @@ import com.signalcollect.psl.parser.PslParser
 import com.signalcollect.util.TestAnnouncements
 import com.signalcollect.admm.utils.MinimaExplorer
 import com.signalcollect.psl.model.PSLToCvxConverter
+import com.signalcollect.psl.model.PSLToLPConverter
 
 class CausalSetsExample extends FlatSpec with Matchers with TestAnnouncements {
 
@@ -94,53 +95,53 @@ rule: indep(X,Y,Z) && FOREACH [Z1 strictSubsetOf Z] !indep(X,Y,Z1) && FOREACH [Z
 // w -> x <- u
 //      x -> y
 
-//fact: indep(w, u, {})
-//fact: !indep(w, u, x)
-//fact: !indep(w, y, {})
-//fact: indep(w, y, x)
-//fact: !indep(u, y, {})
-//fact: indep(u, y, x)
+//rule [10000, linear]: !causes(X,w)
+//rule [10000, linear]: !causes(X,u)
 
-//rule [100, linear]: indep(w, u, {})
-//rule [100, linear]: !indep(w, u, x)
-//rule [100, linear]: !indep(w, y, {})
-//rule [100, linear]: indep(w, y, x)
-//rule [100, linear]: !indep(u, y, {})
-//rule [100, linear]: indep(u, y, x)
+//fact: !causes(x, w)
+//fact: !causes(y, w)
+//fact: !causes(u, w)
+//fact: notcauses(x, w)
+//fact: notcauses(y, w)
+//fact: notcauses(u, w)
+//
+//fact: !causes(x, u)
+//fact: !causes(y, u)
+//fact: !causes(w, u)
+//fact: notcauses(x, u)
+//fact: notcauses(y, u)
+//fact: notcauses(w, u)
 
-rule: !causes(X,w)
-rule : !causes(X,u)
+rule [100, linear] : !indep(x, u, {})
+rule [100, linear] : !indep(x, w, {})
+rule [100, linear] : !indep(x, y, {})
+rule [100, linear] : !indep(y, u, {})
+rule [100, linear] : !indep(y, w, {})
+rule [1, linear]: indep(w, u, {})
 
-fact: !indep(x, u, {})
-fact: !indep(x, w, {})
-fact: !indep(x, y, {})
-fact: !indep(y, u, {})
-fact: !indep(y, w, {})
-fact: indep(w, u, {})
+rule [1, linear]: indep(u, y, x)
+rule [1, linear]: indep(w, y, x)
+rule [100, linear]: !indep(w, u, x)
 
-fact: indep(u, y, x)
-fact: indep(w, y, x)
-fact: !indep(w, u, x)
+rule [100, linear]: !indep(w, u, y)
+rule [100, linear]: !indep(x, w, y)
+rule [100, linear]: !indep(x, u, y)
 
-fact: !indep(w, u, y)
-fact: !indep(x, w, y)
-fact: !indep(x, u, y)
+rule [100, linear]: !indep(x, w, u)
+rule [100, linear]: !indep(x, y, u)
+rule [100, linear]: !indep(y, w, u)
 
-fact: !indep(x, w, u)
-fact: !indep(x, y, u)
-fact: !indep(y, w, u)
+rule [100, linear]: !indep(x, y, w)
+rule [100, linear]: !indep(x, u, w)
+rule [100, linear]: !indep(u, y, w)
 
-fact: !indep(x, y, w)
-fact: !indep(x, u, w)
-fact: !indep(u, y, w)
+rule [100, linear]: !indep(x, y, {u, w})
+rule [100, linear]: !indep(x, w, {y, u})
+rule [100, linear]: !indep(x, u, {y, w})
+rule [100, linear]: !indep(u, w, {y, x})
 
-fact: !indep(x, y, {u, w})
-fact: !indep(x, w, {y, u})
-fact: !indep(x, u, {y, w})
-fact: !indep(u, w, {y, x})
-
-fact: indep(u, y, {x, w})
-fact: indep(w, y, {x, u})
+rule [1, linear]: indep(u, y, {x, w})
+rule [1, linear]: indep(w, y, {x, u})
  """
 
   it should "provide a solution consistent for the causal example" in {
@@ -149,14 +150,14 @@ fact: indep(w, y, {x, u})
       lazyThreshold = None,
       removeSymmetricConstraints = false,
       tolerance = 0,
-      //breezeOptimizer = false,
+      breezeOptimizer = false,
       //verbose =  true,
       maxIterations = 200000,
-      absoluteEpsilon = 1e-12,
-      relativeEpsilon = 1e-8)
-    val inferenceResults = Inferencer.runInferenceFromString(causal, config = config)
-    println(inferenceResults.objectiveFun)
-    println(inferenceResults.printSelected(List.empty))
+      absoluteEpsilon = 1e-8,
+      relativeEpsilon = 1e-5)
+//    val inferenceResults = Inferencer.runInferenceFromString(causal, config = config)
+//    println(inferenceResults.objectiveFun)
+//    println(inferenceResults.printSelected(List.empty))
 
     //    // Experimental.
     //    val results = MinimaExplorer.exploreFromString(causal, config, List("causes"))
@@ -170,7 +171,8 @@ fact: indep(w, y, {x, u})
     //      }
     //    }
 
-    //    println(PSLToCvxConverter.toCvx(causal))
+    //println(PSLToCvxConverter.toCvx(causal))
+    println(PSLToLPConverter.toLP(causal))
   }
 
   //rule [1]:!indep(x, u, {})
