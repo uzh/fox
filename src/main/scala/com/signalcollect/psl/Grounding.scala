@@ -106,7 +106,7 @@ object Grounding {
 
   def combineListOfBindingsAndPruneRepeatedIndividuals(allMappingsList: List[List[Map[String, Individual]]]) = {
     // Use combine to foldleft the values and get the result.
-    val foldedList = allMappingsList.foldLeft(List[Map[String, Individual]]())(combine(_, _))
+    val foldedList = combineListOfBindings(allMappingsList)
 
     // Prune all the mappings that have the same individual in more than two variables.
     // Note: this enforces the fact that if you bind an individual to a variable it cannot be bound again.
@@ -131,6 +131,11 @@ object Grounding {
       }
     }
     prunedList
+  }
+
+  def combineListOfBindings(allMappingsList: List[List[Map[String, Individual]]]) = {
+    // Use combine to foldleft the values and get the result.
+    allMappingsList.foldLeft(List[Map[String, Individual]]())(combine(_, _))
   }
 
   /**
@@ -267,7 +272,7 @@ object Grounding {
         boundIndividual.numberOfIndividualsInSet <= v.classTypes.map(_.maxCardinality).min) {
         Some(boundIndividual)
       } else {
-        //println(s"$v (${v.classTypes.map(_.minCardinality).min}, ${v.classTypes.map(_.maxCardinality).max}): $binding (${boundIndividual.numberOfIndividualsInSet})")
+        println(s"getBinding: $v (${v.classTypes.map(_.minCardinality).min}, ${v.classTypes.map(_.maxCardinality).max}): $binding (${boundIndividual.numberOfIndividualsInSet})")
         None
       }
     case i: Individual => Some(Individual(i.value))
@@ -486,9 +491,13 @@ object Grounding {
               PredicateInRule(pInR.name, newVars, pInR.negated, pInR.predicate)
           }
       }.distinct
+      //      println("foreach")
+      //      println(foreachVariablesInBody)
+      //      println(s"binding: $binding")
+      //      println(s"$newBody")
+      //      println("foreach end")
       val foreachInBodyRule = Rule(rule.id, newBody, rule.head, rule.distanceMeasure, rule.weight, existentialVars = rule.existentialVars,
         rule.foreachInSetClauseInHead, rule.existsInSetClauseInHead, foreachInSetClauseInBody = Set.empty, rule.existsInSetClauseInBody)
-      //println(foreachInBodyRule)
       Some(foreachInBodyRule)
     } else {
       if (rule.foreachInSetClauseInBody.size > 0) {
@@ -518,7 +527,7 @@ object Grounding {
             // - strictSubsetOf get all strict subsets of the iterable, thus has a smaller max cardinality.
             val joinedMinCardinality = math.max(minCardinality, c.minCardinality)
             val joinedMaxCardinality = if (containmentOption == "strictSubsetOf") {
-              math.min(maxCardinality, c.maxCardinality - 1)
+              math.min(maxCardinality, c.maxCardinality) - 1
             } else {
               math.min(maxCardinality, c.maxCardinality)
             }
@@ -570,7 +579,7 @@ object Grounding {
               val groundedBody = newRule.body.map(getGroundedPredicate(groundedPredicates, _, binding)).flatten
               val groundedHead = newRule.head.map(getGroundedPredicate(groundedPredicates, _, binding)).flatten
               val unboundGroundedPredicates = groundedHead.filter(!_.truthValue.isDefined) ::: groundedBody.filter(!_.truthValue.isDefined)
-              if (unboundGroundedPredicates.size > 0) {
+              if (groundedBody.size >= newRule.body.size && groundedHead.size >= newRule.head.size && unboundGroundedPredicates.size > 0) {
                 List(GroundedRule({ id += 1; id }, newRule, groundedBody, groundedHead))
               } else {
                 List.empty
@@ -597,7 +606,6 @@ object Grounding {
               } else {
                 List.empty
               }
-
             }
         }
     }
@@ -636,20 +644,25 @@ object Grounding {
                 val range = boundedMinCardinality to boundedMaxCardinality
                 range.flatMap {
                   r =>
-                    val subsetsOfIterableBoundVar = iterableBindingVarsOrInds.subsets(r)
                     val key = (c.id, r)
-                    val values = subsetsOfIterableBoundVar.flatMap { v =>
+                    val values = iterableBindingVarsOrInds.subsets(r).flatMap { v =>
                       individuals(key).filter(_.name == v.toString)
                     }.toSet
+                    //println(s"$r: $key $values")
                     Map(key -> values)
                 }
               }
           }.toMap
-          generateBindings(List(iterator), individualsOfSubsets)
+          //println(s"binding: $binding; individualsOfSubsets: $individualsOfSubsets")
+          val boundIterators = generateBindings(List(iterator), individualsOfSubsets)
+          //println(s"iterator: $iterator (${iterator.classTypes.head.minCardinality}, ${iterator.classTypes.head.maxCardinality}); boundIterators: $boundIterators")
+          boundIterators
         }
     }.toList
 
-    combineListOfBindingsAndPruneRepeatedIndividuals(allMappingsList)
+    val combinedList = combineListOfBindings(allMappingsList)
+    //println(combinedList)
+    combinedList
   }
 
   /**
@@ -671,7 +684,7 @@ object Grounding {
         val groundedBody = newRule.body.map(getGroundedPredicate(groundedPredicates, _, newBinding ++ binding)).flatten
         val groundedHead = newRule.head.map(getGroundedPredicate(groundedPredicates, _, newBinding ++ binding)).flatten
         val unboundGroundedPredicates = groundedHead.filter(!_.truthValue.isDefined) ::: groundedBody.filter(!_.truthValue.isDefined)
-        if (unboundGroundedPredicates.size > 0) {
+        if (groundedBody.size >= newRule.body.size && groundedHead.size >= newRule.head.size && unboundGroundedPredicates.size > 0) {
           Some(GroundedRule({ id += 1; id }, newRule, groundedBody, groundedHead))
         } else {
           None
@@ -838,6 +851,8 @@ object Grounding {
   def getGroundedPredicate(groundedPredicates: Map[(String, List[Individual]), GroundedPredicate],
     p: PredicateInRule, binding: Map[String, Individual]): Option[GroundedPredicate] = {
     // If the variables is a set of variables, union their bindings.
+    //    println(p)
+    //    println(binding)
     val key = (p.name, p.allVarsOrIndsWithClasses.map {
       case v: Variable =>
         if (!v.set) {
@@ -870,7 +885,7 @@ object Grounding {
       }
 
       // No grounded predicate.
-      //println(s"[Warning] Predicate ${key._1} with binding ${key._2} is not in grounded predicates. ")
+      println(s"[Warning] Predicate ${key._1} with binding ${key._2} is not in grounded predicates. ")
       return None
     }
     Some(groundedPredicates(key))

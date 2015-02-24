@@ -36,7 +36,7 @@ class CausalSetsExample extends FlatSpec with Matchers with TestAnnouncements {
 class Variable: x
 // class SelectionNode: s1,s2,s3
 
-predicate : indep(Variable, Variable, Set{0,1}[Variable])
+predicate : indep(Variable, Variable, Set{0,3}[Variable])
 predicate : causes(Variable, Variable)
 
 // 0. conditional independence is symmetric in the first two variables.
@@ -78,44 +78,51 @@ rule: indep(X,Y,Z) && FOREACH [Z1 strictSubsetOf Z] !indep(X,Y,Z1) && FOREACH [Z
 // w -> x <- u
 //      x -> y
 
-rule [100]: indep(w, u, {})
-rule [100]: !indep(w, u, x)
-rule [100]: !indep(w, y, {})
-rule [100]: indep(w, y, x)
-rule [100]: !indep(u, y, {})
-rule [100]: indep(u, y, x)
-
-
-//fact: !indep(x, u, {})
-//fact: !indep(x, w, {})
-//fact: !indep(x, y, {})
-//fact: !indep(y, u, {})
-//fact: !indep(y, w, {})
 //fact: indep(w, u, {})
-//
-//fact: indep(u, y, x)
-//fact: indep(w, y, x)
 //fact: !indep(w, u, x)
+//fact: !indep(w, y, {})
+//fact: indep(w, y, x)
+//fact: !indep(u, y, {})
+//fact: indep(u, y, x)
 //
-//fact: !indep(w, u, y)
-//fact: !indep(x, w, y)
-//fact: !indep(x, u, y)
-//
-//fact: !indep(x, w, u)
-//fact: !indep(x, y, u)
-//fact: !indep(y, w, u)
-//
-//fact: !indep(x, y, w)
-//fact: !indep(x, u, w)
-//fact: !indep(u, y, w)
-//
-//fact: !indep(x, y, {u, w})
-//fact: !indep(x, w, {y, u})
-//fact: !indep(x, u, {y, w})
-//fact: !indep(u, w, {y, x})
-//
-////fact: indep(u, y, {x, w})
-////fact: indep(w, y, {x, u})
+////rule [100]: indep(w, u, {})
+////rule [100]: !indep(w, u, x)
+////rule [100]: !indep(w, y, {})
+////rule [100]: indep(w, y, x)
+////rule [100]: !indep(u, y, {})
+////rule [100]: indep(u, y, x)
+
+
+fact: !indep(x, u, {})
+fact: !indep(x, w, {})
+fact: !indep(x, y, {})
+fact: !indep(y, u, {})
+fact: !indep(y, w, {})
+fact: indep(w, u, {})
+
+fact: indep(u, y, x)
+fact: indep(w, y, x)
+fact: !indep(w, u, x)
+
+fact: !indep(w, u, y)
+fact: !indep(x, w, y)
+fact: !indep(x, u, y)
+
+fact: !indep(x, w, u)
+fact: !indep(x, y, u)
+fact: !indep(y, w, u)
+
+fact: !indep(x, y, w)
+fact: !indep(x, u, w)
+fact: !indep(u, y, w)
+
+fact: !indep(x, y, {u, w})
+fact: !indep(x, w, {y, u})
+fact: !indep(x, u, {y, w})
+fact: !indep(u, w, {y, x})
+
+//fact: indep(u, y, {x, w})
+//fact: indep(w, y, {x, u})
  """
 
   it should "provide a solution consistent for the causal example" in {

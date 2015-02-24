@@ -115,6 +115,13 @@ case class PredicateInRule(
     }
   }
 
+  override def equals(that: Any) = {
+    that match {
+      case p: PredicateInRule => p.toString == toString
+      case _ => false
+    }
+  }
+
   override def toString = s"${if (negated) "!" else ""}$name${allVarsOrIndsWithClasses.mkString("(", ", ", ")")}"
 }
 
