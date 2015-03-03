@@ -132,7 +132,7 @@ case class InferenceResult(
 
     sortedListGpToTruthValue.foreach {
       case (gp, truthValue) =>
-        s += s"\n$gp has truth value ${nicerTruthValue(truthValue)}"
+        s += s"\n$gp -> ${nicerTruthValue(truthValue)}"
     }
     s
   }
