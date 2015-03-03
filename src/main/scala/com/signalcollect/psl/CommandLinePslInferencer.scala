@@ -20,7 +20,28 @@ Usage: fox filename [--absEps num] [--relEps num] [--maxIter num] [--tol num]
 [--output grounding|lp|cvx|inference] [--outfile outputfilename]
 [--inference foxPSL|mosek]
 [--breezeOptimizer true|false]
+[--help]
   """
+
+  val help = """
+Usage: fox filename [--absEps num] [--relEps num] [--maxIter num] [--tol num]
+[--queryList "pred1, pred2"] [--multipleMinima true] [--threeValuedLogic true] 
+[--output grounding|lp|cvx|inference] [--outfile outputfilename]
+[--inference foxPSL|mosek]
+[--breezeOptimizer true|false]
+[--help]
+
+--absEps, --relEps: absolute and relative epsilons for ADMM algorithm (foxPSL solver)
+--maxIter: maximum number of iterations for ADMM algorithm (foxPSL solver)
+--tol: tolerance value for constraints, under this threshold a constraint is not considered broken
+--queryList: list of predicate names that we want to output
+--multipleMinima: experimental feature that finds the range of the best truth values for each predicates
+--threeValuedLogic: outputs true, false or unknown if multipleMinima is on
+--output: what type of output do we expect: grounding (grounded rules), a file/string in LP format (input to ILP solvers), a file/string in CVX format (input to CVX toolbox in Matlab), standard inference results
+--outfile: if defined the output is saved in this file, otherwise it is shown in the stdout
+--inference: which solver to use for inference, foxPSL or mosek - requires mosek to be installed, and currently works only for problems with hard rules and linear soft rules with one clause.
+--breezeOptimizer: if we use foxPSL, we can choose whether to use the Breeze toolkit to do the single minimizations.
+"""
 
   if (args.length <= 1) {
     println(usage)
@@ -30,6 +51,11 @@ Usage: fox filename [--absEps num] [--relEps num] [--maxIter num] [--tol num]
   val it = arglist.iterator
   val tupleOfArgs = it.zip(it).toList
   val mapOfArgs = tupleOfArgs.toMap
+
+  if (mapOfArgs.get("--help").isDefined) {
+    println(help)
+    System.exit(-1)
+  }
 
   val pslFile = new File(mapOfArgs.get("--filename").get)
   val queryList = mapOfArgs.get("--queryList") match {

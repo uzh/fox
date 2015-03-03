@@ -90,7 +90,7 @@ class ExistsExample extends FlatSpec with Matchers with TestAnnouncements {
   }
 
   val existsInSet = """
-class Variable
+class Variable: 
 
 predicate : indep(Variable, Variable, Set{1,3}[Variable])
 predicate : dep(Variable, Variable, Set{1,3}[Variable])
@@ -129,7 +129,6 @@ GroundedPredicate 118: indep[ ] (y, a, z) has truth value 0.8565016130054439""".
     inferenceResults.solution.results.get(indepYAZ.id) should be(0.48 +- 0.1)
     val indepYAW = inferenceResults.getGp("indep", "y", "a", "w").get
     inferenceResults.solution.results.get(indepYAW.id) should be(0.48 +- 0.1)
-    println(PSLToLPConverter.toLP(existsInSet))
   }
 
   val foreachInBody = """
