@@ -30,23 +30,22 @@ import breeze.optimize.DiffFunction
 import breeze.linalg.DenseVector
 
 object PSLToLPConverter {
-
-  def toLP(pslString: String): String = {
+  def toLP(pslString: String): (String, Map[Int, String]) = {
     val pslData = PslParser.parse(pslString)
     println(s"String parsed.")
     toLP(pslData)
   }
 
-  def toLP(pslFile: File): String = {
+  def toLP(pslFile: File): (String, Map[Int, String]) = {
     val pslData = PslParser.parse(pslFile)
     println(s"File ${pslFile.getName()} parsed.")
     toLP(pslData)
   }
 
-  def toLP(pslData: ParsedPslFile): String = {
+  def toLP(pslData: ParsedPslFile): (String, Map[Int, String]) = {
     val (groundedRules, groundedConstraints, idToGpMap) = Grounding.ground(pslData)
     println(s"Grounding completed: ${groundedRules.size} grounded rules, ${groundedConstraints.size} constraints and ${idToGpMap.keys.size} grounded predicates.")
-    toLP(groundedRules, groundedConstraints)
+    (toLP(groundedRules, groundedConstraints), idToGpMap.map { case (i, p) => (i, p.definition.name + p.groundings.mkString("(", ",", ")")) })
   }
 
   def toLP(rules: List[GroundedRule], constraints: List[GroundedConstraint]): String = {
@@ -86,7 +85,7 @@ object PSLToLPConverter {
     }
     val zIndices = rule.unboundGroundedPredicates.map(gp => "x" + gp.id)
     val c = rule.definition.weight * coefficientMatrix(0)
-    s"${if (c>0) "+" else ""}$c ${zIndices(0)}"
+    s"${if (c > 0) "+" else ""}$c ${zIndices(0)}"
   }
 
   def toLPConstraint(constraint: GroundedConstraint): String = {
@@ -98,7 +97,7 @@ object PSLToLPConverter {
     }
     val zIndices = constraint.unboundGroundedPredicates.map(gp => "x" + gp.id)
     val comparator = constraint.computeComparator
-    val vector = coefficientMatrix.zipWithIndex.map{ case (c, i) => s"${if (c>0) "+" else ""}$c ${zIndices(i)}"}
+    val vector = coefficientMatrix.zipWithIndex.map { case (c, i) => s"${if (c > 0) "+" else ""}$c ${zIndices(i)}" }
     s"${vector.mkString(" ")} ${if (comparator == "leq") "<=" else "=="} ${constant}"
   }
 
@@ -110,7 +109,7 @@ object PSLToLPConverter {
       return ""
     }
     val zIndices = function.unboundGroundedPredicates.map(gp => "x" + gp.id)
-    val vector = coefficientMatrix.zipWithIndex.map { case (c, i) => s"${if (c>0) "+" else ""}$c ${zIndices(i)}"}
+    val vector = coefficientMatrix.zipWithIndex.map { case (c, i) => s"${if (c > 0) "+" else ""}$c ${zIndices(i)}" }
     s"${vector.mkString(" ")} <=  ${constant}"
   }
 

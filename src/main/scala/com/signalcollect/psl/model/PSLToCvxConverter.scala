@@ -31,22 +31,22 @@ import breeze.linalg.DenseVector
 
 object PSLToCvxConverter {
 
-  def toCvx(pslString: String): String = {
+  def toCvx(pslString: String): (String, Map[Int, String]) = {
     val pslData = PslParser.parse(pslString)
     println(s"String parsed.")
     toCvx(pslData)
   }
 
-  def toCvx(pslFile: File): String = {
+  def toCvx(pslFile: File): (String, Map[Int, String]) = {
     val pslData = PslParser.parse(pslFile)
     println(s"File ${pslFile.getName()} parsed.")
     toCvx(pslData)
   }
 
-  def toCvx(pslData: ParsedPslFile): String = {
+  def toCvx(pslData: ParsedPslFile): (String, Map[Int, String]) = {
     val (groundedRules, groundedConstraints, idToGpMap) = Grounding.ground(pslData)
     println(s"Grounding completed: ${groundedRules.size} grounded rules, ${groundedConstraints.size} constraints and ${idToGpMap.keys.size} grounded predicates.")
-    toCvx(groundedRules, groundedConstraints)
+    (toCvx(groundedRules, groundedConstraints), idToGpMap.map { case (i, p) => (i, p.definition.name + p.groundings.mkString("(", ",", ")")) })
   }
 
   def toCvx(rules: List[GroundedRule], constraints: List[GroundedConstraint]): String = {

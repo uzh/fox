@@ -45,16 +45,16 @@ Usage: fox filename [--absEps num] [--relEps num] [--maxIter num] [--tol num]
     absoluteEpsilon = mapOfArgs.get("--absEps").getOrElse("1e-8").toDouble,
     relativeEpsilon = mapOfArgs.get("--relEps").getOrElse("1e-5").toDouble)
 
-  val printableResults = if (doInference && !mapOfArgs.get("--multipleMinima").isDefined) {
+  val (printableResults, extraInformation) = if (doInference && !mapOfArgs.get("--multipleMinima").isDefined) {
     // Normal inference.
     val inferenceResults = Inferencer.runInferenceFromFile(
       pslFile = pslFile,
       config = config)
-    inferenceResults.printSelected(queryList)
+    (inferenceResults.printSelected(queryList), None)
   } else if (doInference) {
     // Multiple minima inference.
     val results = MinimaExplorer.exploreFromFile(pslFile, config, queryList)
-    if (mapOfArgs.get("--threeValuedLogic").isDefined) {
+    val stringOfResults = if (mapOfArgs.get("--threeValuedLogic").isDefined) {
       results.map {
         result =>
           if (result._3 == 0 && result._4 == 0) {
@@ -71,6 +71,7 @@ Usage: fox filename [--absEps num] [--relEps num] [--maxIter num] [--tol num]
           s"${result._1}: ${result._2} [${result._3}, ${result._4}]"
       }.mkString("\n")
     }
+    (stringOfResults, None)
   } else {
     // No inference.
     outputType match {
@@ -78,18 +79,29 @@ Usage: fox filename [--absEps num] [--relEps num] [--maxIter num] [--tol num]
         val (groundedRules, groundedConstraints, idToGpMap) = Grounding.ground(PslParser.parse(pslFile), config)
         val results = groundedRules.map(_.toString) ++
           groundedConstraints.map(_.toString)
-        results.mkString("\n")
-      case Some("lp") => PSLToLPConverter.toLP(pslFile)
-      case Some("cvx") => PSLToCvxConverter.toCvx(pslFile)
-      case any => s"[Warning]: unknown parameter $any"
+        (results.mkString("\n"), None)
+      case Some("lp") =>
+        val (translatedProblem, idToGpName) = PSLToLPConverter.toLP(pslFile)
+        (translatedProblem, Some(idToGpName))
+      case Some("cvx") =>
+        val (translatedProblem, idToGpName) = PSLToCvxConverter.toCvx(pslFile)
+        (translatedProblem, Some(idToGpName))
+      case any =>
+        (s"[Warning]: unknown parameter $any", None)
     }
-
   }
 
   if (outputFile.isDefined) {
     val writer = new FileWriter(outputFile.get)
     writer.append(printableResults)
+    writer.append("\n")
     writer.close()
+    if (extraInformation.isDefined) {
+      val writerMap = new FileWriter(outputFile.get + ".map")
+      writerMap.append(extraInformation.get.mkString("\n"))
+      writerMap.append("\n")
+      writerMap.close()
+    }
   } else {
     println(printableResults)
   }
