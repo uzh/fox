@@ -29,23 +29,31 @@ import com.signalcollect.psl.Grounding
 import breeze.optimize.DiffFunction
 import breeze.linalg.DenseVector
 
+import scala.util.parsing.combinator.ImplicitConversions
+import scala.util.parsing.combinator.RegexParsers
+import scala.util.parsing.combinator.lexical.StdLexical
+import scala.util.parsing.input.CharArrayReader
+import scala.util.parsing.input.StreamReader
+import scala.util.parsing.input.Reader
+import scala.annotation.tailrec
+
 object PSLToLPConverter {
-  def toLP(pslString: String): (String, Map[Int, String]) = {
+  def toLP(pslString: String): (String, Map[Int, GroundedPredicate]) = {
     val pslData = PslParser.parse(pslString)
     println(s"String parsed.")
     toLP(pslData)
   }
 
-  def toLP(pslFile: File): (String, Map[Int, String]) = {
+  def toLP(pslFile: File): (String, Map[Int, GroundedPredicate]) = {
     val pslData = PslParser.parse(pslFile)
     println(s"File ${pslFile.getName()} parsed.")
     toLP(pslData)
   }
 
-  def toLP(pslData: ParsedPslFile): (String, Map[Int, String]) = {
+  def toLP(pslData: ParsedPslFile): (String, Map[Int, GroundedPredicate]) = {
     val (groundedRules, groundedConstraints, idToGpMap) = Grounding.ground(pslData)
     println(s"Grounding completed: ${groundedRules.size} grounded rules, ${groundedConstraints.size} constraints and ${idToGpMap.keys.size} grounded predicates.")
-    (toLP(groundedRules, groundedConstraints), idToGpMap.map { case (i, p) => (i, p.definition.name + p.groundings.mkString("(", ",", ")")) })
+    (toLP(groundedRules, groundedConstraints), idToGpMap)
   }
 
   def toLP(rules: List[GroundedRule], constraints: List[GroundedConstraint]): String = {
@@ -112,5 +120,74 @@ object PSLToLPConverter {
     val vector = coefficientMatrix.zipWithIndex.map { case (c, i) => s"${if (c > 0) "+" else ""}$c ${zIndices(i)}" }
     s"${vector.mkString(" ")} <=  ${constant}"
   }
+}
+
+object LpResultParser extends com.signalcollect.psl.parser.ParseHelper[Map[Int, Int]] with ImplicitConversions {
+
+  /**
+   * VARIABLES
+   * INDEX      NAME           AT ACTIVITY                 LOWER LIMIT        UPPER LIMIT
+   * 0          X1             SB 0.00000000000000e+00     0.00000000e+00     1.00000000e+00
+   */
+
+  lexical.delimiters ++= List("(", ")", "&", "|", "=>", "=", "!", ",", ":", "[", "]")
+  protected override val whiteSpace = """(\s|//.*|#.*|(?m)/\*(\*(?!/)|[^*])*\*/)+""".r
+
+  def defaultParser = variables
+
+  def parse(files: List[File]): Map[Int, Int] = {
+    val parsedFiles = files.map(parseFileLineByLine(_))
+    parsedFiles.foldLeft(Map.empty[Int, Int])(_ ++ _)
+  }
+
+  override def parse(f: File): Map[Int, Int] = {
+    parseFileLineByLine(f)
+  }
+
+  def parseFileLineByLine(file: File): Map[Int, Int] = {
+    val iterator = io.Source.fromFile(file).getLines
+    var isVariableList = false
+    val parsedLines = iterator.toList.flatMap {
+      line =>
+        if (line.contains("VARIABLES")) {
+          isVariableList = true
+          None
+        } else if (!isVariableList || line.contains("INDEX") || line.contains(":") || line.trim == "") {
+          None
+        } else {
+          println(line)
+          Some(parseString(line, variable))
+        }
+    }.flatten.toMap
+    parsedLines
+  }
+
+  lazy val variable: Parser[Option[(Int, Int)]] = {
+    integer ~ identifier ~ identifier ~ double ~ (double | "NONE") ~ (double | "NONE") ^^ {
+      case index ~ varName ~ at ~ activity ~ lowerLimit ~ upperLimit =>
+        println(varName)
+        Some((varName.stripPrefix("X").toInt, activity.toInt))
+    }
+  }
+
+  //  lazy val anyotherLine: Parser[Option[(Int, Int)]] = {
+  //    (identifierOrDash | double | ":") ^^ {
+  //      case any =>
+  //        None
+  //    }
+  //  }
+
+  lazy val variables: Parser[Map[Int, Int]] = {
+    rep(variable) ^^ {
+      case variables => variables.flatten.toMap
+    }
+  }
+
+  //  lazy val results: Parser[Map[Int, Int]] = {
+  //    rep(anyotherLine) ^^ {
+  //      case variableLines => Map.empty
+  //    }
+  //    // rep(anyotherLine) ~! "VARIABLES" ~ "INDEX" ~ "NAME" ~ "AT" ~ "ACTIVITY" ~ "LOWER LIMIT" ~ "UPPER LIMIT" ~> variables ^^ {
+  //  }
 
 }

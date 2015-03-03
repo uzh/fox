@@ -50,7 +50,7 @@ object PslResultParser extends ParseHelper[List[EncodedVariable]] with ImplicitC
 
   def defaultParser = variables
   
-    def parse(files: List[File]): List[EncodedVariable]= {
+  def parse(files: List[File]): List[EncodedVariable]= {
     val parsedFiles = files.map(parseFile(_, defaultParser))
     parsedFiles.foldLeft(List.empty[EncodedVariable]) (_ ++ _)
   }
