@@ -28,6 +28,7 @@ import com.signalcollect.psl.InferencerConfig
 import com.signalcollect.psl.parser.PslParser
 import com.signalcollect.util.TestAnnouncements
 import com.signalcollect.admm.utils.MinimaExplorer
+import com.signalcollect.psl.model.PSLToLPConverter
 
 class CausalExample extends FlatSpec with Matchers with TestAnnouncements {
 
@@ -227,12 +228,12 @@ GroundedPredicate 40: causes[ ] (w, u) : [0.0050777510230964815, 0.9976288302377
 
   it should "provide a solution consistent for the causal example" in {
     val config = InferencerConfig(
-        computeObjectiveValueOfSolution = true, 
-        lazyThreshold = None, 
-        removeSymmetricConstraints = false,
-        maxIterations = 20000,
-        absoluteEpsilon = 1e-5,
-        relativeEpsilon = 1e-3)
+      computeObjectiveValueOfSolution = true,
+      lazyThreshold = None,
+      removeSymmetricConstraints = false,
+      maxIterations = 20000,
+      absoluteEpsilon = 1e-5,
+      relativeEpsilon = 1e-3)
     val results = MinimaExplorer.exploreFromString(causal, config, List("none"))
     for (result <- results) {
       if (result._3 == 0 && result._4 == 0) {

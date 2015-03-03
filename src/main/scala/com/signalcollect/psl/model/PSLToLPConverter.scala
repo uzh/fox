@@ -53,8 +53,9 @@ object PSLToLPConverter {
     val variables = getVariables(rules, constraints)
     val functions = rules.filter(_.definition.weight != Double.MaxValue).map(toLPFunction).mkString(" ")
     val constraintFunctions = rules.filter(_.definition.weight == Double.MaxValue).map(toLPConstraint).mkString("\n")
-    val subjectTo = constraintFunctions + constraints.map(toLPConstraint).mkString("\n") + "\n" + toVariableConstraints(variables)
-    s"\nminimize\nobj: ${functions} \nsubject to \n${subjectTo}\nbinary\n${variables.mkString(" ")}\nend"
+    val subjectTo = constraintFunctions + constraints.map(toLPConstraint).mkString("\n")
+    //s"\nminimize\nobj: ${functions} \nsubject to\n${subjectTo}\nbounds\n${toVariableConstraints(variables)}\nbinary\n${variables.mkString(" ")}\nend"
+    s"\nminimize\nobj: ${functions} \nsubject to\n${subjectTo}\nbinary\n${variables.mkString(" ")}\nend"
   }
 
   def getVariables(rules: List[GroundedRule], constraints: List[GroundedConstraint]) = {
@@ -72,7 +73,7 @@ object PSLToLPConverter {
   }
 
   def toVariableConstraints(variables: Set[String]): String = {
-    variables.map(v => s"${v} >= 0\n${v} <= 1").mkString("\n")
+    variables.map(v => s" 0 <= ${v} <= 1").mkString("\n")
   }
 
   def toLPFunction(rule: GroundedRule): String = {
@@ -86,7 +87,7 @@ object PSLToLPConverter {
     }
     val zIndices = rule.unboundGroundedPredicates.map(gp => "x" + gp.id)
     val c = rule.definition.weight * coefficientMatrix(0)
-    s"${if (c>0) "+" else ""}$c ${zIndices(0)}"
+    s"${if (c > 0) s" + $c" else s" - ${-c}"} ${zIndices(0)}"
   }
 
   def toLPConstraint(constraint: GroundedConstraint): String = {
@@ -98,7 +99,7 @@ object PSLToLPConverter {
     }
     val zIndices = constraint.unboundGroundedPredicates.map(gp => "x" + gp.id)
     val comparator = constraint.computeComparator
-    val vector = coefficientMatrix.zipWithIndex.map{ case (c, i) => s"${if (c>0) "+" else ""}$c ${zIndices(i)}"}
+    val vector = coefficientMatrix.zipWithIndex.map { case (c, i) => s"${if (c > 0) s" + $c" else s" - ${-c}"} ${zIndices(i)}" }
     s"${vector.mkString(" ")} ${if (comparator == "leq") "<=" else "=="} ${constant}"
   }
 
@@ -110,8 +111,8 @@ object PSLToLPConverter {
       return ""
     }
     val zIndices = function.unboundGroundedPredicates.map(gp => "x" + gp.id)
-    val vector = coefficientMatrix.zipWithIndex.map { case (c, i) => s"${if (c>0) "+" else ""}$c ${zIndices(i)}"}
-    s"${vector.mkString(" ")} <=  ${constant}"
+    val vector = coefficientMatrix.zipWithIndex.map { case (c, i) => s"${if (c > 0) s" + $c" else s" - ${-c}"} ${zIndices(i)}" }
+    s"c${function.id}: ${vector.mkString(" ")} <=  ${constant}"
   }
 
 }

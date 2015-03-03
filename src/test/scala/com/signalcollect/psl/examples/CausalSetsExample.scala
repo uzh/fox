@@ -152,12 +152,12 @@ rule [1, linear]: indep(w, y, {x, u})
       tolerance = 0,
       breezeOptimizer = false,
       //verbose =  true,
-      maxIterations = 10,
-      absoluteEpsilon = 1e-8,
-      relativeEpsilon = 1e-5)
+      maxIterations = 200000,
+      absoluteEpsilon = 1e-5,
+      relativeEpsilon = 1e-3)
     val inferenceResults = Inferencer.runInferenceFromString(causal, config = config)
     println(inferenceResults.objectiveFun)
-    println(inferenceResults.printSelected(List.empty))
+    println(inferenceResults.printSelectedResultsAndFacts(List.empty, sortById = true, printOutZeros = true))
 
     //    // Experimental.
     //    val results = MinimaExplorer.exploreFromString(causal, config, List("causes"))
@@ -170,8 +170,7 @@ rule [1, linear]: indep(w, y, {x, u})
     //        println(s"${result._1}: unknown  = ${result._2} : [${result._3},${result._4}]")
     //      }
     //    }
-
-    //println(PSLToCvxConverter.toCvx(causal))
+    println(PSLToCvxConverter.toCvx(causal))
     println(PSLToLPConverter.toLP(causal))
   }
 

@@ -108,12 +108,12 @@ case class InferenceResult(
     }
   }
 
-  def printSelected(predicateNames: List[String] = List.empty) = {
+  def printSelected(predicateNames: List[String] = List.empty, sortById: Boolean = false, printOutZeros: Boolean = false) = {
     var s = ""
     // Sort the output in alphabetical order.
     val listGpToTruthValue = solution.results.toScalaMap.flatMap {
       case (id, truthValue) =>
-        if (truthValue > 0) {
+        if (printOutZeros || truthValue > 0) {
           val gp = idToGpMap(id)
           if (predicateNames.isEmpty || predicateNames.contains(gp.definition.name)) {
             Some(Map(gp -> truthValue))
@@ -121,9 +121,14 @@ case class InferenceResult(
         } else { None }
     }.flatten.toList
 
-    val sortedListGpToTruthValue = listGpToTruthValue.sortBy(f =>
-      // (predicate name, groundings in alphabetical order)
-      (f._1.definition.name, f._1.groundings.toString))
+    val sortedListGpToTruthValue = if (!sortById) {
+      listGpToTruthValue.sortBy(
+        f =>
+          // (predicate name, groundings in alphabetical order)
+          (f._1.definition.name, f._1.groundings.toString))
+    } else {
+      listGpToTruthValue.sortBy(f => f._1.id)
+    }
 
     sortedListGpToTruthValue.foreach {
       case (gp, truthValue) =>
@@ -133,22 +138,27 @@ case class InferenceResult(
   }
 
   // TODO(sara): currently prints also input facts. Consider removing them.
-  def printSelectedResultsAndFacts(predicateNames: List[String] = List.empty) = {
+  def printSelectedResultsAndFacts(predicateNames: List[String] = List.empty, sortById: Boolean = false, printOutZeros: Boolean = false) = {
     var s = ""
     // Sort the output in alphabetical order.
     val listGpToTruthValue = idToGpMap.flatMap {
       case (id, gp) =>
         if (predicateNames.isEmpty || predicateNames.contains(gp.definition.name)) {
           val truthValue = gp.truthValue.getOrElse(solution.results.get(id))
-          if (truthValue > 0) {
+          if (printOutZeros || truthValue > 0) {
             Some(Map(gp -> truthValue))
           } else { None }
         } else { None }
     }.flatten.toList
 
-    val sortedListGpToTruthValue = listGpToTruthValue.sortBy(f =>
-      // (predicate name, groundings in alphabetical order)
-      (f._1.definition.name, f._1.groundings.toString))
+    val sortedListGpToTruthValue = if (!sortById) {
+      listGpToTruthValue.sortBy(
+        f =>
+          // (predicate name, groundings in alphabetical order)
+          (f._1.definition.name, f._1.groundings.toString))
+    } else {
+      listGpToTruthValue.sortBy(f => f._1.id)
+    }
 
     sortedListGpToTruthValue.foreach {
       case (gp, truthValue) =>

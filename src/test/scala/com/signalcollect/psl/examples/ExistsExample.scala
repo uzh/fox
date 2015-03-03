@@ -27,6 +27,7 @@ import com.signalcollect.psl.Inferencer
 import com.signalcollect.psl.InferencerConfig
 import com.signalcollect.psl.parser.PslParser
 import com.signalcollect.util.TestAnnouncements
+import com.signalcollect.psl.model.PSLToLPConverter
 
 /**
  * Small example that exploits the functional and symmetric constraints.
@@ -128,6 +129,7 @@ GroundedPredicate 118: indep[ ] (y, a, z) has truth value 0.8565016130054439""".
     inferenceResults.solution.results.get(indepYAZ.id) should be(0.48 +- 0.1)
     val indepYAW = inferenceResults.getGp("indep", "y", "a", "w").get
     inferenceResults.solution.results.get(indepYAW.id) should be(0.48 +- 0.1)
+    println(PSLToLPConverter.toLP(existsInSet))
   }
 
   val foreachInBody = """
