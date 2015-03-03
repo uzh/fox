@@ -29,24 +29,31 @@ import com.signalcollect.psl.Grounding
 import breeze.optimize.DiffFunction
 import breeze.linalg.DenseVector
 
-object PSLToLPConverter {
+import scala.util.parsing.combinator.ImplicitConversions
+import scala.util.parsing.combinator.RegexParsers
+import scala.util.parsing.combinator.lexical.StdLexical
+import scala.util.parsing.input.CharArrayReader
+import scala.util.parsing.input.StreamReader
+import scala.util.parsing.input.Reader
+import scala.annotation.tailrec
 
-  def toLP(pslString: String): String = {
+object PSLToLPConverter {
+  def toLP(pslString: String): (String, Map[Int, GroundedPredicate]) = {
     val pslData = PslParser.parse(pslString)
     println(s"String parsed.")
     toLP(pslData)
   }
 
-  def toLP(pslFile: File): String = {
+  def toLP(pslFile: File): (String, Map[Int, GroundedPredicate]) = {
     val pslData = PslParser.parse(pslFile)
     println(s"File ${pslFile.getName()} parsed.")
     toLP(pslData)
   }
 
-  def toLP(pslData: ParsedPslFile): String = {
+  def toLP(pslData: ParsedPslFile): (String, Map[Int, GroundedPredicate]) = {
     val (groundedRules, groundedConstraints, idToGpMap) = Grounding.ground(pslData)
     println(s"Grounding completed: ${groundedRules.size} grounded rules, ${groundedConstraints.size} constraints and ${idToGpMap.keys.size} grounded predicates.")
-    toLP(groundedRules, groundedConstraints)
+    (toLP(groundedRules, groundedConstraints), idToGpMap)
   }
 
   def toLP(rules: List[GroundedRule], constraints: List[GroundedConstraint]): String = {
@@ -54,7 +61,6 @@ object PSLToLPConverter {
     val functions = rules.filter(_.definition.weight != Double.MaxValue).map(toLPFunction).mkString(" ")
     val constraintFunctions = rules.filter(_.definition.weight == Double.MaxValue).map(toLPConstraint).mkString("\n")
     val subjectTo = constraintFunctions + constraints.map(toLPConstraint).mkString("\n")
-    //s"\nminimize\nobj: ${functions} \nsubject to\n${subjectTo}\nbounds\n${toVariableConstraints(variables)}\nbinary\n${variables.mkString(" ")}\nend"
     s"\nminimize\nobj: ${functions} \nsubject to\n${subjectTo}\nbinary\n${variables.mkString(" ")}\nend"
   }
 
@@ -113,6 +119,61 @@ object PSLToLPConverter {
     val zIndices = function.unboundGroundedPredicates.map(gp => "x" + gp.id)
     val vector = coefficientMatrix.zipWithIndex.map { case (c, i) => s"${if (c > 0) s" + $c" else s" - ${-c}"} ${zIndices(i)}" }
     s"c${function.id}: ${vector.mkString(" ")} <=  ${constant}"
+  }
+}
+
+object LpResultParser extends com.signalcollect.psl.parser.ParseHelper[Map[Int, Int]] with ImplicitConversions {
+
+  /**
+   * VARIABLES
+   * INDEX      NAME           AT ACTIVITY                 LOWER LIMIT        UPPER LIMIT
+   * 0          X1             SB 0.00000000000000e+00     0.00000000e+00     1.00000000e+00
+   */
+
+  lexical.delimiters ++= List("(", ")", "&", "|", "=>", "=", "!", ",", ":", "[", "]")
+  protected override val whiteSpace = """(\s|//.*|#.*|(?m)/\*(\*(?!/)|[^*])*\*/)+""".r
+
+  def defaultParser = variables
+
+  def parse(files: List[File]): Map[Int, Int] = {
+    val parsedFiles = files.map(parseFileLineByLine(_))
+    parsedFiles.foldLeft(Map.empty[Int, Int])(_ ++ _)
+  }
+
+  override def parse(f: File): Map[Int, Int] = {
+    parseFileLineByLine(f)
+  }
+
+  def parseFileLineByLine(file: File): Map[Int, Int] = {
+    val iterator = io.Source.fromFile(file).getLines
+    var isVariableList = false
+    val parsedLines = iterator.toList.flatMap {
+      line =>
+        if (line.contains("VARIABLES")) {
+          isVariableList = true
+          None
+        } else if (!isVariableList || line.contains("INDEX") || line.contains(":") || line.trim == "") {
+          None
+        } else {
+          println(line)
+          Some(parseString(line, variable))
+        }
+    }.flatten.toMap
+    parsedLines
+  }
+
+  lazy val variable: Parser[Option[(Int, Int)]] = {
+    integer ~ identifier ~ identifier ~ double ~ (double | "NONE") ~ (double | "NONE") ^^ {
+      case index ~ varName ~ at ~ activity ~ lowerLimit ~ upperLimit =>
+        println(varName)
+        Some((varName.stripPrefix("X").toInt, activity.toInt))
+    }
+  }
+
+  lazy val variables: Parser[Map[Int, Int]] = {
+    rep(variable) ^^ {
+      case variables => variables.flatten.toMap
+    }
   }
 
 }

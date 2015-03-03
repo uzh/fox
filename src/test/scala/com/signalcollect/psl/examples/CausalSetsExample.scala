@@ -61,7 +61,6 @@ rule: notcauses(X,X)
 //rule: causes(X,Y) => !causes(Y,X)
 rule: causes(X,Y) => notcauses(Y,X)
 
-
 // 5. Transitivity:
 // X → Y && Y → Z => X → Z
 rule: causes(X,Y)  && causes(Y,Z) => causes(X,Z)
@@ -95,8 +94,8 @@ rule: indep(X,Y,Z) && FOREACH [Z1 strictSubsetOf Z] !indep(X,Y,Z1) && FOREACH [Z
 // w -> x <- u
 //      x -> y
 
-//rule [10000, linear]: !causes(X,w)
-//rule [10000, linear]: !causes(X,u)
+rule [10000, linear]: !causes(X,w)
+rule [10000, linear]: !causes(X,u)
 
 //fact: !causes(x, w)
 //fact: !causes(y, w)
@@ -170,8 +169,6 @@ rule [1, linear]: indep(w, y, {x, u})
     //        println(s"${result._1}: unknown  = ${result._2} : [${result._3},${result._4}]")
     //      }
     //    }
-    println(PSLToCvxConverter.toCvx(causal))
-    println(PSLToLPConverter.toLP(causal))
   }
 
   //rule [1]:!indep(x, u, {})
