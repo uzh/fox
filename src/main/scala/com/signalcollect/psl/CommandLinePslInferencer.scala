@@ -9,15 +9,14 @@ import com.signalcollect.psl.parser.PslParser
 import com.signalcollect.psl.model.PSLToLPConverter
 import com.signalcollect.psl.model.LpResultParser
 import com.signalcollect.psl.model.PSLToCvxConverter
-
-import scala.sys.process._
+import com.signalcollect.psl.model.PSLToMLNConverter
 
 object CommandLinePslInferencer extends App {
 
   val usage = """
 Usage: fox filename [--absEps num] [--relEps num] [--maxIter num] [--tol num]
 [--queryList "pred1, pred2"] [--multipleMinima true] [--threeValuedLogic true] 
-[--output grounding|ilp|lp|cvx|inference] [--outfile outputfilename]
+[--output grounding|ilp|lp|cvx|mln|inference] [--outfile outputfilename]
 [--inference foxPSL|mosekLP|mosekILP]
 [--breezeOptimizer true|false]
 
@@ -27,7 +26,8 @@ Usage: fox filename [--absEps num] [--relEps num] [--maxIter num] [--tol num]
 --queryList: list of predicate names that we want to output
 --multipleMinima: experimental feature that finds the range of the best truth values for each predicates
 --threeValuedLogic: outputs true, false or unknown if multipleMinima is on
---output: what type of output do we expect: grounding (grounded rules), a file/string in LP format (input to ILP solvers), a file/string in CVX format (input to CVX toolbox in Matlab), standard inference results
+--output: what type of output do we expect: grounding (grounded rules), a file/string in LP format (input to ILP solvers), 
+a file/string in CVX format (input to CVX toolbox in Matlab), two files of grounded MLN rules and evidences(mln), standard inference results
 --outfile: if defined the output is saved in this file, otherwise it is shown in the stdout
 --inference: which solver to use for inference, foxPSL or mosek (version LP and ILP) - requires mosek to be installed, and currently works only for problems with hard rules and linear soft rules with one clause.
 --breezeOptimizer: if we use foxPSL, we can choose whether to use the Breeze toolkit to do the single minimizations.
@@ -96,33 +96,11 @@ Usage: fox filename [--absEps num] [--relEps num] [--maxIter num] [--tol num]
     }
     (stringOfResults, None)
   } else if (doMosekILPInference) {
-    val (translatedProblem, idToGpMap) = PSLToLPConverter.toLP(pslFile, isBinary = true)
-    // Write translation to file.
-    val writer = new FileWriter("temp-mosek-translation.lp")
-    writer.append(translatedProblem)
-    writer.close()
-    // Execute Mosek.
-    val mosekCommand = "mosek temp-mosek-translation.lp"
-    val mosekOutput = mosekCommand.!!
-    //println(mosekOutput)
-    // Read the output.
-    val mosekResult = LpResultParser.parse(new File("temp-mosek-translation.int"))
-    val mergedResults = mosekResult.map { case (id, value) => (idToGpMap(id), value) }.mkString("\n")
-    (mergedResults, None)
+    val results = PSLToLPConverter.solve(pslFile, isBinary = true)
+    (PSLToLPConverter.printSelected(results, queryList), None)
   } else if (doMosekLPInference) {
-    val (translatedProblem, idToGpMap) = PSLToLPConverter.toLP(pslFile, isBinary = false)
-    // Write translation to file.
-    val writer = new FileWriter("temp-mosek-translation.lp")
-    writer.append(translatedProblem)
-    writer.close()
-    // Execute Mosek.
-    val mosekCommand = "mosek temp-mosek-translation.lp"
-    val mosekOutput = mosekCommand.!!
-    //println(mosekOutput)
-    // Read the output.
-    val mosekResult = LpResultParser.parse(new File("temp-mosek-translation.sol"))
-    val mergedResults = mosekResult.map { case (id, value) => (idToGpMap(id), value) }.mkString("\n")
-    (mergedResults, None)
+    val results = PSLToLPConverter.solve(pslFile, isBinary = false)
+    (PSLToLPConverter.printSelected(results, queryList), None)
   } else {
     // No inference.
     outputType match {
@@ -140,6 +118,9 @@ Usage: fox filename [--absEps num] [--relEps num] [--maxIter num] [--tol num]
       case Some("cvx") =>
         val (translatedProblem, idToGpName) = PSLToCvxConverter.toCvx(pslFile)
         (translatedProblem, Some(idToGpName))
+      case Some("mln") =>
+        val (evidence, mlnrules, idToGpName) = PSLToMLNConverter.toMLN(pslFile)
+        (evidence + mlnrules, Some(idToGpName))
       case any =>
         (s"[Warning]: unknown parameter $any", None)
     }

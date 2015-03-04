@@ -21,6 +21,8 @@
 package com.signalcollect.psl.model
 
 import java.io.File
+import java.io.FileWriter
+import java.io.FileReader
 import com.signalcollect.admm.optimizers.OptimizableFunction
 import com.signalcollect.psl.Optimizer
 import com.signalcollect.psl.parser.ParsedPslFile
@@ -37,10 +39,40 @@ import scala.util.parsing.input.StreamReader
 import scala.util.parsing.input.Reader
 import scala.annotation.tailrec
 
+import scala.sys.process._
+
 object PSLToLPConverter {
+  def solve(pslString: String, isBinary: Boolean): Map[GroundedPredicate, Double] = {
+    val (translatedProblem, idToGpMap) = toLP(pslString, isBinary)
+    solve(translatedProblem, idToGpMap, isBinary)
+  }
+  def solve(pslFile: File, isBinary: Boolean): Map[GroundedPredicate, Double] = {
+    val (translatedProblem, idToGpMap) = toLP(pslFile, isBinary)
+    solve(translatedProblem, idToGpMap, isBinary)
+  }
+  def solve(translatedProblem: String, idToGpMap: Map[Int, GroundedPredicate], isBinary: Boolean): Map[GroundedPredicate, Double] = {
+    val writer = new FileWriter("temp-mosek-translation.lp")
+    writer.append(translatedProblem)
+    writer.close()
+    val mosekCommand = "mosek temp-mosek-translation.lp"
+    val mosekOutput = mosekCommand.!!
+    val mosekResult = if (isBinary) {
+      LpResultParser.parse(new File("temp-mosek-translation.int"))
+    } else {
+      LpResultParser.parse(new File("temp-mosek-translation.sol"))
+    }
+    mosekResult.map { case (id, value) => (idToGpMap(id), value) }
+  }
+
+  def printSelected(mosekResult: Map[GroundedPredicate, Double], queryList: List[String] = List.empty): String = {
+    if (queryList.isEmpty) {
+      mosekResult.mkString("\n")
+    } else {
+      mosekResult.filter { case (gp, value) => queryList.contains(gp.definition.name) }.mkString("\n")
+    }
+  }
   def toLP(pslString: String, isBinary: Boolean): (String, Map[Int, GroundedPredicate]) = {
     val pslData = PslParser.parse(pslString)
-    println(s"String parsed.")
     toLP(pslData, isBinary)
   }
 

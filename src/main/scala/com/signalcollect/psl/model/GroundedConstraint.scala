@@ -45,6 +45,7 @@ trait GroundedRuleOrConstraint {
   }
 
   def unboundGroundedPredicates: List[GroundedPredicate]
+  def allGroundedPredicates: List[GroundedPredicate]
   def variables: List[Int] = unboundGroundedPredicates.map(gp => gp.id).toList
 }
 
@@ -93,6 +94,10 @@ case class GroundedConstraint(
     groundedPredicates.filter(!_.truthValue.isDefined)
   }
 
+  def allGroundedPredicates: List[GroundedPredicate] = {
+    groundedPredicates
+  }
+
   def createOptimizableFunction(stepSize: Double, tolerance: Double = 0.0,
     breezeOptimizer: Boolean = false,
     optimizedFunctionCreation: Boolean = true): Option[OptimizableFunction] = {
@@ -137,7 +142,7 @@ case class GroundedConstraint(
         }
       }
     }
-    
+
     // TODO: Define zMap - currently just initialized to 0.
     val zMap: Map[Int, Double] = unboundGroundedPredicates.map(gp => (gp.id, 0.0)).toMap
     val zIndices: Array[Int] = unboundGroundedPredicates.map(gp => gp.id).toArray

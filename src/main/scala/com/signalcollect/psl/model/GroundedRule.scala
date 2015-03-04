@@ -91,6 +91,10 @@ case class GroundedRule(
     head.filter(!_.truthValue.isDefined) ::: body.filter(!_.truthValue.isDefined)
   }
 
+  def allGroundedPredicates: List[GroundedPredicate] = {
+    head ::: body
+  }
+
   def createOptimizableFunction(stepSize: Double, tolerance: Double = 0.0,
     breezeOptimizer: Boolean = false,
     optimizedFunctionCreation: Boolean = true): Option[OptimizableFunction] = {
