@@ -272,7 +272,8 @@ object Grounding {
         boundIndividual.numberOfIndividualsInSet <= v.classTypes.map(_.maxCardinality).min) {
         Some(boundIndividual)
       } else {
-        println(s"getBinding: $v (${v.classTypes.map(_.minCardinality).min}, ${v.classTypes.map(_.maxCardinality).max}): $binding (${boundIndividual.numberOfIndividualsInSet})")
+        // Wrong cardinality.
+        //println(s"getBinding: $v (${v.classTypes.map(_.minCardinality).min}, ${v.classTypes.map(_.maxCardinality).max}): $binding (${boundIndividual.numberOfIndividualsInSet})")
         None
       }
     case i: Individual => Some(Individual(i.value))
@@ -885,7 +886,7 @@ object Grounding {
       }
 
       // No grounded predicate.
-      println(s"[Warning] Predicate ${key._1} with binding ${key._2} is not in grounded predicates. ")
+      //println(s"[Warning] Predicate ${key._1} with binding ${key._2} is not in grounded predicates. ")
       return None
     }
     Some(groundedPredicates(key))

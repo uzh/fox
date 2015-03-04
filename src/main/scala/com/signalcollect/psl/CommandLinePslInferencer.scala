@@ -17,19 +17,9 @@ object CommandLinePslInferencer extends App {
   val usage = """
 Usage: fox filename [--absEps num] [--relEps num] [--maxIter num] [--tol num]
 [--queryList "pred1, pred2"] [--multipleMinima true] [--threeValuedLogic true] 
-[--output grounding|lp|cvx|inference] [--outfile outputfilename]
-[--inference foxPSL|mosek]
+[--output grounding|ilp|lp|cvx|inference] [--outfile outputfilename]
+[--inference foxPSL|mosekLP|mosekILP]
 [--breezeOptimizer true|false]
-[--help]
-  """
-
-  val help = """
-Usage: fox filename [--absEps num] [--relEps num] [--maxIter num] [--tol num]
-[--queryList "pred1, pred2"] [--multipleMinima true] [--threeValuedLogic true] 
-[--output grounding|lp|cvx|inference] [--outfile outputfilename]
-[--inference foxPSL|mosek]
-[--breezeOptimizer true|false]
-[--help]
 
 --absEps, --relEps: absolute and relative epsilons for ADMM algorithm (foxPSL solver)
 --maxIter: maximum number of iterations for ADMM algorithm (foxPSL solver)
@@ -39,7 +29,7 @@ Usage: fox filename [--absEps num] [--relEps num] [--maxIter num] [--tol num]
 --threeValuedLogic: outputs true, false or unknown if multipleMinima is on
 --output: what type of output do we expect: grounding (grounded rules), a file/string in LP format (input to ILP solvers), a file/string in CVX format (input to CVX toolbox in Matlab), standard inference results
 --outfile: if defined the output is saved in this file, otherwise it is shown in the stdout
---inference: which solver to use for inference, foxPSL or mosek - requires mosek to be installed, and currently works only for problems with hard rules and linear soft rules with one clause.
+--inference: which solver to use for inference, foxPSL or mosek (version LP and ILP) - requires mosek to be installed, and currently works only for problems with hard rules and linear soft rules with one clause.
 --breezeOptimizer: if we use foxPSL, we can choose whether to use the Breeze toolkit to do the single minimizations.
 """
 
@@ -47,15 +37,11 @@ Usage: fox filename [--absEps num] [--relEps num] [--maxIter num] [--tol num]
     println(usage)
     System.exit(-1)
   }
+
   val arglist = args.toList
   val it = arglist.iterator
   val tupleOfArgs = it.zip(it).toList
   val mapOfArgs = tupleOfArgs.toMap
-
-  if (mapOfArgs.get("--help").isDefined) {
-    println(help)
-    System.exit(-1)
-  }
 
   val pslFile = new File(mapOfArgs.get("--filename").get)
   val queryList = mapOfArgs.get("--queryList") match {
@@ -68,8 +54,10 @@ Usage: fox filename [--absEps num] [--relEps num] [--maxIter num] [--tol num]
   val outputType = mapOfArgs.get("--output")
   val outputFile = mapOfArgs.get("--outfile")
   val doInference = !outputType.isDefined || outputType.get == "inference"
-  val doFoxPSLInference = doInference && mapOfArgs.getOrElse("--inference", "foxPSL") == "foxPSL"
-  val doMosekInference = doInference && mapOfArgs.getOrElse("--inference", "foxPSL") == "mosek"
+  val inference = mapOfArgs.getOrElse("--inference", "foxPSL")
+  val doFoxPSLInference = doInference && inference == "foxPSL"
+  val doMosekLPInference = doInference && inference == "mosekLP"
+  val doMosekILPInference = doInference && (inference == "mosekILP" || inference == "mosek")
 
   val config = InferencerConfig(
     lazyThreshold = None,
@@ -107,8 +95,8 @@ Usage: fox filename [--absEps num] [--relEps num] [--maxIter num] [--tol num]
       }.mkString("\n")
     }
     (stringOfResults, None)
-  } else if (doMosekInference) {
-    val (translatedProblem, idToGpMap) = PSLToLPConverter.toLP(pslFile)
+  } else if (doMosekILPInference) {
+    val (translatedProblem, idToGpMap) = PSLToLPConverter.toLP(pslFile, isBinary = true)
     // Write translation to file.
     val writer = new FileWriter("temp-mosek-translation.lp")
     writer.append(translatedProblem)
@@ -121,6 +109,20 @@ Usage: fox filename [--absEps num] [--relEps num] [--maxIter num] [--tol num]
     val mosekResult = LpResultParser.parse(new File("temp-mosek-translation.int"))
     val mergedResults = mosekResult.map { case (id, value) => (idToGpMap(id), value) }.mkString("\n")
     (mergedResults, None)
+  } else if (doMosekLPInference) {
+    val (translatedProblem, idToGpMap) = PSLToLPConverter.toLP(pslFile, isBinary = false)
+    // Write translation to file.
+    val writer = new FileWriter("temp-mosek-translation.lp")
+    writer.append(translatedProblem)
+    writer.close()
+    // Execute Mosek.
+    val mosekCommand = "mosek temp-mosek-translation.lp"
+    val mosekOutput = mosekCommand.!!
+    //println(mosekOutput)
+    // Read the output.
+    val mosekResult = LpResultParser.parse(new File("temp-mosek-translation.sol"))
+    val mergedResults = mosekResult.map { case (id, value) => (idToGpMap(id), value) }.mkString("\n")
+    (mergedResults, None)
   } else {
     // No inference.
     outputType match {
@@ -130,7 +132,10 @@ Usage: fox filename [--absEps num] [--relEps num] [--maxIter num] [--tol num]
           groundedConstraints.map(_.toString)
         (results.mkString("\n"), None)
       case Some("lp") =>
-        val (translatedProblem, idToGpName) = PSLToLPConverter.toLP(pslFile)
+        val (translatedProblem, idToGpName) = PSLToLPConverter.toLP(pslFile, isBinary = false)
+        (translatedProblem, Some(idToGpName))
+      case Some("ilp") =>
+        val (translatedProblem, idToGpName) = PSLToLPConverter.toLP(pslFile, isBinary = true)
         (translatedProblem, Some(idToGpName))
       case Some("cvx") =>
         val (translatedProblem, idToGpName) = PSLToCvxConverter.toCvx(pslFile)
