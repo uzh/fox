@@ -156,7 +156,7 @@ rule [1, linear]: indep(w, y, {x, u})
       relativeEpsilon = 1e-3)
     val inferenceResults = Inferencer.runInferenceFromString(causal, config = config)
     println(inferenceResults.objectiveFun)
-    println(inferenceResults.printSelectedResultsAndFacts(List.empty, sortById = true, printOutZeros = true))
+    println(inferenceResults.printSelectedResults(List.empty, printFacts = true, sortById = true, printOutZeros = true))
 
     //    // Experimental.
     //    val results = MinimaExplorer.exploreFromString(causal, config, List("causes"))

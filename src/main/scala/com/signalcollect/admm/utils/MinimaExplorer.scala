@@ -38,6 +38,7 @@ import com.signalcollect.psl.parser.PslParser
 import com.signalcollect.psl.parser.ParsedPslFile
 import com.signalcollect.psl.model.GroundedConstraint
 import com.signalcollect.psl.model.GroundedRule
+import com.signalcollect.psl.model.GroundedPredicate
 
 /**
  * Explores the multiple minima based on one solution.
@@ -109,20 +110,50 @@ object MinimaExplorer {
     (optimizerBaseFunctions, hardFunctions)
   }
 
+  def printSelectedResults(results: List[(GroundedPredicate, Double, Double, Double)], threeValuedLogic: Boolean = false, short: Boolean = true) = {
+    if (threeValuedLogic) {
+      results.map {
+        result =>
+          val factName = if (short) {
+            s"""${result._1.definition.name}${result._1.groundings.mkString("(", ",", ")")}"""
+          } else {
+            result._1.toString
+          }
+          if (result._3 == 0 && result._4 == 0) {
+            s"$factName: false"
+          } else if (result._3 == 1 && result._4 == 1) {
+            s"$factName: true"
+          } else {
+            s"$factName: unknown"
+          }
+      }.mkString("\n")
+    } else {
+      results.map {
+        result =>
+          val factName = if (short) {
+            s"""${result._1.definition.name}${result._1.groundings.mkString("(", ",", ")")}"""
+          } else {
+            result._1.toString
+          }
+          s"$factName: ${result._2} [${result._3}, ${result._4}]"
+      }.mkString("\n")
+    }
+  }
+
   def exploreFromString(example: String, config: InferencerConfig = InferencerConfig(),
-    groundedPredicateNames: List[String] = List.empty): List[(String, Double, Double, Double)] = {
+    groundedPredicateNames: List[String] = List.empty): List[(GroundedPredicate, Double, Double, Double)] = {
     val pslData = PslParser.parse(example)
     runExploration(pslData, config, groundedPredicateNames)
   }
 
   def exploreFromFile(example: File, config: InferencerConfig = InferencerConfig(),
-    groundedPredicateNames: List[String] = List.empty): List[(String, Double, Double, Double)] = {
+    groundedPredicateNames: List[String] = List.empty): List[(GroundedPredicate, Double, Double, Double)] = {
     val pslData = PslParser.parse(example)
     runExploration(pslData, config, groundedPredicateNames)
   }
 
   def runExploration(pslData: ParsedPslFile, config: InferencerConfig = InferencerConfig(),
-    groundedPredicateNames: List[String] = List.empty): List[(String, Double, Double, Double)] = {
+    groundedPredicateNames: List[String] = List.empty): List[(GroundedPredicate, Double, Double, Double)] = {
     // This is the same as the inferencer, we copy it so we don't have to recreate the functions.
     val (groundedRules, groundedConstraints, idToGpMap) = Grounding.ground(pslData, config)
     println(s"Grounding completed: ${groundedRules.size} grounded rules, ${groundedConstraints.size} constraints and ${idToGpMap.keys.size} grounded predicates.")
@@ -220,7 +251,7 @@ object MinimaExplorer {
         assert(boundedMinValue <= boundedMiddleValue)
         assert(boundedMiddleValue <= boundedMaxValue)
 
-        (gp.toString, boundedMiddleValue, boundedMinValue, boundedMaxValue)
+        (gp, boundedMiddleValue, boundedMinValue, boundedMaxValue)
     }
     result.toList
   }

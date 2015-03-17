@@ -50,6 +50,12 @@ object PSLToLPConverter {
     val (translatedProblem, idToGpMap) = toLP(pslFile, isBinary)
     solve(translatedProblem, idToGpMap, isBinary)
   }
+
+  def solve(pslData: ParsedPslFile, isBinary: Boolean): Map[GroundedPredicate, Double] = {
+    val (translatedProblem, idToGpMap) = toLP(pslData, isBinary)
+    solve(translatedProblem, idToGpMap, isBinary)
+  }
+
   def solve(translatedProblem: String, idToGpMap: Map[Int, GroundedPredicate], isBinary: Boolean): Map[GroundedPredicate, Double] = {
     val writer = new FileWriter("temp-mosek-translation.lp")
     writer.append(translatedProblem)
@@ -64,11 +70,24 @@ object PSLToLPConverter {
     mosekResult.map { case (id, value) => (idToGpMap(id), value) }
   }
 
-  def printSelected(mosekResult: Map[GroundedPredicate, Double], queryList: List[String] = List.empty): String = {
+  def printSelectedResults(mosekResult: Map[GroundedPredicate, Double], queryList: List[String] = List.empty, short: Boolean = true, printBinary: Boolean = false): String = {
     if (queryList.isEmpty) {
       mosekResult.mkString("\n")
     } else {
-      mosekResult.filter { case (gp, value) => queryList.contains(gp.definition.name) }.mkString("\n")
+      mosekResult.filter { case (gp, value) => queryList.contains(gp.definition.name) }.map {
+        result =>
+          val factName = if (short) {
+            s"""${result._1.definition.name}${result._1.groundings.mkString("(", ",", ")")}"""
+          } else {
+            result._1.toString
+          }
+          val truthValue = if (printBinary) {
+            if (result._2 > 0.5) 1.0 else 0.0
+          } else {
+            result._2
+          }
+          s"$factName -> $truthValue"
+      }.mkString("\n")
     }
   }
   def toLP(pslString: String, isBinary: Boolean): (String, Map[Int, GroundedPredicate]) = {

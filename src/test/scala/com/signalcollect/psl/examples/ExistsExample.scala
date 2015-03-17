@@ -90,7 +90,7 @@ class ExistsExample extends FlatSpec with Matchers with TestAnnouncements {
   }
 
   val existsInSet = """
-class Variable: 
+class Variable: w
 
 predicate : indep(Variable, Variable, Set{1,3}[Variable])
 predicate : dep(Variable, Variable, Set{1,3}[Variable])
@@ -162,7 +162,7 @@ fact: dep(a, b, w)
       absoluteEpsilon = 1e-12,
       relativeEpsilon = 1e-8)
     val inferenceResults = Inferencer.runInferenceFromString(foreachInBody, config = config)
-    //println(inferenceResults.printSelectedResultsAndFacts())
+    //println(inferenceResults.printSelectedResults())
     val causesXY = inferenceResults.getGp("causes", "x", "y").get
     inferenceResults.solution.results.get(causesXY.id) should be(0.83 +- 0.1)
     val causesAB = inferenceResults.getGp("causes", "a", "b").get

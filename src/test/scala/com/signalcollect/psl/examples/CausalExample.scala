@@ -235,14 +235,6 @@ GroundedPredicate 40: causes[ ] (w, u) : [0.0050777510230964815, 0.9976288302377
       absoluteEpsilon = 1e-5,
       relativeEpsilon = 1e-3)
     val results = MinimaExplorer.exploreFromString(causal, config, List("none"))
-    for (result <- results) {
-      if (result._3 == 0 && result._4 == 0) {
-        println(s"${result._1}: false = ${result._2} : [${result._3},${result._4}]")
-      } else if (result._3 == 1 && result._4 == 1) {
-        println(s"${result._1}: true  = ${result._2} : [${result._3},${result._4}]")
-      } else {
-        println(s"${result._1}: unknown  = ${result._2} : [${result._3},${result._4}]")
-      }
-    }
+    println(MinimaExplorer.printSelectedResults(results, short = true))
   }
 }
