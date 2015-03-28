@@ -134,13 +134,13 @@ GroundedPredicate 118: indep[ ] (y, a, z) has truth value 0.8565016130054439""".
   val foreachInBody = """
 class Variable
 
-predicate : indep(Variable, Variable, Set{1,3}[Variable])
-predicate : dep(Variable, Variable, Set{0,3}[Variable])
+predicate [CompletelyGroundedSets]: indep(Variable, Variable, Set{1,3}[Variable])
+predicate [CompletelyGroundedSets]: dep(Variable, Variable, Set{0,3}[Variable])
 predicate : causes(Variable, Variable)
 
 rule [0.1]: !dep(X,Y,W)
 rule [0.1]: !indep(X,Y,W)
-rule [2]: indep(X,Y,W) && FOREACH [W1(1,) strictSubsetOf W] dep(X,Y,W1) => causes(X, Y)
+//rule [2]: indep(X,Y,W) && FOREACH [W1(1,) strictSubsetOf W] dep(X,Y,W1) => causes(X, Y)
 
 // Minimally independent.
 fact: indep(x, y, {w, z})

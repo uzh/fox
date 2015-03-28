@@ -29,25 +29,25 @@ import com.signalcollect.psl.model.Squared
 import com.signalcollect.psl.model.PslClass
 
 case class ParsedFile(
-  explicitClasses: Map[PslClass, Set[Individual]] = Map.empty,
+  explicitlyMentionedIndividualsInClasses: Map[PslClass, Set[Individual]] = Map.empty,
   predicates: List[Predicate] = List.empty,
   rules: List[Rule] = List.empty,
   facts: List[Fact] = List.empty,
   constants: Set[Individual] = Set.empty) {
 
   def toParsedPslFile(): ParsedPslFile = {
-    ParsedPslFile(explicitClasses, predicates, rules, facts, constants)
+    ParsedPslFile(explicitlyMentionedIndividualsInClasses, predicates, rules, facts, constants)
   }
 
   def merge(that: ParsedFile): ParsedFile = {
-    ParsedFile(explicitClasses ++ that.explicitClasses, predicates ++ that.predicates, rules ++ that.rules, 
-        facts ++ that.facts, constants ++ that.constants)
+    ParsedFile(explicitlyMentionedIndividualsInClasses ++ that.explicitlyMentionedIndividualsInClasses, predicates ++ that.predicates, rules ++ that.rules,
+      facts ++ that.facts, constants ++ that.constants)
   }
 
 }
 
 case class ParsedPslFile(
-  explicitClasses: Map[PslClass, Set[Individual]] = Map.empty,
+  explicitlyMentionedIndividualsInClasses: Map[PslClass, Set[Individual]] = Map.empty,
   predicates: List[Predicate] = List.empty,
   rules: List[Rule] = List.empty,
   facts: List[Fact] = List.empty,
@@ -58,7 +58,7 @@ case class ParsedPslFile(
     rulesWithPredicates.flatMap(_.head.flatMap(p => p.singleIndividuals))
 
   def individuals: List[Individual] = {
-    val individualsInClasses = explicitClasses.map(_._2).flatten
+    val individualsInClasses = explicitlyMentionedIndividualsInClasses.map(_._2).flatten
     val allIndividuals = constants.toList ++ individualsInFacts ++ individualsInClasses ++ individualsInRules
     val individualNames = allIndividuals.map(v => v.name).distinct
     val mergedIndividuals = individualNames.map {
@@ -70,35 +70,53 @@ case class ParsedPslFile(
     mergedIndividuals
   }
 
+  def classes: Set[PslClass] = {
+    val classesInFacts = individualsInFacts.flatMap(_.classTypes).distinct
+    val classesInRules = individualsInRules.flatMap(_.classTypes).distinct
+    (explicitlyMentionedIndividualsInClasses.keys.toList ++ classesInFacts ++ classesInRules).toSet
+  }
+
   def individualsWithoutClass: Set[Individual] = individuals.filter(_.classTypes.isEmpty).toSet
 
-  def individualsByClass: Map[PslClass, Set[Individual]] = {
-    // Add individualsInFacts to the proper classes List.
-    val classesInFacts = individualsInFacts.flatMap(_.classTypes).distinct
-    val classesAndIndividualsInFacts = classesInFacts.map(c => (c, individualsInFacts.filter(i => i.classTypes.contains(c)).toSet)).toMap
+//  def individualsByClass: Map[PslClass, Set[Individual]] = {
+//    // Add individualsInFacts to the proper classes List.
+//    val classesInFacts = individualsInFacts.flatMap(_.classTypes).distinct
+//    val classesAndIndividualsInFacts = classesInFacts.map(c => (c, individualsInFacts.filter(i => i.classTypes.contains(c)).toSet)).toMap
+//
+//    // Add individualsInRules to the proper classes list.
+//    val classesInRules = individualsInRules.flatMap(_.classTypes).distinct
+//    val classesAndIndividualsInRules = classesInRules.map(c => (c, individualsInRules.filter(i => i.classTypes.contains(c)).toSet)).toMap
+//
+//    val classes = explicitlyMentionedIndividualsInClasses.keys.toList ++ classesInFacts ++ classesInRules
+//
+//    // For each class add them together.
+//    val allClasses = classes.map {
+//      case classname =>
+//        (classname, explicitlyMentionedIndividualsInClasses.getOrElse(classname, Set.empty) ++
+//          classesAndIndividualsInFacts.getOrElse(classname, Set.empty) ++
+//          classesAndIndividualsInRules.getOrElse(classname, Set.empty))
+//    }.toMap
+//    val allIndividualsByClass = allClasses ++ Map(PslClass("_") -> individuals.toSet)
+//    allIndividualsByClass
+//  }
 
-    // Add individualsInRules to the proper classes list.
-    val classesInRules = individualsInRules.flatMap(_.classTypes).distinct
-    val classesAndIndividualsInRules = classesInRules.map(c => (c, individualsInRules.filter(i => i.classTypes.contains(c)).toSet)).toMap
-
-    val classes = explicitClasses.keys.toList ++ classesInFacts ++ classesInRules
-
-    // For each class add them together.
-    val allClasses = classes.map {
-      case classname =>
-        (classname, explicitClasses.getOrElse(classname, Set.empty) ++
-          classesAndIndividualsInFacts.getOrElse(classname, Set.empty) ++
-          classesAndIndividualsInRules.getOrElse(classname, Set.empty))
-    }.toMap
-    val allIndividualsByClass  = allClasses ++ Map(PslClass("_") -> individuals.toSet)
-    allIndividualsByClass
+  def individualsByClassAndCardinality: Map[(PslClass, Int), Set[Individual]] = {
+    classes.map {
+      c =>
+        val individualsInFactsMatchingClass = if (c.id == "_") {
+          individuals.groupBy(_.numberOfVarsOrIndividualsInSet)
+        } else {
+          individuals.filter(i => i.classTypes.contains(c)).groupBy(_.numberOfVarsOrIndividualsInSet)
+        }
+        individualsInFactsMatchingClass.map { case (card, inds) => ((c, card), inds.toSet) }.toMap
+    }.fold(Map.empty)(_ ++ _)
   }
 
   val rulesWithPredicates = {
     val standardRulesWithPredicates = rules.map {
       rule =>
         Rule(rule.id, rule.body.map(mergePredicateInRule(_)),
-          rule.head.map(mergePredicateInRule(_)), rule.distanceMeasure, rule.weight, rule.existentialVars, 
+          rule.head.map(mergePredicateInRule(_)), rule.distanceMeasure, rule.weight, rule.existentialVars,
           rule.foreachInSetClauseInHead, rule.existsInSetClauseInHead, rule.foreachInSetClauseInBody, rule.existsInSetClauseInBody)
     }
     // Create rules for predicates that have prior values defined.

@@ -274,7 +274,7 @@ object Inferencer {
       println(individualsString)
       Grounding.ground(pslData, config)
     }
-    // groundedRules.map(println(_))
+    groundedRules.map(println(_))
     // groundedConstraints.map(println(_))
     println(s"Grounding completed in $groundingTime ms: ${groundedRules.size} grounded rules, ${groundedConstraints.size} constraints and ${idToGpMap.keys.size} grounded predicates.")
     solveInferenceProblem(groundedRules, groundedConstraints, idToGpMap, groundingTime, parsingTime, nodeActors, config)

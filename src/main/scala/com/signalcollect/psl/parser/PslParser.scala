@@ -122,9 +122,11 @@ object PslParser extends ParseHelper[ParsedPslFile] with ImplicitConversions {
   
   /**
    * Predicates and their properties
+   * - Closed world: anything not mentioned in a fact is false/
+   * - Completely grounded sets: no need to ground sets which are not mentioned in facts or partially grounded rules.
    */
   
-  val validPredicateProperties = Set("prior", "closedWorld")
+  val validPredicateProperties = Set("prior", "ClosedWorld", "CompletelyGroundedSets")
     
   lazy val predicateProperty: Parser[(String, String)] = {
     opt(identifier <~ "=") ~ "[a-zA-Z0-9\\-\\.]*".r ^^ {
@@ -138,10 +140,11 @@ object PslParser extends ParseHelper[ParsedPslFile] with ImplicitConversions {
         } else{
           if (propertyValue.exists(_.isDigit)){
             ("prior", propertyValue)
-          } else if (propertyValue.contains("closed")){
-            println("[WARNING]: closed world not implemented yet.")
-            ("closedWorld", "true")
           } else {
+            if (propertyValue.contains("Closed")){
+              println("[WARNING]: closed world not implemented yet.")
+            }
+            
             // Functional, PartialFunctional, etc.
             (propertyValue, propertyValue)
           }

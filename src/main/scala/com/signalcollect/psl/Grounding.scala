@@ -33,7 +33,7 @@ object Grounding {
    */
   def ground(pslData: ParsedPslFile, config: InferencerConfig = InferencerConfig()) = {
     val allPossibleSetsAndIndividuals = generateAllPossibleSetsAsIndividuals(pslData.rulesWithPredicates,
-      pslData.individualsByClass, config)
+      pslData.individualsByClassAndCardinality, config)
     if (config.verbose) println(s"Generated all possible sets of individuals: ${allPossibleSetsAndIndividuals.size}.")
     val groundedPredicates = createGroundedPredicates(pslData.rulesWithPredicates, pslData.predicates, pslData.facts,
       allPossibleSetsAndIndividuals, config)
@@ -166,18 +166,24 @@ object Grounding {
   /**
    * Generate all possible sets as individuals, so that they can be grounded where needed.
    */
-  def generateAllPossibleSetsAsIndividuals(rules: List[Rule], individuals: Map[PslClass, Set[Individual]],
+  def generateAllPossibleSetsAsIndividuals(rules: List[Rule], individuals: Map[(PslClass, Int), Set[Individual]],
     config: InferencerConfig = InferencerConfig()): Map[(String, Int), Set[Individual]] = {
-    val individualsMap = individuals.map { case (k, v) => (k.id, 1) -> v }
+    val individualsMap = individuals.map { case ((c, card), inds) => ((c.id, card), inds) }.toMap
     // Find all set classes in predicates mentioned in rules.
     val setClasses = rules.flatMap {
       rule =>
         if (config.verbose) println(s"Search for all set classes in rule: $rule")
         rule.allPredicatesInRule.flatMap {
-          _.variables.flatMap { v =>
-            v.classTypes.filter(_.set)
-          }
-        }.distinct
+          pred =>
+            if (pred.predicate.get.properties.contains(CompletelyGroundedSets)) {
+              None
+            } else {
+              val setClassesInPredicate = pred.variables.flatMap { v =>
+                v.classTypes.filter(_.set)
+              }
+              Some(setClassesInPredicate)
+            }
+        }.flatten
     }.toSet
 
     if (setClasses.isEmpty) {
@@ -187,12 +193,12 @@ object Grounding {
 
       if (config.verbose) println("Generating all possible sets of individuals.")
       // Get not set individuals.
-      val nonSetIndividuals = individuals.filter(!_._1.set)
+      val nonSetIndividuals = individuals.filter(!_._1._1.set)
 
       // Group the set classes by their base type and get all the sizes of the sets that we need,
       // based on min and max cardinality.
       val sizesOfSetsBySetClass = setClasses.groupBy(_.id).flatMap {
-        case (k, listOfSetClasses) =>
+        case (className, listOfSetClasses) =>
           var ranges = Set.empty[Int]
           listOfSetClasses.map {
             setClass =>
@@ -207,14 +213,14 @@ object Grounding {
                 ranges = ranges ++ r
               }
           }
-          Map(k -> ranges.toList.sorted)
+          Map(className -> ranges.toList.sorted)
       }
 
       // For each of the set classes, create all possible combinations using the non set individuals.
       val allPossibleSetsAsIndividuals = sizesOfSetsBySetClass.flatMap {
         case (singularTypeName, sizes) =>
           val setClass = PslClass(singularTypeName, true)
-          val nonSetIndividualsOfClass = nonSetIndividuals.filter(_._1.id == singularTypeName)
+          val nonSetIndividualsOfClass = nonSetIndividuals.filter(_._1._1.id == singularTypeName)
           if (nonSetIndividualsOfClass.size == 1) {
             val relevantIndividuals = nonSetIndividualsOfClass.head._2
             // Subsets creates all possible subsets of a set.
@@ -295,6 +301,7 @@ object Grounding {
     }.toMap
 
     // Ground predicates in rules.
+    // TODO: generate a map containing all the intersections of PslClasses that we need.
     val groundedPredicatesKeys =
       rules.flatMap {
         rule =>

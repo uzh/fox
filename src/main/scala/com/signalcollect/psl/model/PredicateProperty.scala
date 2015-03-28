@@ -21,7 +21,7 @@
 package com.signalcollect.psl.model
 
 object PredicateProperty {
-  val validProperties = Set(Functional, Symmetric, PartialFunctional, InverseFunctional, InversePartialFunctional)
+  val validProperties = Set(Functional, Symmetric, PartialFunctional, InverseFunctional, InversePartialFunctional, CompletelyGroundedSets)
   def parse(s: String): PredicateProperty = {
     s match {
       case Functional(_) => Functional
@@ -29,6 +29,7 @@ object PredicateProperty {
       case PartialFunctional(_) => PartialFunctional
       case InverseFunctional(_) => InverseFunctional
       case InversePartialFunctional(_) => InversePartialFunctional
+      case CompletelyGroundedSets(_) => CompletelyGroundedSets
       case other => throw new Exception(
         s"Could not parse relation property $other, valid properties are:\n" +
           validProperties.mkString(", "))
@@ -58,6 +59,10 @@ case object InverseFunctional extends PredicateProperty {
 
 case object InversePartialFunctional extends PredicateProperty {
   override val toString = "InversePartialFunctional"
+}
+
+case object CompletelyGroundedSets extends PredicateProperty {
+  override val toString = "CompletelyGroundedSets"
 }
 
 // These are not allowed in the parsing, but are used for the boundedness of the grounded predicates.

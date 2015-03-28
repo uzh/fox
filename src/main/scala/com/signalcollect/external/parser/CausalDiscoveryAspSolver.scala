@@ -57,7 +57,7 @@ object CausalDiscoveryAspParser {
     val setsMap = CausalDiscoveryAspSetsParser.parse(setDescriptionFile)
     val facts = CausalDiscoveryAspFactsParser.parse(independenceFile)
     val parsedIndependences = parseFacts(originalParsedPslFile.rules.size, setsMap, facts)
-    ParsedPslFile(originalParsedPslFile.explicitClasses, originalParsedPslFile.predicates,
+    ParsedPslFile(originalParsedPslFile.explicitlyMentionedIndividualsInClasses, originalParsedPslFile.predicates,
       originalParsedPslFile.rules ++ parsedIndependences, originalParsedPslFile.facts, originalParsedPslFile.constants)
   }
 
