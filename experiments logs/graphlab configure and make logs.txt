@@ -1,0 +1,230 @@
+Output of ./configure
+
+./configure: line 220: javac: command not found
+Sat Mar 28 20:32:42 CET 2015
+Testing existing cmake version...
+Detected 2.8.9 . Required 2.8.3
+CMake version is good
+======================= BUILD CONFIGURATION ========================
+System Information: 
+#1 SMP Debian 3.2.65-1+deb7u1
+Compiler Information: 
+gcc (Debian 4.7.2-5) 4.7.2
+Copyright (C) 2012 Free Software Foundation, Inc.
+This is free software; see the source for copying conditions.  There is NO
+warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+g++ (Debian 4.7.2-5) 4.7.2
+Copyright (C) 2012 Free Software Foundation, Inc.
+This is free software; see the source for copying conditions.  There is NO
+warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+cmake version 2.8.9
+======================= Config File ================================
+# Release build directory:
+	 RELEASE_DIR=release
+# Debug build directory (optimization disabled):
+	 DEBUG_DIR=debug
+# Directory in which graphlab is installed (prefix):
+	 INSTALL_DIR=/usr/local
+# Is experimental (research) code enabled:
+	 EXPERIMENTAL=false
+# The graphlab home directory: 
+	 GRAPHLAB_HOME=/home/user/sara/graphlab
+# The directory in which graphlab installs external dependencies:
+	 DEPS_PREFIX=/home/user/sara/graphlab/deps/local
+# Use OpenMP?  This can accelerate some graph building code: 
+	 NO_OPENMP=false
+# Use MPI?  Without MPI GraphLab cannot run distributed: 
+	 NO_MPI=false
+# Use tcmalloc?  Thread-Caching Malloc improves memory allocation: 
+	 NO_TCMALLOC=false
+# The c compiler to use: 
+	 CC=gcc
+# The c++ compiler to use: 
+	 CXX=g++
+# Any addition user defined CFLAGS: 
+	 CFLAGS=
+# The Java compiler: 
+	 JAVAC=
+# The cmake binary used to geneate the project:
+	 CMAKE=cmake
+
+
+
+======================= Release ========================
+cmake -D CMAKE_BUILD_TYPE=Release -D NO_OPENMP:BOOL=false -D NO_MPI:BOOL=false -D NO_TCMALLOC:BOOL=false -D CMAKE_INSTALL_PREFIX:STRING=/usr/local -D EXPERIMENTAL:BOOL=false -D CPP11:BOOL=false -D VID32:BOOL=false -D NO_JAVAC:BOOL=1 ../.
+-- The C compiler identification is GNU 4.7.2
+-- The CXX compiler identification is GNU 4.7.2
+-- Check for working C compiler: /usr/bin/gcc
+-- Check for working C compiler: /usr/bin/gcc -- works
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working CXX compiler: /usr/bin/c++
+-- Check for working CXX compiler: /usr/bin/c++ -- works
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Boost libs: /home/user/sara/graphlab/deps/local/lib/libboost_filesystem.a/home/user/sara/graphlab/deps/local/lib/libboost_program_options.a/home/user/sara/graphlab/deps/local/lib/libboost_system.a/home/user/sara/graphlab/deps/local/lib/libboost_iostreams.a/home/user/sara/graphlab/deps/local/lib/libboost_context.a/home/user/sara/graphlab/deps/local/lib/libboost_date_time.a
+-- Boost libs: /home/user/sara/graphlab/deps/local/lib/libboost_filesystem.a
+-- Boost dyn libs: /home/user/sara/graphlab/deps/local/lib/libboost_filesystem.so
+-- Boost libs: /home/user/sara/graphlab/deps/local/lib/libboost_program_options.a
+-- Boost dyn libs: /home/user/sara/graphlab/deps/local/lib/libboost_program_options.so
+-- Boost libs: /home/user/sara/graphlab/deps/local/lib/libboost_system.a
+-- Boost dyn libs: /home/user/sara/graphlab/deps/local/lib/libboost_system.so
+-- Boost libs: /home/user/sara/graphlab/deps/local/lib/libboost_iostreams.a
+-- Boost dyn libs: /home/user/sara/graphlab/deps/local/lib/libboost_iostreams.so
+-- Boost libs: /home/user/sara/graphlab/deps/local/lib/libboost_context.a
+-- Boost dyn libs: /home/user/sara/graphlab/deps/local/lib/libboost_context.so
+-- Boost libs: /home/user/sara/graphlab/deps/local/lib/libboost_date_time.a
+-- Boost dyn libs: /home/user/sara/graphlab/deps/local/lib/libboost_date_time.so
+-- Boost Shared libs: /home/user/sara/graphlab/deps/local/lib/libboost_filesystem.so/home/user/sara/graphlab/deps/local/lib/libboost_program_options.so/home/user/sara/graphlab/deps/local/lib/libboost_system.so/home/user/sara/graphlab/deps/local/lib/libboost_iostreams.so/home/user/sara/graphlab/deps/local/lib/libboost_context.so/home/user/sara/graphlab/deps/local/lib/libboost_date_time.so
+-- Found MPI_C: /usr/lib/openmpi/lib/libmpi.so;/usr/lib/openmpi/lib/libopen-rte.so;/usr/lib/openmpi/lib/libopen-pal.so;/usr/lib/x86_64-linux-gnu/libdl.so;/usr/lib/x86_64-linux-gnu/libnsl.so;/usr/lib/x86_64-linux-gnu/libutil.so;/usr/lib/x86_64-linux-gnu/libm.so;/usr/lib/x86_64-linux-gnu/libdl.so  
+-- Found MPI_CXX: /usr/lib/openmpi/lib/libmpi_cxx.so;/usr/lib/openmpi/lib/libmpi.so;/usr/lib/openmpi/lib/libopen-rte.so;/usr/lib/openmpi/lib/libopen-pal.so;/usr/lib/x86_64-linux-gnu/libdl.so;/usr/lib/x86_64-linux-gnu/libnsl.so;/usr/lib/x86_64-linux-gnu/libutil.so;/usr/lib/x86_64-linux-gnu/libm.so;/usr/lib/x86_64-linux-gnu/libdl.so  
+-- MPI Found: /usr/lib/openmpi/lib/libmpi_cxx.so/usr/lib/openmpi/lib/libmpi.so/usr/lib/openmpi/lib/libopen-rte.so/usr/lib/openmpi/lib/libopen-pal.so/usr/lib/x86_64-linux-gnu/libdl.so/usr/lib/x86_64-linux-gnu/libnsl.so/usr/lib/x86_64-linux-gnu/libutil.so/usr/lib/x86_64-linux-gnu/libm.so/usr/lib/x86_64-linux-gnu/libdl.so
+-- Looking for pthread_setaffinity_np
+-- Looking for pthread_setaffinity_np - found
+-- Performing Test HAS_MARCH_NATIVE
+-- Performing Test HAS_MARCH_NATIVE - Success
+-- Performing Test HAS_MTUNE_NATIVE
+-- Performing Test HAS_MTUNE_NATIVE - Success
+-- Performing Test HAS_WNO_LOCAL_TYPEDEFS
+-- Performing Test HAS_WNO_LOCAL_TYPEDEFS - Success
+-- Performing Test HAS_CRC32
+-- Performing Test HAS_CRC32 - Success
+-- Release build with C++ flags: -O3 -Wno-unused-local-typedefs -Wno-attributes -march=native -mtune=native  -Wall -g  -fopenmp -DHAS_BUILTIN_CRC32
+-- Release build with C flags: -O3 -Wno-attributes -march=native -mtune=native  -Wall -g  -fopenmp
+-- Found PythonInterp: /usr/bin/python (found version "2.7.3") 
+-- Copying Files: *
+-- Installing: /home/user/sara/graphlab/release/tests/data
+-- Up-to-date: /home/user/sara/graphlab/release/tests/data/CMakeLists.txt
+-- Installing: /home/user/sara/graphlab/release/tests/data/test_adj
+-- Up-to-date: /home/user/sara/graphlab/release/tests/data/test_adj/test.adj
+-- Installing: /home/user/sara/graphlab/release/tests/data/test_snap
+-- Up-to-date: /home/user/sara/graphlab/release/tests/data/test_snap/test.snap
+-- Installing: /home/user/sara/graphlab/release/tests/data/test_tsv
+-- Up-to-date: /home/user/sara/graphlab/release/tests/data/test_tsv/test.tsv
+-- Detected demo app: dsl
+-- Detected demo app: pagerank
+-- Detected demo app: rpc
+-- Detected Toolkit: clustering
+-- Detected Toolkit: collaborative_filtering
+-- Detected Toolkit: computer_vision
+-- Detected Toolkit: extensions
+-- Detected Toolkit: graph_analytics
+-- Detected Toolkit: graphical_models
+-- Detected App: denoise
+-- Detected App: test_MAD_relation
+-- Detected App: test_bool_var
+-- Detected App: test_dense_table
+-- Detected App: test_sparse_table
+-- Detected Toolkit: linear_solvers
+-- Detected Toolkit: topic_modeling
+-- Detected App: cascades
+-- Detected App: concomp
+-- Detected App: example
+-- Detected App: label_propagation
+-- Detected App: ADMM
+-- Configuring done
+-- Generating done
+-- Build files have been written to: /home/user/sara/graphlab/release
+
+
+
+======================= Debug =========================
+cmake -D CMAKE_BUILD_TYPE=Debug -D NO_OPENMP:BOOL=false -D NO_MPI:BOOL=false -D NO_TCMALLOC:BOOL=false -D CMAKE_INSTALL_PREFIX:STRING=/usr/local -D EXPERIMENTAL:BOOL=false -D CPP11:BOOL=false -D VID32:BOOL=false -D NO_JAVAC:BOOL=1 ../.
+-- The C compiler identification is GNU 4.7.2
+-- The CXX compiler identification is GNU 4.7.2
+-- Check for working C compiler: /usr/bin/gcc
+-- Check for working C compiler: /usr/bin/gcc -- works
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working CXX compiler: /usr/bin/c++
+-- Check for working CXX compiler: /usr/bin/c++ -- works
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Boost libs: /home/user/sara/graphlab/deps/local/lib/libboost_filesystem.a/home/user/sara/graphlab/deps/local/lib/libboost_program_options.a/home/user/sara/graphlab/deps/local/lib/libboost_system.a/home/user/sara/graphlab/deps/local/lib/libboost_iostreams.a/home/user/sara/graphlab/deps/local/lib/libboost_context.a/home/user/sara/graphlab/deps/local/lib/libboost_date_time.a
+-- Boost libs: /home/user/sara/graphlab/deps/local/lib/libboost_filesystem.a
+-- Boost dyn libs: /home/user/sara/graphlab/deps/local/lib/libboost_filesystem.so
+-- Boost libs: /home/user/sara/graphlab/deps/local/lib/libboost_program_options.a
+-- Boost dyn libs: /home/user/sara/graphlab/deps/local/lib/libboost_program_options.so
+-- Boost libs: /home/user/sara/graphlab/deps/local/lib/libboost_system.a
+-- Boost dyn libs: /home/user/sara/graphlab/deps/local/lib/libboost_system.so
+-- Boost libs: /home/user/sara/graphlab/deps/local/lib/libboost_iostreams.a
+-- Boost dyn libs: /home/user/sara/graphlab/deps/local/lib/libboost_iostreams.so
+-- Boost libs: /home/user/sara/graphlab/deps/local/lib/libboost_context.a
+-- Boost dyn libs: /home/user/sara/graphlab/deps/local/lib/libboost_context.so
+-- Boost libs: /home/user/sara/graphlab/deps/local/lib/libboost_date_time.a
+-- Boost dyn libs: /home/user/sara/graphlab/deps/local/lib/libboost_date_time.so
+-- Boost Shared libs: /home/user/sara/graphlab/deps/local/lib/libboost_filesystem.so/home/user/sara/graphlab/deps/local/lib/libboost_program_options.so/home/user/sara/graphlab/deps/local/lib/libboost_system.so/home/user/sara/graphlab/deps/local/lib/libboost_iostreams.so/home/user/sara/graphlab/deps/local/lib/libboost_context.so/home/user/sara/graphlab/deps/local/lib/libboost_date_time.so
+-- Found MPI_C: /usr/lib/openmpi/lib/libmpi.so;/usr/lib/openmpi/lib/libopen-rte.so;/usr/lib/openmpi/lib/libopen-pal.so;/usr/lib/x86_64-linux-gnu/libdl.so;/usr/lib/x86_64-linux-gnu/libnsl.so;/usr/lib/x86_64-linux-gnu/libutil.so;/usr/lib/x86_64-linux-gnu/libm.so;/usr/lib/x86_64-linux-gnu/libdl.so  
+-- Found MPI_CXX: /usr/lib/openmpi/lib/libmpi_cxx.so;/usr/lib/openmpi/lib/libmpi.so;/usr/lib/openmpi/lib/libopen-rte.so;/usr/lib/openmpi/lib/libopen-pal.so;/usr/lib/x86_64-linux-gnu/libdl.so;/usr/lib/x86_64-linux-gnu/libnsl.so;/usr/lib/x86_64-linux-gnu/libutil.so;/usr/lib/x86_64-linux-gnu/libm.so;/usr/lib/x86_64-linux-gnu/libdl.so  
+-- MPI Found: /usr/lib/openmpi/lib/libmpi_cxx.so/usr/lib/openmpi/lib/libmpi.so/usr/lib/openmpi/lib/libopen-rte.so/usr/lib/openmpi/lib/libopen-pal.so/usr/lib/x86_64-linux-gnu/libdl.so/usr/lib/x86_64-linux-gnu/libnsl.so/usr/lib/x86_64-linux-gnu/libutil.so/usr/lib/x86_64-linux-gnu/libm.so/usr/lib/x86_64-linux-gnu/libdl.so
+-- Looking for pthread_setaffinity_np
+-- Looking for pthread_setaffinity_np - found
+-- Performing Test HAS_MARCH_NATIVE
+-- Performing Test HAS_MARCH_NATIVE - Success
+-- Performing Test HAS_MTUNE_NATIVE
+-- Performing Test HAS_MTUNE_NATIVE - Success
+-- Performing Test HAS_WNO_LOCAL_TYPEDEFS
+-- Performing Test HAS_WNO_LOCAL_TYPEDEFS - Success
+-- Performing Test HAS_CRC32
+-- Performing Test HAS_CRC32 - Success
+-- Debug build with C++ flags: -O0 -Wno-unused-local-typedefs -Wno-attributes -march=native -Winit-self  -Wall -g  -fopenmp
+-- Debug build with C flags: -O0 -Wno-attributes -march=native -Winit-self  -Wall -g  -fopenmp
+-- Found PythonInterp: /usr/bin/python (found version "2.7.3") 
+-- Copying Files: *
+-- Installing: /home/user/sara/graphlab/debug/tests/data
+-- Up-to-date: /home/user/sara/graphlab/debug/tests/data/CMakeLists.txt
+-- Installing: /home/user/sara/graphlab/debug/tests/data/test_adj
+-- Up-to-date: /home/user/sara/graphlab/debug/tests/data/test_adj/test.adj
+-- Installing: /home/user/sara/graphlab/debug/tests/data/test_snap
+-- Up-to-date: /home/user/sara/graphlab/debug/tests/data/test_snap/test.snap
+-- Installing: /home/user/sara/graphlab/debug/tests/data/test_tsv
+-- Up-to-date: /home/user/sara/graphlab/debug/tests/data/test_tsv/test.tsv
+-- Detected demo app: dsl
+-- Detected demo app: pagerank
+-- Detected demo app: rpc
+-- Detected Toolkit: clustering
+-- Detected Toolkit: collaborative_filtering
+-- Detected Toolkit: computer_vision
+-- Detected Toolkit: extensions
+-- Detected Toolkit: graph_analytics
+-- Detected Toolkit: graphical_models
+-- Detected App: denoise
+-- Detected App: test_MAD_relation
+-- Detected App: test_bool_var
+-- Detected App: test_dense_table
+-- Detected App: test_sparse_table
+-- Detected Toolkit: linear_solvers
+-- Detected Toolkit: topic_modeling
+-- Detected App: cascades
+-- Detected App: concomp
+-- Detected App: example
+-- Detected App: label_propagation
+-- Detected App: ADMM
+-- Configuring done
+-- Generating done
+-- Build files have been written to: /home/user/sara/graphlab/debug
+
+
+Output of make -j 20:
+
+[ 43%] Built target libjson
+[ 47%] [ 47%] [ 47%] [ 47%] [ 47%] Built target libevent
+Built target libtcmalloc
+Built target libbz2
+Built target eigen
+Built target zookeeper
+[ 56%] Built target boost
+[100%] Built target graphlab
+[100%] Building CXX object apps/ADMM/CMakeFiles/ADMM.dir/admm.cpp.o
+In file included from /home/user/sara/graphlab/apps/ADMM/admm.cpp:1:0:
+/home/user/sara/graphlab/apps/ADMM/admm.hpp: In constructor ‘admm_node::admm_node()’:
+/home/user/sara/graphlab/apps/ADMM/admm.hpp:110:6: warning: ‘admm_node::consensusVarId’ will be initialized after [-Wreorder]
+/home/user/sara/graphlab/apps/ADMM/admm.hpp:100:7: warning:   ‘bool admm_node::localOpenTermConverge’ [-Wreorder]
+/home/user/sara/graphlab/apps/ADMM/admm.hpp:129:2: warning:   when initialized here [-Wreorder]
+In file included from /home/user/sara/graphlab/apps/ADMM/admm.cpp:1:0:
+/home/user/sara/graphlab/apps/ADMM/admm.hpp: In function ‘void hingeloss_minimize(admm_node&, std::map<int, double>&)’:
+/home/user/sara/graphlab/apps/ADMM/admm.hpp:1086:9: warning: variable ‘prt_cnt’ set but not used [-Wunused-but-set-variable]
+Linking CXX executable ADMM
+[100%] Built target ADMM
