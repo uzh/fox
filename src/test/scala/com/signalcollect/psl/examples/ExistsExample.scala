@@ -140,14 +140,14 @@ predicate : causes(Variable, Variable)
 
 rule [0.1]: !dep(X,Y,W)
 rule [0.1]: !indep(X,Y,W)
-//rule [2]: indep(X,Y,W) && FOREACH [W1(1,) strictSubsetOf W] dep(X,Y,W1) => causes(X, Y)
+rule [2]: indep(X,Y,W) => causes(X, Y)
 
 // Minimally independent.
 fact: indep(x, y, {w, z})
 fact: dep(x, y, w)
 fact: dep(x, y, z)
 // Not minimially independent.
-// Missing dep(a, b, {x, w})
+fact: dep(a, b, {x, w})
 fact: indep(a, b, {x, w, z})
 fact: dep(a, b, z)
 fact: dep(a, b, w)
@@ -162,7 +162,7 @@ fact: dep(a, b, w)
       absoluteEpsilon = 1e-12,
       relativeEpsilon = 1e-8)
     val inferenceResults = Inferencer.runInferenceFromString(foreachInBody, config = config)
-    //println(inferenceResults.printSelectedResults())
+    println(inferenceResults.printSelectedResults())
     val causesXY = inferenceResults.getGp("causes", "x", "y").get
     inferenceResults.solution.results.get(causesXY.id) should be(0.83 +- 0.1)
     val causesAB = inferenceResults.getGp("causes", "a", "b").get
