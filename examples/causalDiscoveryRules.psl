@@ -1,6 +1,6 @@
 class Variable
 
-predicate [CompletelyGroundedSets]: indep(Variable, Variable, Set{0,3}[Variable])
+predicate [CompletelyGroundedSets]: indep(Variable, Variable, Set{0,10}[Variable])
 predicate : causes(Variable, Variable)
 
 // 0. conditional independence is symmetric in the first two variables.

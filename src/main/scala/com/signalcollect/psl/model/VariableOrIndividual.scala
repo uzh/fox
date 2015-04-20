@@ -27,8 +27,8 @@ sealed trait VariableOrIndividual {
   val varsOrIndividualsInSet =
     name.stripPrefix("Set(").stripSuffix(")").split(",").map(_.trim()).toSet
 
-  val numberOfVarsOrIndividualsInSet = varsOrIndividualsInSet.size
-  val numberOfIndividualsInSet = varsOrIndividualsInSet.filter(i => i.size == 0 || !i.charAt(0).isUpper).size
+  val numberOfVarsOrIndividualsInSet = varsOrIndividualsInSet.filter(i => i.size != 0).size
+  val numberOfIndividualsInSet = varsOrIndividualsInSet.filter(i => i.size != 0 && !i.charAt(0).isUpper).size
   val numberOfVariablesInSet = varsOrIndividualsInSet.filter(v => v.size != 0 && v.charAt(0).isUpper).size
 
   val set = name.startsWith("Set(") && numberOfVarsOrIndividualsInSet > 1
@@ -111,7 +111,7 @@ object VariableOrIndividualUtils {
             assert(variableGroundings(i).numberOfVarsOrIndividualsInSet == 1, s"Too many variables or individuals ${variableGroundings(i)} for argument $i of predicate $p that is not a set.")
             List(variableGroundings(i))
           } else if (!classType.set) {
-            assert(variableGroundings(i).numberOfVarsOrIndividualsInSet == 1, s"Too many variables or individuals ${variableGroundings(i)} for argument $i of predicate $p that is not a set.")
+            assert(variableGroundings(i).numberOfVarsOrIndividualsInSet == 1, s"Too many variables or individuals ${variableGroundings(i)} for argument $i of predicate $p that is not a set. ($classType)")
             List(VariableOrIndividual(variableGroundings(i).toString, Set(classType)))
           } else {
             // The argument is a set of a certain class, so the individual constants are each of that class.

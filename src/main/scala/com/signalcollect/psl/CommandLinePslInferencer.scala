@@ -35,6 +35,9 @@ a file/string in CVX format (input to CVX toolbox in Matlab), two files of groun
 --inference: which solver to use for inference, foxPSL or mosek (version LP and ILP) - requires mosek to be installed, and currently works only for problems with hard rules and linear soft rules with one clause.
 --breezeOptimizer: if we use foxPSL, we can choose whether to use the Breeze toolkit to do the single minimizations.
 --setsFile/--factsFile: used for reading the causal ASP problems, the fileanem containing the sets description and the filename containing the facts file.
+
+Example for causal discovery rules:
+./fox.sh examples/causalDiscoveryRules.psl --setsFile causalDiscoveryTmp/pipeline.pre.asp --factsFile causalDiscoveryTmp/pipeline.ind
 """
 
   if (args.length <= 1) {
@@ -95,7 +98,7 @@ a file/string in CVX format (input to CVX toolbox in Matlab), two files of groun
   val (printableResults, extraInformation) = if (doFoxPSLInference && !mapOfArgs.get("--multipleMinima").isDefined) {
     // Normal inference.
     val inferenceResults = Inferencer.runInference(updatedPslData, parsingTime, None, config = config)
-    (inferenceResults.printSelectedResults(queryList, printFacts = true, short = (outputType.get == "shortInference")), None)
+    (inferenceResults.printSelectedResults(queryList, printFacts = true, short = (outputType.getOrElse("inference") == "shortInference")), None)
   } else if (doFoxPSLInference) {
     // Multiple minima inference.
     val results = MinimaExplorer.runExploration(updatedPslData, config, queryList)

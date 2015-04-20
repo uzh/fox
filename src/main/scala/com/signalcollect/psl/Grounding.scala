@@ -654,7 +654,7 @@ object Grounding {
                   r =>
                     val key = (c.id, r)
                     val values = iterableBindingVarsOrInds.subsets(r).flatMap { v =>
-                      individuals(key).filter(_.name == v.toString)
+                      individuals.getOrElse(key, Set.empty).filter(_.name == v.toString)
                     }.toSet
                     //println(s"$r: $key $values")
                     Map(key -> values)

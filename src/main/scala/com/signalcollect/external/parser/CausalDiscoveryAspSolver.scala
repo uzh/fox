@@ -28,6 +28,7 @@ import com.signalcollect.psl.parser.ParsedPslFile
 import com.signalcollect.psl.parser.PslParser
 import com.signalcollect.psl.Grounding
 import com.signalcollect.psl.model.Individual
+import com.signalcollect.psl.model.VariableOrIndividual
 import com.signalcollect.psl.model.GroundedPredicate
 import com.signalcollect.psl.model.PredicateInRule
 import com.signalcollect.psl.model.Rule
@@ -51,8 +52,15 @@ import scala.sys.process._
 
 object CausalDiscoveryAspParser {
 
-  val indepPredicate = Predicate("indep", classes = List(PslClass("Variable"), PslClass("Variable"), PslClass("Set[Variable]")), properties = Set.empty)
-
+  val variableClass = PslClass("Variable")
+  val variableSetClass = PslClass("Variable", true)
+  val indepPredicate = Predicate("indep", classes = List(variableClass, variableClass, variableSetClass), properties = Set.empty)
+  val emptySet = VariableOrIndividual("Set()", Set(variableSetClass)) match {
+    case i: Individual => 
+      i
+    case _ => throw new ClassCastException
+  }
+  
   def updateParsedPslFile(originalParsedPslFile: ParsedPslFile, independenceFile: File, setDescriptionFile: File): ParsedPslFile = {
     val setsMap = CausalDiscoveryAspSetsParser.parse(setDescriptionFile)
     val facts = CausalDiscoveryAspFactsParser.parse(independenceFile)
@@ -64,11 +72,18 @@ object CausalDiscoveryAspParser {
   def parseFacts(startingRuleId: Int, setsMap: Map[String, Set[Individual]], facts: List[(Boolean, String, String, String, Double)]): List[Rule] = {
     var id = startingRuleId
     facts.map { fact =>
+      val conditioningSet = if (setsMap.contains(fact._4)){
+        Individual(setsMap(fact._4).toString())
+      } else {
+        emptySet
+      }
       // A rule with only the head and the weight, e.g. rule [5]: indep(x,y,{y,z})
       // Last argument needs to be translated to a set of Individuals and then refactored as a single Individual containing a set.
-      val factArguments = List(Individual(fact._2), Individual(fact._3), Individual(setsMap(fact._4).toString))
+      val factArguments = List(Individual(fact._2), Individual(fact._3), conditioningSet)
       val headPredicate = PredicateInRule(indepPredicate.name, variableOrIndividual = factArguments, negated = fact._1, Some(indepPredicate))
-      Rule({ id += 1; id }, body = List.empty, head = List(headPredicate), distanceMeasure = Linear, weight = fact._5)
+      // println(headPredicate)
+      val rule = Rule({ id += 1; id }, body = List.empty, head = List(headPredicate), distanceMeasure = Linear, weight = fact._5)
+      rule
     }
   }
 }

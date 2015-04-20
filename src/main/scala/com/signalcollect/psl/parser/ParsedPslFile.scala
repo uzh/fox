@@ -78,27 +78,27 @@ case class ParsedPslFile(
 
   def individualsWithoutClass: Set[Individual] = individuals.filter(_.classTypes.isEmpty).toSet
 
-//  def individualsByClass: Map[PslClass, Set[Individual]] = {
-//    // Add individualsInFacts to the proper classes List.
-//    val classesInFacts = individualsInFacts.flatMap(_.classTypes).distinct
-//    val classesAndIndividualsInFacts = classesInFacts.map(c => (c, individualsInFacts.filter(i => i.classTypes.contains(c)).toSet)).toMap
-//
-//    // Add individualsInRules to the proper classes list.
-//    val classesInRules = individualsInRules.flatMap(_.classTypes).distinct
-//    val classesAndIndividualsInRules = classesInRules.map(c => (c, individualsInRules.filter(i => i.classTypes.contains(c)).toSet)).toMap
-//
-//    val classes = explicitlyMentionedIndividualsInClasses.keys.toList ++ classesInFacts ++ classesInRules
-//
-//    // For each class add them together.
-//    val allClasses = classes.map {
-//      case classname =>
-//        (classname, explicitlyMentionedIndividualsInClasses.getOrElse(classname, Set.empty) ++
-//          classesAndIndividualsInFacts.getOrElse(classname, Set.empty) ++
-//          classesAndIndividualsInRules.getOrElse(classname, Set.empty))
-//    }.toMap
-//    val allIndividualsByClass = allClasses ++ Map(PslClass("_") -> individuals.toSet)
-//    allIndividualsByClass
-//  }
+  //  def individualsByClass: Map[PslClass, Set[Individual]] = {
+  //    // Add individualsInFacts to the proper classes List.
+  //    val classesInFacts = individualsInFacts.flatMap(_.classTypes).distinct
+  //    val classesAndIndividualsInFacts = classesInFacts.map(c => (c, individualsInFacts.filter(i => i.classTypes.contains(c)).toSet)).toMap
+  //
+  //    // Add individualsInRules to the proper classes list.
+  //    val classesInRules = individualsInRules.flatMap(_.classTypes).distinct
+  //    val classesAndIndividualsInRules = classesInRules.map(c => (c, individualsInRules.filter(i => i.classTypes.contains(c)).toSet)).toMap
+  //
+  //    val classes = explicitlyMentionedIndividualsInClasses.keys.toList ++ classesInFacts ++ classesInRules
+  //
+  //    // For each class add them together.
+  //    val allClasses = classes.map {
+  //      case classname =>
+  //        (classname, explicitlyMentionedIndividualsInClasses.getOrElse(classname, Set.empty) ++
+  //          classesAndIndividualsInFacts.getOrElse(classname, Set.empty) ++
+  //          classesAndIndividualsInRules.getOrElse(classname, Set.empty))
+  //    }.toMap
+  //    val allIndividualsByClass = allClasses ++ Map(PslClass("_") -> individuals.toSet)
+  //    allIndividualsByClass
+  //  }
 
   def individualsByClassAndCardinality: Map[(PslClass, Int), Set[Individual]] = {
     classes.map {
