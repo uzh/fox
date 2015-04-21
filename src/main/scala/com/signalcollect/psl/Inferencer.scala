@@ -156,7 +156,7 @@ case class InferenceResult(
         if (!short)
           s += s"\n$gp -> ${nicerTruthValue(truthValue)}"
         else
-          s += s"""${gp.definition.name}${gp.groundings.mkString("(", ",", ")")}= ${nicerTruthValue(truthValue)}"""
+          s += "\n" + s"""${gp.definition.name}${gp.groundings.mkString("(", ",", ")")}= ${nicerTruthValue(truthValue)}"""
     }
     s
   }

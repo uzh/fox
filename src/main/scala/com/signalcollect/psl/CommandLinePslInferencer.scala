@@ -102,13 +102,13 @@ Example for causal discovery rules:
   } else if (doFoxPSLInference) {
     // Multiple minima inference.
     val results = MinimaExplorer.runExploration(updatedPslData, config, queryList)
-    (MinimaExplorer.printSelectedResults(results, mapOfArgs.get("--threeValuedLogic").isDefined, short = (outputType.get == "shortInference")), None)
+    (MinimaExplorer.printSelectedResults(results, mapOfArgs.get("--threeValuedLogic").isDefined, short = (outputType.getOrElse("inference") == "shortInference")), None)
   } else if (doMosekILPInference) {
     val results = PSLToLPConverter.solve(updatedPslData, isBinary = true)
-    (PSLToLPConverter.printSelectedResults(results, queryList, short = (outputType.get == "shortInference"), printBinary = true), None)
+    (PSLToLPConverter.printSelectedResults(results, queryList, short = (outputType.getOrElse("inference") == "shortInference"), printBinary = true), None)
   } else if (doMosekLPInference) {
     val results = PSLToLPConverter.solve(updatedPslData, isBinary = false)
-    (PSLToLPConverter.printSelectedResults(results, queryList, short = (outputType.get == "shortInference")), None)
+    (PSLToLPConverter.printSelectedResults(results, queryList, short = (outputType.getOrElse("inference") == "shortInference")), None)
   } else {
     // No inference.
     outputType match {
