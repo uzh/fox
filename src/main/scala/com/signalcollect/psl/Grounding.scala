@@ -190,7 +190,6 @@ object Grounding {
       if (config.verbose) println("No variable with set type.")
       individualsMap
     } else {
-
       if (config.verbose) println("Generating all possible sets of individuals.")
       // Get not set individuals.
       val nonSetIndividuals = individuals.filter(!_._1._1.set)

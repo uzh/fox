@@ -73,7 +73,7 @@ case class ParsedPslFile(
   def classes: Set[PslClass] = {
     val classesInFacts = individualsInFacts.flatMap(_.classTypes).distinct
     val classesInRules = individualsInRules.flatMap(_.classTypes).distinct
-    (explicitlyMentionedIndividualsInClasses.keys.toList ++ classesInFacts ++ classesInRules).toSet
+    (explicitlyMentionedIndividualsInClasses.keys.toList ++ classesInFacts ++ classesInRules ++ List(PslClass("_"))).toSet
   }
 
   def individualsWithoutClass: Set[Individual] = individuals.filter(_.classTypes.isEmpty).toSet

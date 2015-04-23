@@ -140,17 +140,17 @@ predicate : causes(Variable, Variable)
 
 rule [0.1]: !dep(X,Y,W)
 rule [0.1]: !indep(X,Y,W)
-rule [2]: indep(X,Y,W) => causes(X, Y)
-
-// Minimally independent.
-fact: indep(x, y, {w, z})
-fact: dep(x, y, w)
-fact: dep(x, y, z)
-// Not minimially independent.
-fact: dep(a, b, {x, w})
-fact: indep(a, b, {x, w, z})
-fact: dep(a, b, z)
-fact: dep(a, b, w)
+rule [2]: indep(X,Y,W) && FOREACH [W1(1,) strictSubsetOf W] dep(X,Y,W1) => causes(X, Y)
+ 
+ // Minimally independent.
+ fact: indep(x, y, {w, z})
+ fact: dep(x, y, w)
+ fact: dep(x, y, z)
+ // Not minimially independent.
+ // Missing dep(a, b, {x, w})
+ fact: indep(a, b, {x, w, z})
+ fact: dep(a, b, z)
+ fact: dep(a, b, w)
 """
 
   "ExistsExample" should "provide a solution for foreach clauses in body." in {
