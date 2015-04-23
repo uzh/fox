@@ -18,7 +18,7 @@ object CommandLinePslInferencer extends App {
   val usage = """
 Usage: fox filename [--absEps num] [--relEps num] [--maxIter num] [--tol num]
 [--queryList "pred1, pred2"] [--multipleMinima true] [--threeValuedLogic true]
-[--output grounding|ilp|lp|cvx|mln|inference|shortInference] [--outfile outputfilename]
+[--output grounding|ilp|lp|cvx|mln|inference|shortInference|onlyTrueFacts] [--outfile outputfilename]
 [--inference foxPSL|mosekLP|mosekILP]
 [--breezeOptimizer true|false]
 [--setsFile filename --factsFile filename]
@@ -30,14 +30,16 @@ Usage: fox filename [--absEps num] [--relEps num] [--maxIter num] [--tol num]
 --multipleMinima: experimental feature that finds the range of the best truth values for each predicates
 --threeValuedLogic: outputs true, false or unknown if multipleMinima is on
 --output: what type of output do we expect: grounding (grounded rules), a file/string in LP format (input to ILP solvers), 
-a file/string in CVX format (input to CVX toolbox in Matlab), two files of grounded MLN rules and evidences(mln), standard inference results, shortInference (inference results without the technical details, e.g. "causes(x,y)"
+a file/string in CVX format (input to CVX toolbox in Matlab), two files of grounded MLN rules and evidences(mln), standard inference results, 
+shortInference (inference results without the technical details, e.g. "causes(x,y) = 0.0", 
+onlyTrueFacts (only the inferred facts that have a truth value >0.5 and without truth value).
 --outfile: if defined the output is saved in this file, otherwise it is shown in the stdout
 --inference: which solver to use for inference, foxPSL or mosek (version LP and ILP) - requires mosek to be installed, and currently works only for problems with hard rules and linear soft rules with one clause.
 --breezeOptimizer: if we use foxPSL, we can choose whether to use the Breeze toolkit to do the single minimizations.
 --setsFile/--factsFile: used for reading the causal ASP problems, the fileanem containing the sets description and the filename containing the facts file.
 
 Example for causal discovery rules:
-./fox.sh examples/causalDiscoveryRules.psl --setsFile causalDiscoveryTmp/pipeline.pre.asp --factsFile causalDiscoveryTmp/pipeline.ind
+./fox.sh examples/causalDiscoveryRules.psl --setsFile causalDiscoveryTmp/pipeline.pre.asp --factsFile causalDiscoveryTmp/pipeline.ind --outputType onlyTrueFacts --queryList causes
 """
 
   if (args.length <= 1) {
@@ -60,7 +62,7 @@ Example for causal discovery rules:
 
   val outputType = mapOfArgs.get("--output")
   val outputFile = mapOfArgs.get("--outfile")
-  val doInference = !outputType.isDefined || outputType.get == "inference" || outputType.get == "shortInference"
+  val doInference = !outputType.isDefined || outputType.get == "inference" || outputType.get == "shortInference" || outputType.get == "onlyTrueFacts" 
   val inference = mapOfArgs.getOrElse("--inference", "foxPSL")
   val doFoxPSLInference = doInference && inference == "foxPSL"
   val doMosekLPInference = doInference && inference == "mosekLP"
@@ -98,17 +100,17 @@ Example for causal discovery rules:
   val (printableResults, extraInformation) = if (doFoxPSLInference && !mapOfArgs.get("--multipleMinima").isDefined) {
     // Normal inference.
     val inferenceResults = Inferencer.runInference(updatedPslData, parsingTime, None, config = config)
-    (inferenceResults.printSelectedResults(queryList, printFacts = true, short = (outputType.getOrElse("inference") == "shortInference")), None)
+    (inferenceResults.printSelectedResults(queryList, printFacts = true, outputType = outputType.getOrElse("inference")), None)
   } else if (doFoxPSLInference) {
     // Multiple minima inference.
     val results = MinimaExplorer.runExploration(updatedPslData, config, queryList)
     (MinimaExplorer.printSelectedResults(results, mapOfArgs.get("--threeValuedLogic").isDefined, short = (outputType.getOrElse("inference") == "shortInference")), None)
   } else if (doMosekILPInference) {
     val results = PSLToLPConverter.solve(updatedPslData, isBinary = true)
-    (PSLToLPConverter.printSelectedResults(results, queryList, short = (outputType.getOrElse("inference") == "shortInference"), printBinary = true), None)
+    (PSLToLPConverter.printSelectedResults(results, queryList, outputType = outputType.getOrElse("inference"), printBinary = true), None)
   } else if (doMosekLPInference) {
     val results = PSLToLPConverter.solve(updatedPslData, isBinary = false)
-    (PSLToLPConverter.printSelectedResults(results, queryList, short = (outputType.getOrElse("inference") == "shortInference")), None)
+    (PSLToLPConverter.printSelectedResults(results, queryList, outputType = outputType.getOrElse("inference")), None)
   } else {
     // No inference.
     outputType match {

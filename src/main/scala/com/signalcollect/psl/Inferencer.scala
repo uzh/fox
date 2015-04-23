@@ -148,15 +148,21 @@ case class InferenceResult(
     }
   }
 
-  def printSelectedResults(predicateNames: List[String] = List.empty, printFacts: Boolean = true, sortById: Boolean = false, printOutZeros: Boolean = false, short: Boolean = false) = {
+  def printSelectedResults(predicateNames: List[String] = List.empty, printFacts: Boolean = true, sortById: Boolean = false, printOutZeros: Boolean = false,
+    outputType: String = "inference") = {
     var s = ""
     val sortedListGpToTruthValue = getSortedSelectedResults(predicateNames, printFacts, sortById, printOutZeros)
     sortedListGpToTruthValue.foreach {
       case (gp, truthValue) =>
-        if (!short)
+        if (outputType == "shortInference") {
           s += s"\n$gp -> ${nicerTruthValue(truthValue)}"
-        else
+        } else if (outputType == "onlyTrueFacts" && truthValue > 0.5) {
+          s += "\n" + s"""${gp.definition.name}${gp.groundings.mkString("(", ",", ")")}"""
+        } else if (outputType == "inference") {
           s += "\n" + s"""${gp.definition.name}${gp.groundings.mkString("(", ",", ")")}= ${nicerTruthValue(truthValue)}"""
+        } else {
+          // Do nothing.
+        }
     }
     s
   }

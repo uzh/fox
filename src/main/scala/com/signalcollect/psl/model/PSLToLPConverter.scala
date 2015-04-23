@@ -70,13 +70,14 @@ object PSLToLPConverter {
     mosekResult.map { case (id, value) => (idToGpMap(id), value) }
   }
 
-  def printSelectedResults(mosekResult: Map[GroundedPredicate, Double], queryList: List[String] = List.empty, short: Boolean = true, printBinary: Boolean = false): String = {
+  def printSelectedResults(mosekResult: Map[GroundedPredicate, Double], queryList: List[String] = List.empty, outputType: String = "inference",
+    printBinary: Boolean = false): String = {
     if (queryList.isEmpty) {
       mosekResult.mkString("\n")
     } else {
       mosekResult.filter { case (gp, value) => queryList.contains(gp.definition.name) }.map {
         result =>
-          val factName = if (short) {
+          val factName = if (outputType == "shortInference" || outputType == "onlyTrueFacts") {
             s"""${result._1.definition.name}${result._1.groundings.mkString("(", ",", ")")}"""
           } else {
             result._1.toString
@@ -86,7 +87,14 @@ object PSLToLPConverter {
           } else {
             result._2
           }
-          s"$factName -> $truthValue"
+
+          if (outputType == "onlyTrueFacts" && truthValue > 0.5) {
+            s"$factName"
+          } else if (outputType != "onlyTrueFacts") {
+            s"$factName -> $truthValue"
+          } else {
+            ""
+          }
       }.mkString("\n")
     }
   }
