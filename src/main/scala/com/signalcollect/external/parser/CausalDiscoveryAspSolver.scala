@@ -56,11 +56,11 @@ object CausalDiscoveryAspParser {
   val variableSetClass = PslClass("Variable", true)
   val indepPredicate = Predicate("indep", classes = List(variableClass, variableClass, variableSetClass), properties = Set.empty)
   val emptySet = VariableOrIndividual("Set()", Set(variableSetClass)) match {
-    case i: Individual => 
+    case i: Individual =>
       i
     case _ => throw new ClassCastException
   }
-  
+
   def updateParsedPslFile(originalParsedPslFile: ParsedPslFile, independenceFile: File, setDescriptionFile: File): ParsedPslFile = {
     val setsMap = CausalDiscoveryAspSetsParser.parse(setDescriptionFile)
     val facts = CausalDiscoveryAspFactsParser.parse(independenceFile)
@@ -72,7 +72,7 @@ object CausalDiscoveryAspParser {
   def parseFacts(startingRuleId: Int, setsMap: Map[String, Set[Individual]], facts: List[(Boolean, String, String, String, Double)]): List[Rule] = {
     var id = startingRuleId
     facts.map { fact =>
-      val conditioningSet = if (setsMap.contains(fact._4)){
+      val conditioningSet = if (setsMap.contains(fact._4)) {
         Individual(setsMap(fact._4).toString())
       } else {
         emptySet
@@ -131,7 +131,7 @@ object CausalDiscoveryAspSetsParser extends com.signalcollect.psl.parser.ParseHe
   }
 
   lazy val setDefinition: Parser[Map[String, Set[Individual]]] = {
-    repsep(ismember, ".") <~ opt(".") ^^ {
+    opt(("cset(" | "jset(") ~ integer ~ ").") ~> repsep(ismember, ".") <~ opt(".") ^^ {
       case setMembers => setMembers.groupBy(_._1).map { case (k, v) => (k, v.map(b => Individual(b._2)).toSet) }.toMap
     }
   }
@@ -162,16 +162,21 @@ object CausalDiscoveryAspFactsParser extends com.signalcollect.psl.parser.ParseH
   def parseFileLineByLine(file: File): List[(Boolean, String, String, String, Double)] = {
     io.Source.fromFile(file).getLines.toList.flatMap {
       line =>
-        parseString(line.split("%")(0), fact)
+        val partsOfLine = line.split("%")
+        if (partsOfLine.size == 2 && partsOfLine(0).size > 16) {
+          parseString(partsOfLine(0), fact)
+        } else {
+          List.empty
+        }
     }
   }
 
   lazy val fact: Parser[List[(Boolean, String, String, String, Double)]] = {
     ("dep" | "indep") ~ "(" ~ identifier ~ "," ~ identifier ~ "," ~ identifier ~ "," ~ identifier ~ "," ~ identifier ~ "," ~ double ~ ")" ~ "." ^^ {
       case "dep" ~ "(" ~ x ~ "," ~ y ~ "," ~ c ~ "," ~ j ~ "," ~ m ~ "," ~ w ~ ")" ~ "." =>
-        List((false, x, y, c, w/1000))
+        List((false, x, y, c, w / 1000))
       case "indep" ~ "(" ~ x ~ "," ~ y ~ "," ~ c ~ "," ~ j ~ "," ~ m ~ "," ~ w ~ ")" ~ "." =>
-        List((true, x, y, c, w/1000))
+        List((true, x, y, c, w / 1000))
     }
   }
 

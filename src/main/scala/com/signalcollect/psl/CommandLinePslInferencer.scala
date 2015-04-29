@@ -32,7 +32,7 @@ Usage: fox filename [--absEps num] [--relEps num] [--maxIter num] [--tol num]
 --output: what type of output do we expect: grounding (grounded rules), a file/string in LP format (input to ILP solvers), 
 a file/string in CVX format (input to CVX toolbox in Matlab), two files of grounded MLN rules and evidences(mln), standard inference results, 
 shortInference (inference results without the technical details, e.g. "causes(x,y) = 0.0", 
-onlyTrueFacts (only the inferred facts that have a truth value >0.5 and without truth value).
+onlyTrueFacts (only the inferred facts that have a truth value >0.5 and without truth value, separated by a comma).
 --outfile: if defined the output is saved in this file, otherwise it is shown in the stdout
 --inference: which solver to use for inference, foxPSL or mosek (version LP and ILP) - requires mosek to be installed, and currently works only for problems with hard rules and linear soft rules with one clause.
 --breezeOptimizer: if we use foxPSL, we can choose whether to use the Breeze toolkit to do the single minimizations.

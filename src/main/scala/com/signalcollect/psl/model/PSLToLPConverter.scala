@@ -75,8 +75,9 @@ object PSLToLPConverter {
     if (queryList.isEmpty) {
       mosekResult.mkString("\n")
     } else {
-      mosekResult.filter { case (gp, value) => queryList.contains(gp.definition.name) }.map {
-        result =>
+      var s = ""
+      mosekResult.filter { case (gp, value) => queryList.contains(gp.definition.name) }.foreach {
+        case result =>
           val factName = if (outputType == "shortInference" || outputType == "onlyTrueFacts") {
             s"""${result._1.definition.name}${result._1.groundings.mkString("(", ",", ")")}"""
           } else {
@@ -89,13 +90,18 @@ object PSLToLPConverter {
           }
 
           if (outputType == "onlyTrueFacts" && truthValue > 0.5) {
-            s"$factName"
+            if (s == "") {
+              s += "$factName"
+            } else {
+              s += ", $factName"
+            }
           } else if (outputType != "onlyTrueFacts") {
-            s"$factName -> $truthValue"
+            s += "\n$factName -> $truthValue"
           } else {
-            ""
+            // Do nothing.
           }
-      }.mkString("\n")
+      }
+      s
     }
   }
   def toLP(pslString: String, isBinary: Boolean): (String, Map[Int, GroundedPredicate]) = {
