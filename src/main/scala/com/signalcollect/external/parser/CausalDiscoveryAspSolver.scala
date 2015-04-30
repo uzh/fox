@@ -173,9 +173,9 @@ object CausalDiscoveryAspFactsParser extends com.signalcollect.psl.parser.ParseH
 
   lazy val fact: Parser[List[(Boolean, String, String, String, Double)]] = {
     ("dep" | "indep") ~ "(" ~ identifier ~ "," ~ identifier ~ "," ~ identifier ~ "," ~ identifier ~ "," ~ identifier ~ "," ~ double ~ ")" ~ "." ^^ {
-      case "dep" ~ "(" ~ x ~ "," ~ y ~ "," ~ c ~ "," ~ j ~ "," ~ m ~ "," ~ w ~ ")" ~ "." =>
-        List((false, x, y, c, w / 1000))
       case "indep" ~ "(" ~ x ~ "," ~ y ~ "," ~ c ~ "," ~ j ~ "," ~ m ~ "," ~ w ~ ")" ~ "." =>
+        List((false, x, y, c, w / 1000))
+      case "dep" ~ "(" ~ x ~ "," ~ y ~ "," ~ c ~ "," ~ j ~ "," ~ m ~ "," ~ w ~ ")" ~ "." =>
         List((true, x, y, c, w / 1000))
     }
   }

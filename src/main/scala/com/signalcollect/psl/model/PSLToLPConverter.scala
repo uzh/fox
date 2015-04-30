@@ -90,11 +90,7 @@ object PSLToLPConverter {
           }
 
           if (outputType == "onlyTrueFacts" && truthValue > 0.5) {
-            if (s == "") {
-              s += "$factName"
-            } else {
-              s += ", $factName"
-            }
+            s += "$factName "
           } else if (outputType != "onlyTrueFacts") {
             s += "\n$factName -> $truthValue"
           } else {

@@ -157,11 +157,7 @@ case class InferenceResult(
         if (outputType == "shortInference") {
           s += s"\n$gp -> ${nicerTruthValue(truthValue)}"
         } else if (outputType == "onlyTrueFacts" && truthValue > 0.5) {
-          if (s == "") {
-            s += s"""${gp.definition.name}${gp.groundings.mkString("(", ",", ")")}"""
-          } else {
-            s += s""", ${gp.definition.name}${gp.groundings.mkString("(", ",", ")")}"""
-          }
+          s += s"""${gp.definition.name}${gp.groundings.mkString("(", ",", ")")} """
         } else if (outputType == "inference") {
           s += "\n" + s"""${gp.definition.name}${gp.groundings.mkString("(", ",", ")")}= ${nicerTruthValue(truthValue)}"""
         } else {
