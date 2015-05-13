@@ -1,8 +1,7 @@
 /*
- *  @author Philip Stutz
  *  @author Sara Magliacane
  *
- *  Copyright 2014 University of Zurich & VU University Amsterdam
+ *  Copyright 2015 VU University Amsterdam
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -90,9 +89,9 @@ object PSLToLPConverter {
           }
 
           if (outputType == "onlyTrueFacts" && truthValue > 0.5) {
-            s += "$factName "
+            s += s"$factName "
           } else if (outputType != "onlyTrueFacts") {
-            s += "\n$factName -> $truthValue"
+            s += s"\n$factName -> $truthValue"
           } else {
             // Do nothing.
           }

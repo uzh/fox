@@ -1,8 +1,7 @@
 /*
- *  @author Philip Stutz
  *  @author Sara Magliacane
  *
- *  Copyright 2014 University of Zurich & VU University Amsterdam
+ *  Copyright 2014 VU University Amsterdam
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.

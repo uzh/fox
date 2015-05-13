@@ -1,7 +1,7 @@
 /*
  *  @author Sara Magliacane
  *
- *  Copyright 2014 University of Zurich & VU University Amsterdam
+ *  Copyright 2015 VU University Amsterdam
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -24,6 +24,7 @@ import java.io.FileWriter
 import java.io.FileReader
 import com.signalcollect.admm.optimizers.OptimizableFunction
 import com.signalcollect.psl.Optimizer
+import com.signalcollect.psl.parser.Fact
 import com.signalcollect.psl.parser.ParsedPslFile
 import com.signalcollect.psl.parser.PslParser
 import com.signalcollect.psl.Grounding
@@ -55,6 +56,7 @@ object CausalDiscoveryAspParser {
   val variableClass = PslClass("Variable")
   val variableSetClass = PslClass("Variable", true)
   val indepPredicate = Predicate("indep", classes = List(variableClass, variableClass, variableSetClass), properties = Set.empty)
+  val causesPredicate = Predicate("causes", classes = List(variableClass, variableClass), properties = Set.empty)
   val emptySet = VariableOrIndividual("Set()", Set(variableSetClass)) match {
     case i: Individual =>
       i
@@ -66,25 +68,52 @@ object CausalDiscoveryAspParser {
     val facts = CausalDiscoveryAspFactsParser.parse(independenceFile)
     val parsedIndependences = parseFacts(originalParsedPslFile.rules.size, setsMap, facts)
     ParsedPslFile(originalParsedPslFile.explicitlyMentionedIndividualsInClasses, originalParsedPslFile.predicates,
-      originalParsedPslFile.rules ++ parsedIndependences, originalParsedPslFile.facts, originalParsedPslFile.constants)
+      originalParsedPslFile.rules ++ parsedIndependences._1, originalParsedPslFile.facts ++ parsedIndependences._2, originalParsedPslFile.constants)
   }
 
-  def parseFacts(startingRuleId: Int, setsMap: Map[String, Set[Individual]], facts: List[(Boolean, String, String, String, Double)]): List[Rule] = {
+  def parseFacts(startingRuleId: Int, setsMap: Map[String, Set[Individual]], facts: List[(Boolean, String, String, String, Double)]): (List[Rule], List[Fact])= {
     var id = startingRuleId
-    facts.map { fact =>
-      val conditioningSet = if (setsMap.contains(fact._4)) {
-        Individual(setsMap(fact._4).toString())
+    val rules = facts.filter(_._5 != Double.MaxValue).map { fact =>
+      val headPredicate = if (fact._2 == "causes"){
+        // Causes fact.
+        val factArguments = List(Individual(fact._3), Individual(fact._4))
+        PredicateInRule(causesPredicate.name, variableOrIndividual = factArguments, negated = fact._1, Some(causesPredicate))
+        
       } else {
-        emptySet
+        // Independence fact.
+        val conditioningSet = if (setsMap.contains(fact._4)) {
+          Individual(setsMap(fact._4).toString())
+        } else {
+          emptySet
+        }
+        // A rule with only the head and the weight, e.g. rule [5]: indep(x,y,{y,z})
+        // Last argument needs to be translated to a set of Individuals and then refactored as a single Individual containing a set.
+        val factArguments = List(Individual(fact._2), Individual(fact._3), conditioningSet)
+        PredicateInRule(indepPredicate.name, variableOrIndividual = factArguments, negated = fact._1, Some(indepPredicate))
       }
-      // A rule with only the head and the weight, e.g. rule [5]: indep(x,y,{y,z})
-      // Last argument needs to be translated to a set of Individuals and then refactored as a single Individual containing a set.
-      val factArguments = List(Individual(fact._2), Individual(fact._3), conditioningSet)
-      val headPredicate = PredicateInRule(indepPredicate.name, variableOrIndividual = factArguments, negated = fact._1, Some(indepPredicate))
       // println(headPredicate)
-      val rule = Rule({ id += 1; id }, body = List.empty, head = List(headPredicate), distanceMeasure = Linear, weight = fact._5)
-      rule
+      Rule({ id += 1; id }, body = List.empty, head = List(headPredicate), distanceMeasure = Linear, weight = fact._5)
     }
+    val properFacts = facts.filter(_._5 == Double.MaxValue).map { fact =>
+     if (fact._2 == "causes"){
+        // Causes fact.
+        val factArguments = List(Set(Individual(fact._3)), Set(Individual(fact._4)))
+        Fact(causesPredicate.name, variableGroundings = factArguments, if (fact._1 == true) Some(0.0) else Some(1.0), Some(causesPredicate))        
+      } else {
+        // Independence fact.
+        val conditioningSet = if (setsMap.contains(fact._4)) {
+          // TODO(sara): double check this.
+          setsMap(fact._4)
+        } else {
+          Set(emptySet)
+        }
+        // A rule with only the head and the weight, e.g. rule [5]: indep(x,y,{y,z})
+        // Last argument needs to be translated to a set of Individuals and then refactored as a single Individual containing a set.
+        val factArguments = List(Set(Individual(fact._2)), Set(Individual(fact._3)), conditioningSet)
+        Fact(indepPredicate.name, variableGroundings = factArguments, if (fact._1 == true) Some(0.0) else Some(1.0) , Some(indepPredicate))   
+      }
+    }
+    (rules, properFacts)
   }
 }
 
@@ -163,9 +192,12 @@ object CausalDiscoveryAspFactsParser extends com.signalcollect.psl.parser.ParseH
     io.Source.fromFile(file).getLines.toList.flatMap {
       line =>
         val partsOfLine = line.split("%")
+        // If there is a part of string before % and it's longer than 10
         if (partsOfLine.size == 2 && partsOfLine(0).size > 16) {
           parseString(partsOfLine(0), fact)
-        } else {
+        } else if (partsOfLine.size == 1){
+           parseString(partsOfLine(0), causesFact)
+        } else{
           List.empty
         }
     }
@@ -177,6 +209,15 @@ object CausalDiscoveryAspFactsParser extends com.signalcollect.psl.parser.ParseH
         List((false, x, y, c, w / 1000))
       case "dep" ~ "(" ~ x ~ "," ~ y ~ "," ~ c ~ "," ~ j ~ "," ~ m ~ "," ~ w ~ ")" ~ "." =>
         List((true, x, y, c, w / 1000))
+    }
+  }
+  
+  lazy val causesFact: Parser[List[(Boolean, String, String, String, Double)]] = {
+    ("causes"|"-causes") ~ "(" ~ identifier ~ "," ~ identifier ~ ")" ~ "." ^^ {
+      case "causes" ~ "(" ~ x ~ "," ~ y ~  ")" ~ "." =>
+        List((false, "causes", x, y, Double.MaxValue))
+      case "-causes" ~ "(" ~ x ~ "," ~ y ~ ")" ~ "." =>
+        List((true, "causes", x, y, Double.MaxValue))
     }
   }
 
