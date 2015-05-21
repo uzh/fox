@@ -47,24 +47,25 @@ object PSLToLPConverter {
   }
   def solve(pslFile: File, isBinary: Boolean): Map[GroundedPredicate, Double] = {
     val (translatedProblem, idToGpMap) = toLP(pslFile, isBinary)
-    solve(translatedProblem, idToGpMap, isBinary)
+    solve(translatedProblem, idToGpMap, isBinary, pslFile.getName)
   }
 
-  def solve(pslData: ParsedPslFile, isBinary: Boolean): Map[GroundedPredicate, Double] = {
+  def solve(pslData: ParsedPslFile, isBinary: Boolean, inputFilename: String): Map[GroundedPredicate, Double] = {
     val (translatedProblem, idToGpMap) = toLP(pslData, isBinary)
-    solve(translatedProblem, idToGpMap, isBinary)
+    solve(translatedProblem, idToGpMap, isBinary, inputFilename)
   }
 
-  def solve(translatedProblem: String, idToGpMap: Map[Int, GroundedPredicate], isBinary: Boolean): Map[GroundedPredicate, Double] = {
-    val writer = new FileWriter("temp-mosek-translation.lp")
+  def solve(translatedProblem: String, idToGpMap: Map[Int, GroundedPredicate], isBinary: Boolean, 
+      patternFilename: String = "temp-mosek-translation"): Map[GroundedPredicate, Double] = {
+    val writer = new FileWriter(s"$patternFilename.lp")
     writer.append(translatedProblem)
     writer.close()
-    val mosekCommand = "mosek temp-mosek-translation.lp"
+    val mosekCommand = s"mosek $patternFilename.lp"
     val mosekOutput = mosekCommand.!!
     val mosekResult = if (isBinary) {
-      LpResultParser.parse(new File("temp-mosek-translation.int"))
+      LpResultParser.parse(new File(s"$patternFilename.int"))
     } else {
-      LpResultParser.parse(new File("temp-mosek-translation.sol"))
+      LpResultParser.parse(new File(s"$patternFilename.sol"))
     }
     mosekResult.map { case (id, value) => (idToGpMap(id), value) }
   }
