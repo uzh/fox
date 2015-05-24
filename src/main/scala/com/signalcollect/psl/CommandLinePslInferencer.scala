@@ -106,10 +106,10 @@ Example for causal discovery rules:
     val results = MinimaExplorer.runExploration(updatedPslData, config, queryList)
     (MinimaExplorer.printSelectedResults(results, mapOfArgs.get("--threeValuedLogic").isDefined, short = (outputType.getOrElse("inference") == "shortInference")), None)
   } else if (doMosekILPInference) {
-    val results = PSLToLPConverter.solve(updatedPslData, isBinary = true, mapOfArgs.get("--filename").get)
+    val results = PSLToLPConverter.solve(updatedPslData, isBinary = true, outputFile.getOrElse("temp-mosek-translation"))
     (PSLToLPConverter.printSelectedResults(results, queryList, outputType = outputType.getOrElse("inference"), printBinary = true), None)
   } else if (doMosekLPInference) {
-    val results = PSLToLPConverter.solve(updatedPslData, isBinary = false, mapOfArgs.get("--filename").get)
+    val results = PSLToLPConverter.solve(updatedPslData, isBinary = false, outputFile.getOrElse("temp-mosek-translation"))
     (PSLToLPConverter.printSelectedResults(results, queryList, outputType = outputType.getOrElse("inference")), None)
   } else {
     // No inference.
