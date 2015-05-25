@@ -65,6 +65,7 @@ case class WolfConfig(
   relativeEpsilon: Double,
   objectiveLoggingEnabled: Boolean,
   maxIterations: Int, // maximum number of iterations.
+  timeLimit: Option[Long],
   stepSize: Double,
   isBounded: Boolean,
   serializeMessages: Boolean,
@@ -138,9 +139,12 @@ object Wolf {
         val ((stats, convergence), inferenceTime) = Timer.time {
           println(s"ADMM graph creation completed in $graphLoadingTime ms.")
           println("Starting inference ...")
-          val executionConfig = ExecutionConfiguration[Int, Double]().
+          val baseExecutionConfig = ExecutionConfiguration[Int, Double]().
             withExecutionMode(if (config.asynchronous) ExecutionMode.PureAsynchronous else ExecutionMode.Synchronous).
             withStepsLimit(config.maxIterations)
+          val executionConfig = if (config.timeLimit.isDefined) {
+            baseExecutionConfig.withTimeLimit(config.timeLimit.get)
+          } else { baseExecutionConfig }
           if (config.globalConvergenceDetection.isDefined) {
             // Global convergence case:
             val globalConvergence = if (config.objectiveLoggingEnabled) {

@@ -178,6 +178,7 @@ case class InferencerConfig(
   computeObjectiveValueOfSolution: Boolean = false,
   objectiveLoggingEnabled: Boolean = false,
   maxIterations: Int = 10000, // maximum number of iterations.
+  timeLimit: Option[Long] = None,
   stepSize: Double = 1.0,
   tolerance: Double = 1e-12, // for Double precision is 15-17 decimal places, lower after arithmetic operations.
   isBounded: Boolean = true,
@@ -203,6 +204,7 @@ case class InferencerConfig(
       absoluteEpsilon = absoluteEpsilon,
       relativeEpsilon = relativeEpsilon,
       maxIterations = maxIterations,
+      timeLimit = timeLimit,
       stepSize = stepSize,
       isBounded = isBounded,
       serializeMessages = serializeMessages,

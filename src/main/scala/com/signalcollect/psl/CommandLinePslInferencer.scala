@@ -16,7 +16,7 @@ import com.signalcollect.admm.utils.Timer
 object CommandLinePslInferencer extends App {
 
   val usage = """
-Usage: fox filename [--absEps num] [--relEps num] [--maxIter num] [--tol num]
+Usage: fox filename [--absEps num] [--relEps num] [--time_limit num] [--maxIter num] [--tol num] 
 [--queryList "pred1, pred2"] [--multipleMinima true] [--threeValuedLogic true]
 [--output grounding|ilp|lp|cvx|mln|inference|shortInference|onlyTrueFacts] [--outfile outputfilename]
 [--inference foxPSL|mosekLP|mosekILP]
@@ -25,6 +25,7 @@ Usage: fox filename [--absEps num] [--relEps num] [--maxIter num] [--tol num]
 
 --absEps, --relEps: absolute and relative epsilons for ADMM algorithm (foxPSL solver)
 --maxIter: maximum number of iterations for ADMM algorithm (foxPSL solver)
+--time_limit: maximum time limit for ADMM algorithm (foxPSL solver)
 --tol: tolerance value for constraints, under this threshold a constraint is not considered broken
 --queryList: list of predicate names that we want to output
 --multipleMinima: experimental feature that finds the range of the best truth values for each predicates
@@ -67,11 +68,13 @@ Example for causal discovery rules:
   val doFoxPSLInference = doInference && inference == "foxPSL"
   val doMosekLPInference = doInference && inference == "mosekLP"
   val doMosekILPInference = doInference && (inference == "mosekILP" || inference == "mosek")
+  val timeLimit = if (mapOfArgs.get("--time_limit").isDefined) Some(mapOfArgs.get("--time_limit").get.toLong) else None
 
   val config = InferencerConfig(
     lazyThreshold = None,
     removeSymmetricConstraints = false,
     maxIterations = mapOfArgs.get("--maxIter").getOrElse("200000").toInt,
+    timeLimit = timeLimit,
     tolerance = mapOfArgs.get("--tol").getOrElse("0").toDouble,
     absoluteEpsilon = mapOfArgs.get("--absEps").getOrElse("1e-8").toDouble,
     relativeEpsilon = mapOfArgs.get("--relEps").getOrElse("1e-5").toDouble,
