@@ -27,6 +27,7 @@ import com.signalcollect.psl.Inferencer
 import com.signalcollect.psl.InferencerConfig
 import com.signalcollect.psl.parser.PslParser
 import com.signalcollect.util.TestAnnouncements
+import com.signalcollect.admm.utils.MinimaExplorer
 
 /**
  * Small example that plays around with default values and contrasting rules.
@@ -34,7 +35,7 @@ import com.signalcollect.util.TestAnnouncements
 class FriendsExample extends FlatSpec with Matchers with TestAnnouncements {
 
   val friends = """
-  predicate [prior = 0.2]:    friends(_, _)    
+  predicate [prior=0.2]:    friends(_, _)    
   fact: !friends(bob, carl)
   fact: friends(anna, bob)
   """

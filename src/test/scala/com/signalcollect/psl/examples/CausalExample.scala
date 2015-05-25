@@ -27,34 +27,26 @@ import com.signalcollect.psl.Inferencer
 import com.signalcollect.psl.InferencerConfig
 import com.signalcollect.psl.parser.PslParser
 import com.signalcollect.util.TestAnnouncements
+import com.signalcollect.admm.utils.MinimaExplorer
+import com.signalcollect.psl.model.PSLToLPConverter
 
 class CausalExample extends FlatSpec with Matchers with TestAnnouncements {
 
-  val casual = """
-// The two arguments are independent of each other.
-//predicate [Symmetric]: indep(Variable, Variable)
-predicate : indep(Variable, Variable)
+  val causal = """
 // The two first arguments are conditionally independent based on the third argument.
-predicate : cond-indep(Variable, Variable, Variable)
+predicate [Symmetric]: indep(Variable, Variable)
+predicate : cond-indep(Variable, Variable, Set[Variable])
 // The first argument causes the second argument.
 // We don’t add not-causes, but instead use !causes, we will add a mechanism to deal if there 
 // is no evidence for neither.
 predicate : causes(Variable, Variable)
 
 // 0. conditional independence is symmetric in the first two variables.
-//rule: cond-indep(X, Y, Z) => cond-indep(Y, X, Z)
-
-// 1. mutual exclusivity of independence and dependence.
-// ! (( X → Y) && (X -/-> Y))
-// We assume it’s implicit by using the negation: !causes(X, Y) \equiv not-causes(X,Y).
+rule: cond-indep(X, Y, Z) => cond-indep(Y, X, Z)
 
 // 2. Irreflexivity of causes:
 // !(X → X)
 rule: !causes(X, X)
-
-// 3. Irreflexivity of not causes:
-// X -/-> X
-// We assume it’s implicit by using the negation: !causes(X, Y) \equiv not-causes(X,Y).
 
 // 4. Acyclicity
 // X→ Y => Y-/->X
@@ -71,14 +63,59 @@ rule: !indep(X,Y)  && cond-indep(X,Y,Z) => causes(Z, X) || causes (Z, Y)
 rule: indep(X,Y)  && !cond-indep(X,Y,Z) => !causes(Z, X)
 rule: indep(X,Y)  && !cond-indep(X,Y,Z) => !causes(Z, Y)
 
+// 8. If X and Y are independent, then they are not causing each other.
+rule: indep(X,Y) => !causes(X, Y)
+rule: indep(X,Y) => !causes(Y, X)
+
+// 9. If X and Y are conditionally independent, then they are not causing each other (at least directly!)
+// This gets wrong with transitivity (I would remove transitivity and keep only direct causes).
+//rule: cond-indep(X,Y,Z) => !causes(X, Y)
+//rule: cond-indep(X,Y,Z) => !causes(Y, X)
+
 class Variable: u,w,x,y
 
-fact: indep(w, u)
-fact: !cond-indep(w, u, x)
-fact: !indep(w, y)
+// GroundedPredicate 48: causes[ ] (x, y): unknown  = 0.595 : [0.593,1.0]
+
+//fact [truthValue = 0.8]: indep(w, u)
+//fact [truthValue = 1.0]: !cond-indep(w, u, x)
+//fact [truthValue = 1.0]: !indep(w, y)
+//fact [truthValue = 0.8]: cond-indep(w, y, x)
+
+
+//fact: indep(w, u)
+//fact: !cond-indep(w, u, x)
+//fact: !indep(w, y)
+//fact: cond-indep(w, y, x)
+
+ fact: !indep(x, u)
+ fact: !indep(x, w)
+ fact: !indep(x, y)
+ fact: !indep(y, u)
+ fact: !indep(y, w)
+ fact: indep(w, u)
+ fact: !cond-indep(w, u, x)
+ fact: !cond-indep(w, u, y)
+fact: cond-indep(u, y, x)
 fact: cond-indep(w, y, x)
-  """
-  
+fact: !cond-indep(x, w, y)
+fact: !cond-indep(x, w, u)
+fact: !cond-indep(x, y, w)
+fact: !cond-indep(x, y, u)
+fact: !cond-indep(x, u, y)
+fact: !cond-indep(x, u, w)
+fact: !cond-indep(u, y, w)
+fact: !cond-indep(y, w, u)
+
+fact: !cond-indep(x, y, {u, w})
+fact: !cond-indep(x, w, {y, u})
+fact: !cond-indep(x, u, {w, y})
+fact: !cond-indep(u, w, {x, y})
+
+fact: cond-indep(u, y, {x, w})
+fact: cond-indep(w, y, {u, x})
+
+ """
+
   val expected = """
 
 fact: indep(w, u)
@@ -87,92 +124,117 @@ fact [0]: indep(w, y)
 fact [0]: cond-indep(w, u, x)
 fact: cond-indep(w, y, x)
 
+fact [1]: causes(x,y) // w and y are dependent, but they are not anymore given x.
 fact [0]: causes(x,w) //ok
 fact [0]: causes(x,u) //ok
-fact [1]: causes(x,y) // w and y are dependent, but they are not anymore given x.
-fact [0]: causes(y, x) //ok
-fact [0]: causes(y,w)  //ok
-fact [0]: causes(y,u) //ok
 
-GroundedPredicate 166: causes[ ] (u, x)  has truth value 0.46
-GroundedPredicate 170: causes[ ] (w, x)  has truth value 0.42539530927390246
-GroundedPredicate 82: causes[ ] (w, y)  has truth value 0.4254391646493712
-GroundedPredicate 119: causes[ ] (u, y)  has truth value 0.46
+fact [0]: causes(y, x) //ok
+fact [0]: causes(y,u) //ok
+fact [0]: causes(y,w)  //ok
+
 
 """
-//fact: indep(w, u)
-////fact: indep( u, w) 
-//fact [0]: indep(w, y)
-////fact [0]: indep(y, w)
-//
-//fact [0]: cond-indep(w, u, x)
-////fact [0]: cond-indep( u, w, x)
-//fact: cond-indep(w, y, x)
-////fact: cond-indep(y,w, x)
-//
-//// Rule 7:
-//
-//rule: MAX(0, indep(w, u):1 + !cond-indep(w, u, x):1 -1 - 1 + causes(x, w))^2 
-//rule: MAX(0,  causes(x, w))^2 => causes(x,w) is 0
-////same: rule: MAX(0, indep(u, w):1 + cond-indep(u, w, x):1 -1 - 1 + causes(x, w))^2 
-//
-//rule: MAX(0, indep(w, u):1 + !cond-indep(w, u, x):1 -1 - 1 + causes(x, u))^2 
-//rule: MAX(0, causes(x, u))^2 => causes(x,u) is 0
-//
-//rule: MAX(0, indep(w, y):1 + !cond-indep(w, y, x):0 -1 - 1 + causes(x, w))^2 
-//rule: MAX(0, -1 + causes(x, w))^2 => causes(x,w) is anything in [0, 1], but for other rule is 0
-//
-//rule: MAX(0, indep(w, y):1 + !cond-indep(w, y, x):0 -1 - 1 + causes(x, y))^2 
-//rule: MAX(0, -1 + causes(x, y))^2 => causes(x,y) is anything in [0, 1]
-//
-//// Rule 6:
-//
-//rule:  MAX(0, !indep(w, u):0 + cond-indep(w, u, x):0 -1 - causes(x, w) - causes(x, u))^2 
-//rule:  MAX(0, -1 - causes(x, w) - causes(x, u))^2  => causes(x,w|u) is anything in [0, 1], but for other rule is 0
-//
-//rule:  MAX(0, !indep(w, y):1 + cond-indep(w, y, x):1 -1 - causes(x, w) - causes(x, y))^2 
-//rule:  MAX(0, 1 - causes(x, w) - causes(x, y))^2  => causes(x,w) +  causes(x, y) = 1, 
-//// since causes(x,w) = 0, then causes(x,y) = 1
-//
-//// After rule 7 and 6
-//fact [0]: causes(x,w)
-//fact [0]: causes(x,u)
-//fact [1]: causes(x,y) // w and y are dependent, but they are not anymore given x.
-//
-//// 4. Acyclicity
-//
-//rule: MAX(0, causes(x, w):0 - 1 + causes(w, x))^2
-//rule: MAX(0, - 1 + causes(w, x))^2 => causes (w, x) can be anything in [0, 1]
-//
-//rule: MAX(0, causes(x, u):0 - 1 + causes(u, x))^2
-//rule: MAX(0, - 1 + causes(u, x))^2 => causes (u, x) can be anything in [0, 1]
-//
-//rule: MAX(0, causes(x, y):1 - 1 + causes(y, x))^2
-//rule: MAX(0, causes(y, x))^2 => causes (y, x) is 0
-//
-//fact [0]: causes(y, x)
-//
-//// 5. Transitivity:
-//rule: MAX(0, causes(x, w):0 + causes(w, u) - 1 - causes(x, u): 0)^2
-//rule: MAX(0,  causes(w, u) - 1 )^2 => causes (w, u) can be anything in [0, 1]
-//
-//rule: MAX(0, causes(x, w):0 + causes(w, y) - 1 - causes(x, y): 1)^2
-//rule: MAX(0,  causes(w, y) - 2 )^2 => causes (w, y) can be anything in [0, 1]
-//
-//rule: MAX(0, causes(x, y):1 + causes(y, w) - 1 - causes(x, w): 0)^2
-//rule: MAX(0,  causes(y, w)  )^2 => causes (y, w) is 0 
-//
-//rule: MAX(0, causes(x, y):1 + causes(y, u) - 1 - causes(x, u): 0)^2
-//rule: MAX(0,  causes(y, u)  )^2 => causes (y, u) is 0
-//
-//fact [0]: causes(y,w)
-//fact [0]: causes(y,u)
+  /*
+ * GroundedPredicate 164: causes[ ] (x, x) : [0.0, 0.0]
+ * GroundedPredicate 59: causes[ ] (x, y) : [0.9984497725066939, 0.9984360437109558]
+ * GroundedPredicate 48: causes[ ] (x, u) : [0.0, 5.63596217807545E-4]
+ * GroundedPredicate 15: causes[ ] (x, w) : [5.183992981389012E-4, 1.3050320566076267E-4]
+ * 
+ * GroundedPredicate 161: causes[ ] (y, x) : [0.0, 2.827754462365966E-4]
+ * GroundedPredicate 88: causes[ ] (y, y) : [0.0, 0.0]
+ * GroundedPredicate 98: causes[ ] (y, u) : [0.00146545701352099, 7.882164634398476E-4]
+ * GroundedPredicate 69: causes[ ] (y, w) : [5.064198406355208E-6, 2.3897887293128413E-4]
+
+GroundedPredicate 166: causes[ ] (u, x) : [0.1613609694185838, 0.17167728235962768]
+GroundedPredicate 119: causes[ ] (u, y) : [0.1323243799621113, 0.1454936607218651]
+GroundedPredicate 97: causes[ ] (u, u) : [0.0, 0.0]
+GroundedPredicate 131: causes[ ] (u, w) : [0.39751503752784834, 0.10667813499511081]
 
 
-  it should "provide a solution consistent for hardenemies, an example with negative prior and a hard rule" in {
-    val config = InferencerConfig(computeObjectiveValueOfSolution = true)
-    val inferenceResults = Inferencer.runInferenceFromString(casual, config = config)
-    val objectiveFunctionValOption = inferenceResults.objectiveFun
-    // println(inferenceResults.printSelected(List("causes")))
+GroundedPredicate 170: causes[ ] (w, x) : [0.20790164241284562, 0.06128211658605666]
+GroundedPredicate 82: causes[ ] (w, y) : [0.9372412110510067, 0.14491635962665825]
+GroundedPredicate 86: causes[ ] (w, w) : [0.0, 0.0]
+GroundedPredicate 40: causes[ ] (w, u) : [0.0050777510230964815, 0.9976288302377336]
+
+ */
+
+  //fact: indep(w, u)
+  ////fact: indep( u, w) 
+  //fact [0]: indep(w, y)
+  ////fact [0]: indep(y, w)
+  //
+  //fact [0]: cond-indep(w, u, x)
+  ////fact [0]: cond-indep( u, w, x)
+  //fact: cond-indep(w, y, x)
+  ////fact: cond-indep(y,w, x)
+  //
+  //// Rule 7:
+  //
+  //rule: MAX(0, indep(w, u):1 + !cond-indep(w, u, x):1 -1 - 1 + causes(x, w))^2 
+  //rule: MAX(0,  causes(x, w))^2 => causes(x,w) is 0
+  ////same: rule: MAX(0, indep(u, w):1 + cond-indep(u, w, x):1 -1 - 1 + causes(x, w))^2 
+  //
+  //rule: MAX(0, indep(w, u):1 + !cond-indep(w, u, x):1 -1 - 1 + causes(x, u))^2 
+  //rule: MAX(0, causes(x, u))^2 => causes(x,u) is 0
+  //
+  //rule: MAX(0, indep(w, y):1 + !cond-indep(w, y, x):0 -1 - 1 + causes(x, w))^2 
+  //rule: MAX(0, -1 + causes(x, w))^2 => causes(x,w) is anything in [0, 1], but for other rule is 0
+  //
+  //rule: MAX(0, indep(w, y):1 + !cond-indep(w, y, x):0 -1 - 1 + causes(x, y))^2 
+  //rule: MAX(0, -1 + causes(x, y))^2 => causes(x,y) is anything in [0, 1]
+  //
+  //// Rule 6:
+  //
+  //rule:  MAX(0, !indep(w, u):0 + cond-indep(w, u, x):0 -1 - causes(x, w) - causes(x, u))^2 
+  //rule:  MAX(0, -1 - causes(x, w) - causes(x, u))^2  => causes(x,w|u) is anything in [0, 1], but for other rule is 0
+  //
+  //rule:  MAX(0, !indep(w, y):1 + cond-indep(w, y, x):1 -1 - causes(x, w) - causes(x, y))^2 
+  //rule:  MAX(0, 1 - causes(x, w) - causes(x, y))^2  => causes(x,w) +  causes(x, y) = 1, 
+  //// since causes(x,w) = 0, then causes(x,y) = 1
+  //
+  //// After rule 7 and 6
+  //fact [0]: causes(x,w)
+  //fact [0]: causes(x,u)
+  //fact [1]: causes(x,y) // w and y are dependent, but they are not anymore given x.
+  //
+  //// 4. Acyclicity
+  //
+  //rule: MAX(0, causes(x, w):0 - 1 + causes(w, x))^2
+  //rule: MAX(0, - 1 + causes(w, x))^2 => causes (w, x) can be anything in [0, 1]
+  //
+  //rule: MAX(0, causes(x, u):0 - 1 + causes(u, x))^2
+  //rule: MAX(0, - 1 + causes(u, x))^2 => causes (u, x) can be anything in [0, 1]
+  //
+  //rule: MAX(0, causes(x, y):1 - 1 + causes(y, x))^2
+  //rule: MAX(0, causes(y, x))^2 => causes (y, x) is 0
+  //
+  //fact [0]: causes(y, x)
+  //
+  //// 5. Transitivity:
+  //rule: MAX(0, causes(x, w):0 + causes(w, u) - 1 - causes(x, u): 0)^2
+  //rule: MAX(0,  causes(w, u) - 1 )^2 => causes (w, u) can be anything in [0, 1]
+  //
+  //rule: MAX(0, causes(x, w):0 + causes(w, y) - 1 - causes(x, y): 1)^2
+  //rule: MAX(0,  causes(w, y) - 2 )^2 => causes (w, y) can be anything in [0, 1]
+  //
+  //rule: MAX(0, causes(x, y):1 + causes(y, w) - 1 - causes(x, w): 0)^2
+  //rule: MAX(0,  causes(y, w)  )^2 => causes (y, w) is 0 
+  //
+  //rule: MAX(0, causes(x, y):1 + causes(y, u) - 1 - causes(x, u): 0)^2
+  //rule: MAX(0,  causes(y, u)  )^2 => causes (y, u) is 0
+  //
+  //fact [0]: causes(y,w)
+  //fact [0]: causes(y,u)
+
+  it should "provide a solution consistent for the causal example" in {
+    val config = InferencerConfig(
+      computeObjectiveValueOfSolution = true,
+      lazyThreshold = None,
+      removeSymmetricConstraints = false,
+      maxIterations = 20000,
+      absoluteEpsilon = 1e-5,
+      relativeEpsilon = 1e-3)
+    val results = MinimaExplorer.exploreFromString(causal, config, List("none"))
+    println(MinimaExplorer.printSelectedResults(results, short = true))
   }
 }

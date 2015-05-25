@@ -27,7 +27,11 @@ sealed trait VariableOrIndividual {
   val varsOrIndividualsInSet =
     name.stripPrefix("Set(").stripSuffix(")").split(",").map(_.trim()).toSet
 
-  val set = name.startsWith("Set(") && varsOrIndividualsInSet.size > 1
+  val numberOfVarsOrIndividualsInSet = varsOrIndividualsInSet.filter(i => i.size != 0).size
+  val numberOfIndividualsInSet = varsOrIndividualsInSet.filter(i => i.size != 0 && !i.charAt(0).isUpper).size
+  val numberOfVariablesInSet = varsOrIndividualsInSet.filter(v => v.size != 0 && v.charAt(0).isUpper).size
+
+  val set = name.startsWith("Set(") && numberOfVarsOrIndividualsInSet > 1
 
   val value = this.toString
 
@@ -44,7 +48,13 @@ sealed trait VariableOrIndividual {
     }
   }
   override def toString = {
-    if (set) { name } else if (!name.startsWith("Set(")) { name } else { varsOrIndividualsInSet.head }
+    if (set) {
+      name
+    } else if (!name.startsWith("Set(")) {
+      name
+    } else {
+      varsOrIndividualsInSet.head
+    }
 
   }
   override def hashCode(): Int = {
@@ -60,7 +70,7 @@ sealed trait VariableOrIndividual {
 
 object VariableOrIndividual {
   def apply(name: String, classTypes: Set[PslClass] = Set.empty): VariableOrIndividual = {
-    if (name.stripPrefix("Set(")(0).isUpper) {
+    if (name.stripPrefix("Set(").length() > 0 && name.stripPrefix("Set(")(0).isUpper) {
       Variable(name, classTypes)
     } else {
       Individual(name, classTypes)
@@ -87,3 +97,117 @@ case class Individual(name: String, classTypes: Set[PslClass] = Set.empty) exten
 }
 
 case class Variable(name: String, classTypes: Set[PslClass] = Set.empty) extends VariableOrIndividual
+
+object VariableOrIndividualUtils {
+
+  def getVariablesOrIndividualsWithClasses(p: Predicate, variableGroundings: List[VariableOrIndividual], getSingleIndividuals: Boolean = false): List[VariableOrIndividual] = {
+    p.classes.zipWithIndex.map {
+      case (classType, i) =>
+        if (variableGroundings.length <= i) {
+          println(s"Too few arguments for the predicate $p: $variableGroundings")
+          List.empty[VariableOrIndividual]
+        } else {
+          if (classType.id == "_") {
+            assert(variableGroundings(i).numberOfVarsOrIndividualsInSet == 1, s"Too many variables or individuals ${variableGroundings(i)} for argument $i of predicate $p that is not a set.")
+            List(variableGroundings(i))
+          } else if (!classType.set) {
+            assert(variableGroundings(i).numberOfVarsOrIndividualsInSet == 1, s"Too many variables or individuals ${variableGroundings(i)} for argument $i of predicate $p that is not a set. ($classType)")
+            List(VariableOrIndividual(variableGroundings(i).toString, Set(classType)))
+          } else {
+            // The argument is a set of a certain class, so the individual constants are each of that class.
+            // Example: symptom (Disease, Set[Symptom]) 
+            // symptom(flu, {cough, fever}) => flu: Disease, cough: Symptom, fever: Symptom.
+            if (classType.minCardinalityOption.isDefined) {
+              assert(variableGroundings(i).numberOfVariablesInSet >= 1 || variableGroundings(i).numberOfIndividualsInSet >= classType.minCardinalityOption.get,
+                s"Too few variables or individuals ${variableGroundings(i)} for argument $i of predicate $p, which is a set with a minimum cardinality of ${classType.minCardinality}.")
+            }
+            if (classType.maxCardinalityOption.isDefined) {
+              assert(variableGroundings(i).numberOfIndividualsInSet <= classType.maxCardinalityOption.get,
+                s"Too many variables ${variableGroundings(i)} for argument $i of predicate $p, which is a set with a maximum cardinality of ${classType.maxCardinality}.")
+            }
+            // Get the class of each argument.
+            val individualClass = PslClass(classType.id)
+            // Get the set class without the cardinalities.
+            val isSetClassAnActualSet = classType.minCardinalityOption.getOrElse(0) != 1 || classType.maxCardinalityOption.getOrElse(classType.maxPossibleCardinality) != 1
+            val setClass = PslClass(classType.id, isSetClassAnActualSet)
+            variableGroundings(i) match {
+              case v: Variable =>
+                List(VariableOrIndividual(v.toString, Set(classType)))
+              case ind: Individual =>
+                val individual = Set(VariableOrIndividual(ind.toString, Set(setClass)))
+                if (getSingleIndividuals && isSetClassAnActualSet) {
+                  individual ++
+                    ind.varsOrIndividualsInSet.map { i => VariableOrIndividual(i, Set(individualClass)) }.toSet
+                } else {
+                  individual
+                }
+
+            }
+
+          }
+        }
+    }.flatten
+  }
+
+  def getIndividualsReusingGroundingsAsSingleIndividuals(p: Predicate, variableGroundings: List[Set[Individual]],
+    groundingsAsSingleIndividuals: List[Individual], getSingleIndividuals: Boolean = false): List[Individual] = {
+    p.classes.zipWithIndex.map {
+      case (classType, i) =>
+        if (variableGroundings.length <= i) {
+          println(s"Too few arguments for the predicate $p: $variableGroundings")
+          List.empty
+        } else {
+          if (classType.id == "_") {
+            assert(variableGroundings(i).size == 1, "Too many variables for an argument that is not a set.")
+            variableGroundings(i)
+          } else if (!classType.set) {
+            assert(variableGroundings(i).size == 1, "Too many variables for an argument that is not a set.")
+            variableGroundings(i).map { ind => Individual(ind.name, Set(classType)) }
+          } else {
+            // The argument is a set of a certain class, so the individual constants are each of that class.
+            // Example: symptom (Disease, Set[Symptom]) 
+            // symptom(flu, {cough, fever}) => flu: Disease, cough: Symptom, fever: Symptom.
+            if (classType.minCardinalityOption.isDefined) {
+              assert(variableGroundings(i).size >= classType.minCardinalityOption.get,
+                "Too few variables for an argument set with a minimum cardinality.")
+            }
+            if (classType.maxCardinalityOption.isDefined) {
+              assert(variableGroundings(i).size <= classType.maxCardinalityOption.get,
+                "Too many variables for an argument set with a maximum cardinality.")
+            }
+
+            // Get the class of each argument.
+            val individualClass = PslClass(classType.id)
+            // Get the set class without the cardinalities.
+            val isSetClassAnActualSet = classType.minCardinalityOption.getOrElse(0) != 1 || classType.maxCardinalityOption.getOrElse(classType.maxPossibleCardinality) != 1
+            val setClass = PslClass(classType.id, isSetClassAnActualSet)
+            val individual = Set(Individual(groundingsAsSingleIndividuals(i).toString, Set(setClass)))
+
+            if (getSingleIndividuals && isSetClassAnActualSet) {
+              val singleIndividuals = variableGroundings(i).map { ind => Individual(ind.name, Set(individualClass)) }
+              if (singleIndividuals.size == 1) {
+                singleIndividuals
+              } else {
+                individual ++ singleIndividuals
+              }
+            } else {
+              individual
+            }
+          }
+        }
+    }.flatten
+  }
+
+  def groundingsAsSingleIndividuals(variableGroundings: List[Set[Individual]]): List[Individual] = {
+    variableGroundings.map { singleGrounding =>
+      val orderedIndividuals = if (singleGrounding.size > 1) {
+        // Before creating a single individual with this set, we order the set of individuals,
+        // so we can normalize it.
+        singleGrounding.toList.sortBy(_.name).toSet
+      } else {
+        singleGrounding
+      }
+      Individual(orderedIndividuals.toString)
+    }
+  }
+}

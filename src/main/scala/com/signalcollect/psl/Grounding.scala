@@ -33,8 +33,8 @@ object Grounding {
    */
   def ground(pslData: ParsedPslFile, config: InferencerConfig = InferencerConfig()) = {
     val allPossibleSetsAndIndividuals = generateAllPossibleSetsAsIndividuals(pslData.rulesWithPredicates,
-      pslData.individualsByClass, config)
-    if (config.verbose) println(s"Generated all classes of individuals: ${allPossibleSetsAndIndividuals.size}.")
+      pslData.individualsByClassAndCardinality, config)
+    if (config.verbose) println(s"Generated all possible sets of individuals: ${allPossibleSetsAndIndividuals.size}.")
     val groundedPredicates = createGroundedPredicates(pslData.rulesWithPredicates, pslData.predicates, pslData.facts,
       allPossibleSetsAndIndividuals, config)
     if (config.verbose) println(s"Created ${groundedPredicates.size} grounded predicates.")
@@ -68,20 +68,29 @@ object Grounding {
    *  (A->demo, B->repub), (A->demo, B->anna).
    *
    */
-  def generateBindings(variables: List[Variable], individuals: Map[PslClass, Set[Individual]],
+  def generateBindings(variables: List[Variable], individuals: Map[(String, Int), Set[Individual]],
     config: InferencerConfig = InferencerConfig()): List[Map[String, Individual]] = {
     if (variables.size < 1) {
       return List.empty
     }
+
     // For each variable try all the individuals that are in the intersection of the classes it has.
     //     Need a list of List[Map[String, Individual]], each one representing the value of a variable.
     //     e.g. List (Map(A -> anna), Map(A -> sara)) 	    
     val allMappingsList = variables.map {
       variable =>
         val variableIndividuals = if (variable.classTypes.isEmpty) {
-          individuals(PslClass("_")).map(v => Individual(v.value))
+          individuals(("_", 1)).map(v => Individual(v.value))
         } else {
-          val sets = variable.classTypes.map(individuals(_)).toList
+          val sets = variable.classTypes.map {
+            c =>
+              if (c.set) {
+                val range = c.minCardinality to c.maxCardinality
+                range.flatMap(r => individuals.get((c.id, r))).flatten.toSet
+              } else {
+                individuals.getOrElse((c.id, 1), Set.empty)
+              }
+          }.toList
           val intersection = sets.foldLeft(sets(0))(_ & _)
           intersection.map(v => Individual(v.value))
         }
@@ -91,8 +100,13 @@ object Grounding {
         variableIndividuals.map(v => Map[String, Individual](variable.value -> v)).toList
     }
 
+    combineListOfBindingsAndPruneRepeatedIndividuals(allMappingsList)
+
+  }
+
+  def combineListOfBindingsAndPruneRepeatedIndividuals(allMappingsList: List[List[Map[String, Individual]]]) = {
     // Use combine to foldleft the values and get the result.
-    val foldedList = allMappingsList.foldLeft(List[Map[String, Individual]]())(combine(_, _))
+    val foldedList = combineListOfBindings(allMappingsList)
 
     // Prune all the mappings that have the same individual in more than two variables.
     // Note: this enforces the fact that if you bind an individual to a variable it cannot be bound again.
@@ -117,6 +131,11 @@ object Grounding {
       }
     }
     prunedList
+  }
+
+  def combineListOfBindings(allMappingsList: List[List[Map[String, Individual]]]) = {
+    // Use combine to foldleft the values and get the result.
+    allMappingsList.foldLeft(List[Map[String, Individual]]())(combine(_, _))
   }
 
   /**
@@ -147,45 +166,122 @@ object Grounding {
   /**
    * Generate all possible sets as individuals, so that they can be grounded where needed.
    */
-  def generateAllPossibleSetsAsIndividuals(rules: List[Rule], individuals: Map[PslClass, Set[Individual]],
-    config: InferencerConfig = InferencerConfig()): Map[PslClass, Set[Individual]] = {
+  def generateAllPossibleSetsAsIndividuals(rules: List[Rule], individuals: Map[(PslClass, Int), Set[Individual]],
+    config: InferencerConfig = InferencerConfig()): Map[(String, Int), Set[Individual]] = {
+    val individualsMap = individuals.map { case ((c, card), inds) => ((c.id, card), inds) }.toMap
     // Find all set classes in predicates mentioned in rules.
     val setClasses = rules.flatMap {
       rule =>
-        if (config.verbose) println(s"Checking variables in rule: $rule")
+        if (config.verbose) println(s"Search for all set classes in rule: $rule")
         rule.allPredicatesInRule.flatMap {
-          _.variables.flatMap { v =>
-            v.classTypes.filter(_.set)
-          }.toSet
-        }.toSet
+          pred =>
+            if (pred.predicate.get.properties.contains(CompletelyGroundedSets)) {
+              None
+            } else {
+              val setClassesInPredicate = pred.variables.flatMap { v =>
+                v.classTypes.filter(_.set)
+              }
+              Some(setClassesInPredicate)
+            }
+        }.flatten
     }.toSet
 
     if (setClasses.isEmpty) {
       if (config.verbose) println("No variable with set type.")
-      individuals
+      individualsMap
     } else {
       if (config.verbose) println("Generating all possible sets of individuals.")
       // Get not set individuals.
-      val nonSetIndividuals = individuals.filter(!_._1.set)
+      val nonSetIndividuals = individuals.filter(!_._1._1.set)
+
+      // Group the set classes by their base type and get all the sizes of the sets that we need,
+      // based on min and max cardinality.
+      val sizesOfSetsBySetClass = setClasses.groupBy(_.id).flatMap {
+        case (className, listOfSetClasses) =>
+          var ranges = Set.empty[Int]
+          listOfSetClasses.map {
+            setClass =>
+              if (!ranges.contains(setClass.minCardinality) && !ranges.contains(setClass.maxCardinality)) {
+                val r = setClass.minCardinality to setClass.maxCardinality
+                ranges = ranges ++ r
+              } else if (!ranges.contains(setClass.minCardinality)) {
+                val r = setClass.minCardinality to ranges.min - 1
+                ranges = ranges ++ r
+              } else if (!ranges.contains(setClass.maxCardinality)) {
+                val r = ranges.max + 1 to setClass.maxCardinality
+                ranges = ranges ++ r
+              }
+          }
+          Map(className -> ranges.toList.sorted)
+      }
 
       // For each of the set classes, create all possible combinations using the non set individuals.
-      val allPossibleSetsAsIndividuals = setClasses.flatMap { setClass =>
-        val nonSetIndividualsOfClass = nonSetIndividuals.filter(_._1.name == setClass.name)
-        if (nonSetIndividualsOfClass.size == 1) {
-          val relevantIndividuals = nonSetIndividualsOfClass.head._2
-          // Subsets creates all possible subsets of a set.
-          val allPossibleSetsForClass = relevantIndividuals.subsets.map(
-            subset => Individual(subset.toString, Set(setClass))).toSet
-          Some(Map(setClass -> allPossibleSetsForClass))
-        } else {
-          None
-        }
+      val allPossibleSetsAsIndividuals = sizesOfSetsBySetClass.flatMap {
+        case (singularTypeName, sizes) =>
+          val setClass = PslClass(singularTypeName, true)
+          val nonSetIndividualsOfClass = nonSetIndividuals.filter(_._1._1.id == singularTypeName)
+          if (nonSetIndividualsOfClass.size == 1) {
+            val relevantIndividuals = nonSetIndividualsOfClass.head._2
+            // Subsets creates all possible subsets of a set.
+            sizes.flatMap {
+              size =>
+                val subsetsPerSize = relevantIndividuals.subsets(size).map {
+                  subset =>
+                    val orderedSubset = subset.toList.sortBy(_.name).toSet
+                    Individual(orderedSubset.toString, Set(setClass))
+                }.toSet
+                Some(Map((setClass.id, size) -> subsetsPerSize))
+            }
+          } else {
+            None
+          }
       }.flatten.toMap
 
       // Return original individuals merged with the new individuals for set classes.
-      individuals ++ allPossibleSetsAsIndividuals
+      individualsMap ++ allPossibleSetsAsIndividuals
     }
+  }
 
+  def getBindingOfRule(rule: Rule, binding: Map[String, Individual]) = {
+    (rule.head ++ rule.body).flatMap {
+      p =>
+        val key = p.predicate.get
+        val value = p.allVarsOrIndsWithClasses.flatMap(getBinding(_, binding))
+        if (key.arity != value.size) {
+          None
+        } else {
+          Some((key, value))
+        }
+    }.distinct
+  }
+
+  def getBinding(varOrInd: VariableOrIndividual, binding: Map[String, Individual]) = varOrInd match {
+    case v: Variable if !v.set =>
+      Some(binding(v.value))
+    case v: Variable if v.set =>
+      // If the variable is a set of variables, we have to join the results of all of the variables in the set.
+      val setVariables = v.varsOrIndividualsInSet.map(VariableOrIndividual(_)).map {
+        case variable: Variable =>
+          binding(variable.value).varsOrIndividualsInSet
+        case individual: Individual =>
+          individual.varsOrIndividualsInSet
+      }.flatten.toList.sorted.toSet
+      val boundIndividual = if (setVariables.size == 1) {
+        // If there is only one set variable, keep it.
+        Individual(setVariables.toString)
+      } else {
+        // Otherwise, remove the empty set.
+        Individual(setVariables.filter(_ != "").toString)
+      }
+      if (boundIndividual.numberOfIndividualsInSet >= v.classTypes.map(_.minCardinality).max &&
+        boundIndividual.numberOfIndividualsInSet <= v.classTypes.map(_.maxCardinality).min) {
+        Some(boundIndividual)
+      } else {
+        // Wrong cardinality.
+        //println(s"getBinding: $v (${v.classTypes.map(_.minCardinality).min}, ${v.classTypes.map(_.maxCardinality).max}): $binding (${boundIndividual.numberOfIndividualsInSet})")
+        None
+      }
+    case i: Individual => Some(Individual(i.value))
   }
 
   /**
@@ -195,35 +291,39 @@ object Grounding {
    * Then add the truth values that are in the facts and the predicates.
    */
   def createGroundedPredicates(rules: List[Rule], predicates: List[Predicate], facts: List[Fact],
-    individuals: Map[PslClass, Set[Individual]],
+    individuals: Map[(String, Int), Set[Individual]],
     config: InferencerConfig = InferencerConfig()): Map[(String, List[Individual]), GroundedPredicate] = {
     // Collect the truth values in facts.
     val parallelMapOfFacts = if (config.parallelizeGrounding) { facts.par } else { facts }
     val truthValues = parallelMapOfFacts.map { fact =>
-      ((fact.name, fact.groundingsAsSingleIndividuals.map(_.value)), fact.truthValue)
+      ((fact.name, fact.groundingsAsSingleIndividuals.map(_.value)), (fact.truthValue, fact.minTruthValue, fact.maxTruthValue))
     }.toMap
 
     // Ground predicates in rules.
+    // TODO: generate a map containing all the intersections of PslClasses that we need.
     val groundedPredicatesKeys =
       rules.flatMap {
         rule =>
-          if (config.verbose) println(s"Creating grounded predicate keys for rule: $rule")
           val bindings = generateBindings(rule.variables, individuals, config)
-          val parallelMapOfBindings = if (config.parallelizeGrounding) { bindings.par } else { bindings }
-          val result = parallelMapOfBindings.flatMap {
-            binding =>
-              val bodyContribution = rule.body.map(p => (p.predicate.get, p.varsOrIndsWithClasses.map {
-                case v: Variable => binding(v.value)
-                case i: Individual => Individual(i.value)
-              }))
-              val headContribution = rule.head.map(p => (p.predicate.get, p.varsOrIndsWithClasses.map {
-                case v: Variable => binding(v.value)
-                case i: Individual => Individual(i.value)
-              }))
-              val totalContribution = bodyContribution ++ headContribution
-              totalContribution
+          if (config.verbose) {
+            println(s"Creating grounded predicate keys for rule: $rule")
+            rule.variables.map(v => println(s"- $v : ${v.classTypes}"))
+            println("Bindings for grounded predicates:")
+            bindings.map { m => println(s"- $m") }
           }
-          if (config.parallelizeGrounding) { result.seq } else { result }
+          val parallelMapOfBindings = if (config.parallelizeGrounding) {
+            bindings.par
+          } else {
+            bindings
+          }
+          val result = parallelMapOfBindings.flatMap {
+            binding => getBindingOfRule(rule, binding)
+          }
+          if (config.parallelizeGrounding) {
+            result.seq
+          } else {
+            result
+          }
       }.toSet
 
     //Ground predicates in constraints
@@ -267,8 +367,8 @@ object Grounding {
     // Create the grounded constraint predicates by merging the truth values.
     val groundedPredicates = allGroundedPredicatesKeys.map {
       case (pr, grounding) =>
-        val gp = GroundedPredicate({ id += 1; id }, pr, grounding,
-          truthValues.getOrElse((pr.name, grounding.map(_.value)), None))
+        val (truthValue, minTruthValue, maxTruthValue) = truthValues.getOrElse((pr.name, grounding.map(_.value)), (None, None, None))
+        val gp = GroundedPredicate({ id += 1; id }, pr, grounding, truthValue, minTruthValue.getOrElse(0.0), maxTruthValue.getOrElse(1.0))
         ((pr.name, grounding), gp)
     }.toMap
 
@@ -298,7 +398,7 @@ object Grounding {
             case None =>
               ((predicateName, newgroundings), otherGp)
             case Some(t) =>
-              ((predicateName, newgroundings), GroundedPredicate(otherGp.id, otherGp.definition, newgroundings, Some(t)))
+              ((predicateName, newgroundings), GroundedPredicate(otherGp.id, otherGp.definition, newgroundings, Some(t), math.max(otherGp.lowerBound, gp.lowerBound), math.min(otherGp.upperBound, gp.upperBound)))
           }
         }
     }
@@ -306,53 +406,298 @@ object Grounding {
   }
 
   /**
+   * Create the new rule based on the existential quantifiers on the right side.
+   */
+
+  def createExistentiallyGroundedRule(rule: Rule, individuals: Map[(String, Int), Set[Individual]], config: InferencerConfig) = {
+    val existentialVariables = rule.variables.filter(v => rule.existentialVars.contains(v.name))
+    //println(s"existentialVariables : $existentialVariables")
+    val existentialBindings = generateBindings(existentialVariables, individuals, config)
+    // Expand the eventual existential quantified variables in the head to a GP for each existential binding of each predicate in rule.
+    if (existentialBindings.length > 0) {
+      val newHead = existentialBindings.flatMap {
+        // For each possible binding of the existentially qualified variables.
+        existBinding =>
+          rule.head.map {
+            // For each predicate in rule in the head, substitute the affected variables with this binding.
+            pInR =>
+              val newVars = pInR.variableOrIndividual.map {
+                v =>
+                  if (existBinding.contains(v.value)) {
+                    existBinding(v.value)
+                  } else { v }
+              }
+              PredicateInRule(pInR.name, newVars, pInR.negated, pInR.predicate)
+          }
+      }.distinct
+      Rule(rule.id, rule.body, newHead, rule.distanceMeasure, rule.weight, existentialVars = Set.empty,
+        rule.foreachInSetClauseInHead, rule.existsInSetClauseInHead, rule.foreachInSetClauseInBody, rule.existsInSetClauseInBody)
+    } else {
+      rule
+    }
+  }
+
+  /**
+   * Create the new rule based on the exists in set quantifiers in the head.
+   */
+
+  def createExistsInSetInHeadGroundedRule(existsInSetVariablesInHead: Set[(Variable, Variable, String)], binding: Map[String, Individual],
+    rule: Rule, individuals: Map[(String, Int), Set[Individual]], config: InferencerConfig) = {
+    val foldedList = generateBindingForIteratorsGivenIterables(existsInSetVariablesInHead, binding, individuals)
+    // Expand the eventual existential quantified variables in the head to a GP for each existential binding of each predicate in rule.
+    if (foldedList.length > 0) {
+      val newHead = foldedList.flatMap {
+        // For each possible binding of the existentially qualified variables.
+        existBinding =>
+          rule.head.map {
+            // For each predicate in rule in the head, substitute the affected variables with this binding.
+            pInR =>
+              val newVars = pInR.allVarsOrIndsWithClasses.map {
+                v =>
+                  if (existBinding.contains(v.value)) {
+                    existBinding(v.value)
+                  } else {
+                    v
+                  }
+              }
+              PredicateInRule(pInR.name, newVars, pInR.negated, pInR.predicate)
+          }
+      }.distinct
+      val existsInSetRule = Rule(rule.id, rule.body, newHead, rule.distanceMeasure, rule.weight, existentialVars = rule.existentialVars,
+        rule.foreachInSetClauseInHead, existsInSetClauseInHead = Set.empty, rule.foreachInSetClauseInBody, rule.existsInSetClauseInBody)
+      Some(existsInSetRule)
+    } else {
+      if (rule.existsInSetClauseInHead.size > 0) {
+        // Something went wrong, ignore.
+        None
+      } else {
+        Some(rule)
+      }
+    }
+  }
+
+  /**
+   * Create the new rule based on the foreach in set quantifiers in the body.
+   */
+
+  def createForeachInBodyGroundedRule(foreachVariablesInBody: Set[(Variable, Variable, String)], binding: Map[String, Individual],
+    rule: Rule, individuals: Map[(String, Int), Set[Individual]], config: InferencerConfig) = {
+    val foldedList = generateBindingForIteratorsGivenIterables(foreachVariablesInBody, binding, individuals)
+    if (foldedList.length > 0) {
+      val newBody = foldedList.flatMap {
+        foreachBinding =>
+          rule.body.map {
+            // For each predicate in rule in the body, substitute the affected variables with this binding.
+            pInR =>
+              val newVars = pInR.variableOrIndividual.map {
+                v =>
+                  if (foreachBinding.contains(v.value)) {
+                    foreachBinding(v.value)
+                  } else { v }
+              }
+              PredicateInRule(pInR.name, newVars, pInR.negated, pInR.predicate)
+          }
+      }.distinct
+      //      println("foreach")
+      //      println(foreachVariablesInBody)
+      //      println(s"binding: $binding")
+      //      println(s"$newBody")
+      //      println("foreach end")
+      val foreachInBodyRule = Rule(rule.id, newBody, rule.head, rule.distanceMeasure, rule.weight, existentialVars = rule.existentialVars,
+        rule.foreachInSetClauseInHead, rule.existsInSetClauseInHead, foreachInSetClauseInBody = Set.empty, rule.existsInSetClauseInBody)
+      Some(foreachInBodyRule)
+    } else {
+      if (rule.foreachInSetClauseInBody.size > 0) {
+        // Something went wrong, ignore.
+        None
+      } else {
+        Some(rule)
+      }
+    }
+  }
+
+  /**
+   * Given a rule and a set of iterator and iterable names, get the related Variables with the classtypes and
+   * restrict the cardinality to 1.
+   */
+  def getIteratorVariablesInRuleFromNames(rule: Rule, iteratorIterableNames: Set[(String, String, Int, Int, String)]) = {
+    iteratorIterableNames.map {
+      case (iterator, iterable, minCardinality, maxCardinality, containmentOption) =>
+        val iteratorVariable = rule.variables.filter(_.name == iterator).head
+        val constrainedCardinalityClasses = iteratorVariable.classTypes.map { c =>
+          if (containmentOption == "in") {
+            // Classic iterator, iterating over a single element in a list of elements (iterable).
+            PslClass(c.id)
+          } else {
+            // Containment option is either subsetOf or strictSubsetOf:
+            // - subsetOf gets all subsets of the iterable
+            // - strictSubsetOf get all strict subsets of the iterable, thus has a smaller max cardinality.
+            val joinedMinCardinality = math.max(minCardinality, c.minCardinality)
+            val joinedMaxCardinality = if (containmentOption == "strictSubsetOf") {
+              math.min(maxCardinality, c.maxCardinality) - 1
+            } else {
+              math.min(maxCardinality, c.maxCardinality)
+            }
+            assert(joinedMinCardinality <= joinedMaxCardinality)
+            PslClass(c.id, joinedMinCardinality != 1 && joinedMaxCardinality != 1, Some(joinedMinCardinality), Some(joinedMaxCardinality))
+          }
+        }
+        val iterableVariable = rule.variables.filter(_.name == iterable).head
+        (new Variable(iteratorVariable.name, constrainedCardinalityClasses), iterableVariable, containmentOption)
+    }
+  }
+
+  /**
    * Create the grounded rules using the grounded predicates.
    * We do it in a second time, so we can have a unique id for each grounded predicate.
    */
   def createGroundedRules(rules: List[Rule], groundedPredicates: Map[(String, List[Individual]), GroundedPredicate],
-    individuals: Map[PslClass, Set[Individual]], startingId: Int = 0,
+    individuals: Map[(String, Int), Set[Individual]], startingId: Int = 0,
     config: InferencerConfig = InferencerConfig()): List[GroundedRule] = {
     var id = startingId
     rules.flatMap {
       rule =>
         // Existentially quantified vars.
-        val existentialVariables = rule.variables.filter(v => rule.existentialVars.contains(v.name))
-        val existentialBindings = generateBindings(existentialVariables, individuals, config)
-        // Expand the eventual existential quantified variables in the head to a GP for each existential binding of each predicate in rule.
-        val newHead = if (existentialBindings.length > 0) {
-          existentialBindings.flatMap {
-            // For each possible binding of the existentially qualified variables.
-            existBinding =>
-              rule.head.map {
-                // For each predicate in rule in the head, substitute the affected variables with this binding.
-                pInR =>
-                  val newVars = pInR.variableOrIndividual.map {
-                    v =>
-                      if (existBinding.contains(v.value)) {
-                        existBinding(v.value)
-                      } else { v }
-                  }
-                  PredicateInRule(pInR.name, newVars, pInR.negated, pInR.predicate)
-              }
-          }.distinct
-        } else { rule.head }
-        val newRule = Rule(rule.id, rule.body, newHead, rule.distanceMeasure, rule.weight, Set.empty)
+        val newRule = createExistentiallyGroundedRule(rule, individuals, config)
+
+        // For each quantified vars: FOREACH [V1 in V] where V1 is the iterator and V the iterable variable.
+        val forEachQuantifiedVariablesInHead = getIteratorVariablesInRuleFromNames(rule, rule.foreachInSetClauseInHead)
+        val forEachQuantifiedVariablesInBody = getIteratorVariablesInRuleFromNames(rule, rule.foreachInSetClauseInBody)
+        // Exists in quantified vars : EXISTS [V1 in V] where V1 is the iterator and V the iterable variable.
+        val existsInSetVariablesInHead = getIteratorVariablesInRuleFromNames(rule, rule.existsInSetClauseInHead)
+        val existsInSetVariablesInBody = getIteratorVariablesInRuleFromNames(rule, rule.existsInSetClauseInBody)
+
+        val iteratorVariables =
+          (forEachQuantifiedVariablesInBody ++ forEachQuantifiedVariablesInHead ++ existsInSetVariablesInHead ++ existsInSetVariablesInBody).map(_._1)
 
         // Normal vars.
         // Treat the rule as a normal rule.
-        val bindings = generateBindings(newRule.variables, individuals, config)
-        bindings.map {
+        val normalVars = newRule.variables.filter(!iteratorVariables.contains(_))
+        // println(s"normalVars : ${normalVars}")
+        val bindings = if (normalVars.size == 0) {
+          List(Map.empty[String, Individual])
+        } else {
+          generateBindings(normalVars, individuals, config)
+        }
+        bindings.flatMap {
           binding =>
-            val groundedBody = newRule.body.map(getGroundedPredicate(groundedPredicates, _, binding)).flatten
-            val groundedHead = newRule.head.map(getGroundedPredicate(groundedPredicates, _, binding)).flatten
-            val unboundGroundedPredicates = groundedHead.filter(!_.truthValue.isDefined) ::: groundedBody.filter(!_.truthValue.isDefined)
-            if (unboundGroundedPredicates.size > 0) {
-              Some(GroundedRule({ id += 1; id }, newRule, groundedBody, groundedHead))
+            if (iteratorVariables.size == 0) {
+              // Standard execution.
+              val groundedBody = newRule.body.map(getGroundedPredicate(groundedPredicates, _, binding)).flatten
+              val groundedHead = newRule.head.map(getGroundedPredicate(groundedPredicates, _, binding)).flatten
+              val unboundGroundedPredicates = groundedHead.filter(!_.truthValue.isDefined) ::: groundedBody.filter(!_.truthValue.isDefined)
+              if (groundedBody.size >= newRule.body.size && groundedHead.size >= newRule.head.size && unboundGroundedPredicates.size > 0) {
+                List(GroundedRule({ id += 1; id }, newRule, groundedBody, groundedHead))
+              } else {
+                List.empty
+              }
             } else {
-              None
+              assert(newRule.existsInSetClauseInBody.size == 0, "Exists in body are not implemented yet.")
+              // Bind the FOREACH iterator variables in the body directly.
+              val foreachInBodyRule = createForeachInBodyGroundedRule(forEachQuantifiedVariablesInBody, binding,
+                newRule, individuals, config)
+
+              if (foreachInBodyRule.isDefined) {
+                // Bind the EXISTS iterator variables in the head directly.
+                val existsInSetRule = createExistsInSetInHeadGroundedRule(existsInSetVariablesInHead, binding,
+                  foreachInBodyRule.get, individuals, config)
+                if (existsInSetRule.isDefined) {
+                  // Bind the FOREACH iterator variables a posteriori with the individuals bound in the iterable variables.
+                  val (newId, newGroundedRules) = createNewRuleForeachIteratorInHead(forEachQuantifiedVariablesInHead, binding,
+                    existsInSetRule.get, id, groundedPredicates, individuals)
+                  id = newId
+                  newGroundedRules
+                } else {
+                  List.empty
+                }
+              } else {
+                List.empty
+              }
             }
         }
-    }.flatten
+    }
+  }
+
+  /**
+   * Generate bindings for iterators given a binding of iterables.
+   */
+
+  def generateBindingForIteratorsGivenIterables(iteratorIterableSet: Set[(Variable, Variable, String)],
+    binding: Map[String, Individual], individuals: Map[(String, Int), Set[Individual]]) = {
+    val allMappingsList = iteratorIterableSet.map {
+      case (iterator, iterable, containmentOption) =>
+        val iterableBinding = binding(iterable.name)
+        if (iterableBinding.value == "") {
+          List.empty
+        } else {
+          val individualsOfSubsets = iterator.classTypes.flatMap {
+            c =>
+              val iterableBindingVarsOrInds = iterableBinding.varsOrIndividualsInSet
+              // Decide the appropriate subsets based on the containment options:
+              // - "in" : one element at a time
+              // - "subsetOf" : subsets of any size, including 0 to the whole set, unless min and max cardinality
+              // - "strictSubsetOf" : strict subsets, same as subset of, except for the whole set.
+              val (boundedMinCardinality, boundedMaxCardinality) = if (containmentOption == "in") {
+                (1, 1)
+              } else if (containmentOption == "strictSubsetOf") {
+                (c.minCardinality, math.min(c.maxCardinality, iterableBindingVarsOrInds.size - 1))
+              } else {
+                (c.minCardinality, math.min(c.maxCardinality, iterableBindingVarsOrInds.size))
+              }
+              // println(s"$iterator $iterableBindingVarsOrInds $containmentOption: $boundedMinCardinality : $boundedMaxCardinality")
+              if (boundedMinCardinality > boundedMaxCardinality) {
+                Map.empty
+              } else {
+                val range = boundedMinCardinality to boundedMaxCardinality
+                range.flatMap {
+                  r =>
+                    val key = (c.id, r)
+                    val values = iterableBindingVarsOrInds.subsets(r).flatMap { v =>
+                      individuals.getOrElse(key, Set.empty).filter(_.name == v.toString)
+                    }.toSet
+                    //println(s"$r: $key $values")
+                    Map(key -> values)
+                }
+              }
+          }.toMap
+          //println(s"binding: $binding; individualsOfSubsets: $individualsOfSubsets")
+          val boundIterators = generateBindings(List(iterator), individualsOfSubsets)
+          //println(s"iterator: $iterator (${iterator.classTypes.head.minCardinality}, ${iterator.classTypes.head.maxCardinality}); boundIterators: $boundIterators")
+          boundIterators
+        }
+    }.toList
+
+    val combinedList = combineListOfBindings(allMappingsList)
+    //println(combinedList)
+    combinedList
+  }
+
+  /**
+   * Create a new rule for each iterator variable in head.
+   */
+
+  def createNewRuleForeachIteratorInHead(forEachQuantifiedVariables: Set[(Variable, Variable, String)],
+    binding: Map[String, Individual], newRule: Rule, startingId: Int,
+    groundedPredicates: Map[(String, List[Individual]), GroundedPredicate], individuals: Map[(String, Int), Set[Individual]]): (Int, List[GroundedRule]) = {
+    var id = startingId
+    val foldedList = if (forEachQuantifiedVariables.size == 0) {
+      List(Map.empty[String, Individual])
+    } else {
+      generateBindingForIteratorsGivenIterables(forEachQuantifiedVariables, binding, individuals)
+    }
+
+    val newGroundedRules = foldedList.flatMap {
+      newBinding =>
+        val groundedBody = newRule.body.map(getGroundedPredicate(groundedPredicates, _, newBinding ++ binding)).flatten
+        val groundedHead = newRule.head.map(getGroundedPredicate(groundedPredicates, _, newBinding ++ binding)).flatten
+        val unboundGroundedPredicates = groundedHead.filter(!_.truthValue.isDefined) ::: groundedBody.filter(!_.truthValue.isDefined)
+        if (groundedBody.size >= newRule.body.size && groundedHead.size >= newRule.head.size && unboundGroundedPredicates.size > 0) {
+          Some(GroundedRule({ id += 1; id }, newRule, groundedBody, groundedHead))
+        } else {
+          None
+        }
+    }
+    (id, newGroundedRules)
   }
 
   /**
@@ -361,7 +706,7 @@ object Grounding {
    * We do it in a second time, so we can have a unique id for each grounded predicate.
    */
   def createGroundedConstraints(predicates: List[Predicate], groundedPredicates: Map[(String, List[Individual]), GroundedPredicate],
-    individuals: Map[PslClass, Set[Individual]], startingConstraintId: Int = 0,
+    individuals: Map[(String, Int), Set[Individual]], startingConstraintId: Int = 0,
     config: InferencerConfig = InferencerConfig()): (List[GroundedConstraint], Map[(String, List[Individual]), GroundedPredicate]) = {
     // The id of the grounded constraint.
     var id = 1
@@ -401,7 +746,7 @@ object Grounding {
    */
   def createFunctionalConstraints(startingId: Int, ruleId: Int, property: PredicateProperty, predicate: Predicate,
     groundedPredicates: Map[(String, List[Individual]), GroundedPredicate],
-    individuals: Map[PslClass, Set[Individual]],
+    individuals: Map[(String, Int), Set[Individual]],
     config: InferencerConfig = InferencerConfig()): (Int, List[GroundedConstraint], Map[(String, List[Individual]), GroundedPredicate]) = {
 
     // Functional means that the first individual is the same in all the grounded predicates of the same constraint.
@@ -482,8 +827,8 @@ object Grounding {
     // Keep the grounded predicates that have no truth value (for the others the constraints are useless). 
     val bounds = unboundedGroundedPredicates.map {
       gp =>
-        val newLowerBound = if (pushBoundsInNodes) { math.max(0, math.min(gp.lowerBound, 1.0)) } else { 1.0 }
-        val newUpperBound = if (pushBoundsInNodes) { math.max(0, math.min(gp.upperBound, 1.0)) } else { 0.0 }
+        val newLowerBound = math.max(0, math.min(gp.lowerBound, 1.0))
+        val newUpperBound = math.max(0, math.min(gp.upperBound, 1.0))
         val leqUpperBound = GroundedConstraint({ id += 1; id }, { ruleId += 1; ruleId }, LessOrEqual, List(gp), Array(1.0), newUpperBound)
         val geqLowerBound = GroundedConstraint({ id += 1; id }, { ruleId }, GreaterOrEqual, List(gp), Array(1.0), newLowerBound)
         List(leqUpperBound, geqLowerBound)
@@ -513,6 +858,8 @@ object Grounding {
   def getGroundedPredicate(groundedPredicates: Map[(String, List[Individual]), GroundedPredicate],
     p: PredicateInRule, binding: Map[String, Individual]): Option[GroundedPredicate] = {
     // If the variables is a set of variables, union their bindings.
+    //    println(p)
+    //    println(binding)
     val key = (p.name, p.allVarsOrIndsWithClasses.map {
       case v: Variable =>
         if (!v.set) {
@@ -545,7 +892,7 @@ object Grounding {
       }
 
       // No grounded predicate.
-      println(s"[Warning] Predicate ${key._1} with binding ${key._2} is not in grounded predicates. ")
+      //println(s"[Warning] Predicate ${key._1} with binding ${key._2} is not in grounded predicates. ")
       return None
     }
     Some(groundedPredicates(key))
@@ -556,7 +903,7 @@ object Grounding {
    * Used only when the hasSymmetricConstraints is true.
    */
   def createSymmetricConstraints(startingId: Int, ruleId: Int, predicate: Predicate, groundedPredicates: Map[(String, List[Individual]), GroundedPredicate],
-    individuals: Map[PslClass, Set[Individual]],
+    individuals: Map[(String, Int), Set[Individual]],
     config: InferencerConfig = InferencerConfig()): (Int, List[GroundedConstraint], Map[(String, List[Individual]), GroundedPredicate]) = {
     // Given all the combinations of individuals, e.g. (a,b), (b,c), (a,c)
     // For each produce the constraint: (a,b) - (b,a) = 0.	  

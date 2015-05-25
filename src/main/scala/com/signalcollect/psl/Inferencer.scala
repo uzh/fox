@@ -76,7 +76,7 @@ case class InferenceResult(
 
   override def toString() = {
     var s = solution.stats.toString
-    s += printSelectedResultsAndFacts()
+    s += printSelectedResults(printFacts = true)
     objectiveFun match {
       case Some(x) =>
         s += s"\nObjective function value: $x"
@@ -108,51 +108,61 @@ case class InferenceResult(
     }
   }
 
-  def printSelected(predicateNames: List[String] = List.empty) = {
-    var s = ""
-    // Sort the output in alphabetical order.
-    val listGpToTruthValue = solution.results.toScalaMap.flatMap {
+  def getSelectedResultsOnly(predicateNames: List[String] = List.empty, printOutZeros: Boolean = false) = {
+    solution.results.toScalaMap.flatMap {
       case (id, truthValue) =>
-        if (truthValue > 0) {
+        if (printOutZeros || truthValue > 0) {
           val gp = idToGpMap(id)
           if (predicateNames.isEmpty || predicateNames.contains(gp.definition.name)) {
             Some(Map(gp -> truthValue))
           } else { None }
         } else { None }
     }.flatten.toList
-
-    val sortedListGpToTruthValue = listGpToTruthValue.sortBy(f =>
-      // (predicate name, groundings in alphabetical order)
-      (f._1.definition.name, f._1.groundings.toString))
-
-    sortedListGpToTruthValue.foreach {
-      case (gp, truthValue) =>
-        s += s"\n$gp has truth value ${nicerTruthValue(truthValue)}"
-    }
-    s
   }
 
-  // TODO(sara): currently prints also input facts. Consider removing them.
-  def printSelectedResultsAndFacts(predicateNames: List[String] = List.empty) = {
-    var s = ""
-    // Sort the output in alphabetical order.
-    val listGpToTruthValue = idToGpMap.flatMap {
+  def getSelectedResultsAndFacts(predicateNames: List[String] = List.empty, printOutZeros: Boolean = false) = {
+    idToGpMap.flatMap {
       case (id, gp) =>
         if (predicateNames.isEmpty || predicateNames.contains(gp.definition.name)) {
           val truthValue = gp.truthValue.getOrElse(solution.results.get(id))
-          if (truthValue > 0) {
+          if (printOutZeros || truthValue > 0) {
             Some(Map(gp -> truthValue))
           } else { None }
         } else { None }
     }.flatten.toList
+  }
 
-    val sortedListGpToTruthValue = listGpToTruthValue.sortBy(f =>
-      // (predicate name, groundings in alphabetical order)
-      (f._1.definition.name, f._1.groundings.toString))
+  def getSortedSelectedResults(predicateNames: List[String] = List.empty, printFacts: Boolean = true, sortById: Boolean = false, printOutZeros: Boolean = false) = {
+    val listGpToTruthValue = if (printFacts) {
+      getSelectedResultsAndFacts(predicateNames, printOutZeros)
+    } else {
+      getSelectedResultsOnly(predicateNames, printOutZeros)
+    }
+    if (!sortById) {
+      listGpToTruthValue.sortBy(
+        f =>
+          // (predicate name, groundings in alphabetical order)
+          (f._1.definition.name, f._1.groundings.toString))
+    } else {
+      listGpToTruthValue.sortBy(f => f._1.id)
+    }
+  }
 
+  def printSelectedResults(predicateNames: List[String] = List.empty, printFacts: Boolean = true, sortById: Boolean = false, printOutZeros: Boolean = false,
+    outputType: String = "inference") = {
+    var s = ""
+    val sortedListGpToTruthValue = getSortedSelectedResults(predicateNames, printFacts, sortById, printOutZeros)
     sortedListGpToTruthValue.foreach {
       case (gp, truthValue) =>
-        s += s"\n$gp has truth value ${nicerTruthValue(truthValue)}"
+        if (outputType == "shortInference") {
+          s += s"\n$gp -> ${nicerTruthValue(truthValue)}"
+        } else if (outputType == "onlyTrueFacts" && truthValue > 0.5) {
+          s += s"""${gp.definition.name}${gp.groundings.mkString("(", ",", ")")} """
+        } else if (outputType == "inference") {
+          s += "\n" + s"""${gp.definition.name}${gp.groundings.mkString("(", ",", ")")}= ${nicerTruthValue(truthValue)}"""
+        } else {
+          // Do nothing.
+        }
     }
     s
   }
@@ -168,6 +178,7 @@ case class InferencerConfig(
   computeObjectiveValueOfSolution: Boolean = false,
   objectiveLoggingEnabled: Boolean = false,
   maxIterations: Int = 10000, // maximum number of iterations.
+  timeLimit: Option[Long] = None,
   stepSize: Double = 1.0,
   tolerance: Double = 1e-12, // for Double precision is 15-17 decimal places, lower after arithmetic operations.
   isBounded: Boolean = true,
@@ -193,6 +204,7 @@ case class InferencerConfig(
       absoluteEpsilon = absoluteEpsilon,
       relativeEpsilon = relativeEpsilon,
       maxIterations = maxIterations,
+      timeLimit = timeLimit,
       stepSize = stepSize,
       isBounded = isBounded,
       serializeMessages = serializeMessages,
@@ -270,6 +282,8 @@ object Inferencer {
       println(individualsString)
       Grounding.ground(pslData, config)
     }
+    // groundedRules.map(println(_))
+    // groundedConstraints.map(println(_))
     println(s"Grounding completed in $groundingTime ms: ${groundedRules.size} grounded rules, ${groundedConstraints.size} constraints and ${idToGpMap.keys.size} grounded predicates.")
     solveInferenceProblem(groundedRules, groundedConstraints, idToGpMap, groundingTime, parsingTime, nodeActors, config)
   }
@@ -284,7 +298,7 @@ object Inferencer {
     } else {
       Map.empty
     }
-    println(s"Problem converted to consensus optimization with ${functions.size} functions and ${constraints.size} constraints.")
+    println(s"Problem converted to consensus optimization with ${functions.size} functions,  ${constraints.size} constraints and ${boundsForConsensusVariables.size} bounds.")
     (functions, constraints, boundsForConsensusVariables)
   }
 

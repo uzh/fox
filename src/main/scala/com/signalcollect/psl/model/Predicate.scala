@@ -30,23 +30,41 @@ case class Predicate(
 
   override def toString = {
     val propertiesString = if (properties.isEmpty) "" else " " + properties.mkString("[", ", ", "]")
-    val positionPlaceholders = (1 to arity).map(_ => "_").mkString("(", ", ", ")")
+    val positionPlaceholders = classes.map(_.toString).mkString("(", ", ", ")")
     s"relation$propertiesString ${prior.getOrElse("")}: $name$positionPlaceholders"
   }
 }
 
 case class PslClass(
-  id: String) {
-  override def toString = {
-    if (set) { s"Set[${name}]" } else { name }
-  }
+  id: String,
+  set: Boolean = false,
+  minCardinalityOption: Option[Int] = None,
+  maxCardinalityOption: Option[Int] = None) {
+  
+  val maxPossibleCardinality = 10
 
-  val set = id.startsWith("Set[")
-  val name = id.stripPrefix("Set[").stripSuffix("]")
+  val minCardinality =  minCardinalityOption.getOrElse(0)
+  val maxCardinality =  maxCardinalityOption.getOrElse(maxPossibleCardinality)
+  
+  override def toString = {
+    if (set) {
+      if (!minCardinalityOption.isDefined && !maxCardinalityOption.isDefined) {
+        s"Set [${id}]"
+      } else {
+        s"Set (${minCardinalityOption.getOrElse(0)}, ${
+          maxCardinalityOption match {
+            case Some(s) => s.toString
+            case None => "-"
+          }
+        }) [${id}]"
+      }
+    } else { id }
+  }
 
   override def equals(that: Any) = {
     that match {
-      case v: PslClass => (v.id == id)
+      case v: PslClass => (v.id == id) && (v.set == set) &&
+        (v.minCardinalityOption == minCardinalityOption) && (v.maxCardinalityOption == maxCardinalityOption)
       case _ => false
     }
   }

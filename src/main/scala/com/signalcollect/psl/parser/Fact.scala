@@ -23,36 +23,28 @@ package com.signalcollect.psl.parser
 import com.signalcollect.psl.model.Individual
 import com.signalcollect.psl.model.Predicate
 import com.signalcollect.psl.model.PslClass
+import com.signalcollect.psl.model.VariableOrIndividualUtils
 
 case class Fact(
   name: String,
   variableGroundings: List[Set[Individual]],
   truthValue: Option[Double],
-  predicate: Option[Predicate] = None) {
+  predicate: Option[Predicate] = None,
+  minTruthValue: Option[Double] = None,
+  maxTruthValue: Option[Double] = None) {
+
+  val groundingsAsSingleIndividuals =
+    VariableOrIndividualUtils.groundingsAsSingleIndividuals(variableGroundings)
 
   val indsWithClasses = {
     predicate match {
       case Some(p) => {
-        p.classes.zipWithIndex.map {
-          case (classType, i) if classType.name == "_" =>
-            variableGroundings(i)
-          case (classType, i) if !classType.set =>
-            assert(variableGroundings(i).size == 1, "Too many variables for an argument that is not a set.")
-            variableGroundings(i).map { ind => Individual(ind.name, Set(classType)) }
-          case (classType, i) =>
-            // The argument is a set of a certain class, so the individual constants are each of that class.
-            // Example: symptom (Disease, Set[Symptom]) 
-            // symptom(flu, {cough, fever}) => flu: Disease, cough: Symptom, fever: Symptom.
-            val individualClass = PslClass(classType.name)
-            List(Individual(variableGroundings(i).toString, Set(classType))) ++
-              variableGroundings(i).map { ind => Individual(ind.name, Set(individualClass)) }
-        }.flatten
+        VariableOrIndividualUtils.getIndividualsReusingGroundingsAsSingleIndividuals(p, variableGroundings, 
+            groundingsAsSingleIndividuals, getSingleIndividuals = true)
       }
       case None => variableGroundings.flatten
     }
   }
-  
-  val groundingsAsSingleIndividuals = variableGroundings.map(i => Individual(i.toString))
 
   override def toString = {
     val truth = if (truthValue.isDefined) {
@@ -60,6 +52,6 @@ case class Fact(
     } else {
       ""
     }
-    s"grounding$truth: $name${variableGroundings.mkString("(", ", ", ")")}"
+    s"grounding [$truth, $minTruthValue, $maxTruthValue]: $name${groundingsAsSingleIndividuals.mkString("(", ", ", ")")}"
   }
 }

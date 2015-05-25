@@ -76,7 +76,7 @@ class LinearLossOptimizer(
     setZ(consensusAssignments)
     x = z - (y / stepSize)
     x = x - coeffs * weight / stepSize
-    //x = minimize(linearlossFunction, x)
+    // x = minimize(linearlossFunction, x)
   }
 
   override def toString = s"LinearLossOptimizer(x=$x, y=$y, z=$z, coeffs=$coeffs, constant=$constant, zIndices=${zIndices.mkString("[", ",", "]")})"

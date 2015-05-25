@@ -21,14 +21,22 @@
 package com.signalcollect.psl.model
 
 case class Rule(
-  // TODO: rules should have ids (or be indexed in a list).
   id: Int, // change in PslParser.
   body: List[PredicateInRule], // implied conjunction
   head: List[PredicateInRule], // implied disjunction
   distanceMeasure: DistanceMeasure,
   weight: Double,
-  existentialVars: Set[String] = Set.empty) {
+  existentialVars: Set[String] = Set.empty, // Only in head.
+  foreachInSetClauseInHead: Set[(String, String, Int, Int, String)] = Set.empty, // Warning: this is not standard Lukasiewicz.
+  existsInSetClauseInHead: Set[(String, String, Int, Int, String)] = Set.empty,
+  foreachInSetClauseInBody: Set[(String, String, Int, Int, String)] = Set.empty,
+  existsInSetClauseInBody: Set[(String, String, Int, Int, String)] = Set.empty // Warning: this is not standard Lukasiewicz.
+  ) {
   override def toString = {
+    val foreachInHeadString = if (foreachInSetClauseInHead.size > 0) "FOREACH" + foreachInSetClauseInHead.mkString(", ") else ""
+    val foreachInBodyString = if (foreachInSetClauseInBody.size > 0) "FOREACH" + foreachInSetClauseInBody.mkString(", ") else ""
+    val existInHeadString = if (existsInSetClauseInHead.size > 0) "EXISTS" + existsInSetClauseInHead.mkString(", ") else ""
+    val existInBodyString = if (existsInSetClauseInBody.size > 0) "EXISTS" + existsInSetClauseInBody.mkString(", ") else ""
     val conditionsString = body.mkString(" && ")
     val implicationsString = head.mkString(" || ")
     val properties = (weight, distanceMeasure) match {
@@ -37,7 +45,7 @@ case class Rule(
       case (w, Squared) => s" [weight = $w]"
       case (w, Linear) => s" [weight = $w, distanceMeasure = $Linear]"
     }
-    s"rule$properties: $conditionsString => $implicationsString"
+    s"rule$properties: $foreachInBodyString $existInBodyString $conditionsString => $foreachInHeadString $existInHeadString $implicationsString"
   }
 
   val allVariables: List[Variable] = {
@@ -75,33 +83,46 @@ case class PredicateInRule(
 
   val allVarsOrIndsWithClasses = {
     predicate match {
-      case Some(p) => {
-        p.classes.zipWithIndex.map {
-          case (classType, i) if classType.name == "_" =>
-            variableOrIndividual(i)
-          case (classType, i) =>
-            VariableOrIndividual(variableOrIndividual(i).toString, Set(classType))
-        }
-      }
+      case Some(p) =>
+        VariableOrIndividualUtils.getVariablesOrIndividualsWithClasses(p, variableOrIndividual)
       case None => variableOrIndividual
     }
   }
 
-  val varsOrIndsWithClasses = allVarsOrIndsWithClasses.filter(!_.set)
-    
-  val setVarsOrIndsWithClasses = allVarsOrIndsWithClasses.filter(_.set)
+  //val varsOrIndsWithClasses = allVarsOrIndsWithClasses.filter(!_.set)
 
-  val variables = varsOrIndsWithClasses.map {
+  //val setVarsOrIndsWithClasses = allVarsOrIndsWithClasses.filter(_.set)
+
+  val variables = allVarsOrIndsWithClasses.filter(!_.set).flatMap {
     case v: Variable => Some(v)
     case _ => None
-  }.flatten
+  }
 
-  val individuals = varsOrIndsWithClasses.map {
+  val individuals = allVarsOrIndsWithClasses.flatMap {
     case i: Individual => Some(i)
     case _ => None
-  }.flatten
+  }
 
-  override def toString = s"${if (negated) "!" else ""}$name${varsOrIndsWithClasses.mkString("(", ", ", ")")}"
+  val singleIndividuals = predicate match {
+    case Some(p) =>
+      VariableOrIndividualUtils.getVariablesOrIndividualsWithClasses(p, variableOrIndividual, getSingleIndividuals = true).flatMap {
+        case i: Individual => Some(i)
+        case _ => None
+      }
+    case None => variableOrIndividual.flatMap {
+      case i: Individual => Some(i)
+      case _ => None
+    }
+  }
+
+  override def equals(that: Any) = {
+    that match {
+      case p: PredicateInRule => p.toString == toString
+      case _ => false
+    }
+  }
+
+  override def toString = s"${if (negated) "!" else ""}$name${allVarsOrIndsWithClasses.mkString("(", ", ", ")")}"
 }
 
 

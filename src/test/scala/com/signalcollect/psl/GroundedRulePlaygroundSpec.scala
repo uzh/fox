@@ -40,8 +40,10 @@ class GroundedRulePlaygroundSpec extends FlatSpec with Matchers with TestAnnounc
         fact [truthValue = 0.5]: votes(anna, democrats)
         fact [truthValue = 0.666]: votes(bob, republicans)
 	""")
-    val groundedPredicates = Grounding.createGroundedPredicates(pslData.rulesWithPredicates, pslData.predicates, pslData.facts, pslData.individualsByClass)
-    val groundedRules = Grounding.createGroundedRules(pslData.rulesWithPredicates, groundedPredicates, pslData.individualsByClass)
+
+    val individualsMap = pslData.individualsByClassAndCardinality.map { case ((k,card), v) => (k.id, card) -> v }
+    val groundedPredicates = Grounding.createGroundedPredicates(pslData.rulesWithPredicates, pslData.predicates, pslData.facts, individualsMap)
+    val groundedRules = Grounding.createGroundedRules(pslData.rulesWithPredicates, groundedPredicates, individualsMap)
     def groundedPredicateToPslExpression(gp: GroundedPredicate, negated: Boolean) = {
       import SimplePslExpression._
       val exp = {
