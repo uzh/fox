@@ -23,7 +23,6 @@ package com.signalcollect.admm.utils;
 import java.io.File
 import com.signalcollect.util.IntDoubleHashMap
 import com.signalcollect.admm.optimizers.OptimizableFunction
-import com.signalcollect.admm.optimizers.ConvexConstraintOptimizer
 import com.signalcollect.admm.optimizers.LinearLossOptimizer
 import com.signalcollect.admm.optimizers.LinearConstraintOptimizer
 import com.signalcollect.admm.optimizers.HingeLossOptimizer

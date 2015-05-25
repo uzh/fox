@@ -10,7 +10,6 @@ import com.signalcollect.psl.model.PSLToLPConverter
 import com.signalcollect.psl.model.LpResultParser
 import com.signalcollect.psl.model.PSLToCvxConverter
 import com.signalcollect.psl.model.PSLToMLNConverter
-import com.signalcollect.external.parser.CausalDiscoveryAspParser
 import com.signalcollect.admm.utils.Timer
 
 object CommandLinePslInferencer extends App {
@@ -21,7 +20,6 @@ Usage: fox filename [--absEps num] [--relEps num] [--time_limit num] [--maxIter 
 [--output grounding|ilp|lp|cvx|mln|inference|shortInference|onlyTrueFacts] [--outfile outputfilename]
 [--inference foxPSL|mosekLP|mosekILP]
 [--breezeOptimizer true|false]
-[--setsFile filename --factsFile filename]
 
 --absEps, --relEps: absolute and relative epsilons for ADMM algorithm (foxPSL solver)
 --maxIter: maximum number of iterations for ADMM algorithm (foxPSL solver)
@@ -37,10 +35,6 @@ onlyTrueFacts (only the inferred facts that have a truth value >0.5 and without 
 --outfile: if defined the output is saved in this file, otherwise it is shown in the stdout
 --inference: which solver to use for inference, foxPSL or mosek (version LP and ILP) - requires mosek to be installed, and currently works only for problems with hard rules and linear soft rules with one clause.
 --breezeOptimizer: if we use foxPSL, we can choose whether to use the Breeze toolkit to do the single minimizations.
---setsFile/--factsFile: used for reading the causal ASP problems, the fileanem containing the sets description and the filename containing the facts file.
-
-Example for causal discovery rules:
-./fox.sh examples/causalDiscoveryRules.psl --setsFile causalDiscoveryTmp/pipeline.pre.asp --factsFile causalDiscoveryTmp/pipeline.ind --outputType onlyTrueFacts --queryList causes
 """
 
   if (args.length <= 1) {
@@ -80,24 +74,12 @@ Example for causal discovery rules:
     relativeEpsilon = mapOfArgs.get("--relEps").getOrElse("1e-5").toDouble,
     breezeOptimizer = mapOfArgs.get("--breezeOptimizer").getOrElse("false").toBoolean)
 
-  val (pslData, parsingTime) = Timer.time {
+  val (updatedPslData, parsingTime) = Timer.time {
     if (config.parallelizeParsing) {
       PslParser.parseFileLineByLine(pslFile).toParsedPslFile()
     } else {
       PslParser.parse(pslFile)
     }
-  }
-
-  val updatedPslData = if (mapOfArgs.get("--setsFile").isDefined) {
-    val setsFile = new File(mapOfArgs.get("--setsFile").get)
-    if (!mapOfArgs.get("--factsFile").isDefined) {
-      println("[ERROR]: no facts file specified, no inference performed")
-      System.exit(1)
-    }
-    val factsFile = new File(mapOfArgs.get("--factsFile").get)
-    CausalDiscoveryAspParser.updateParsedPslFile(pslData, factsFile, setsFile)
-  } else {
-    pslData
   }
 
   val (printableResults, extraInformation) = if (doFoxPSLInference && !mapOfArgs.get("--multipleMinima").isDefined) {
