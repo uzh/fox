@@ -151,6 +151,37 @@ object MinimaExplorer {
     val pslData = PslParser.parse(example)
     runExploration(pslData, config, groundedPredicateNames)
   }
+  
+  def runExplorationUsingExtraGroundedRules(pslData: ParsedPslFile, config: InferencerConfig = InferencerConfig(),
+    groundedPredicateNames: List[String] = List.empty, extraGroundedRules: List[GroundedRule]) = {
+    // This is the same as the inferencer, we copy it so we don't have to recreate the functions.
+    val (groundedRules, groundedConstraints, idToGpMap) = Grounding.ground(pslData, config)
+    println(s"Grounding completed: ${groundedRules.size} grounded rules, ${groundedConstraints.size} constraints and ${idToGpMap.keys.size} grounded predicates.")
+    //idToGpMap.map(gp => println(s"${gp._2} ${gp._2.truthValue}"))
+    //groundedRules.map(println(_))
+
+    val (solution, objectiveFunctionVal) = runStandardInference(groundedRules, groundedConstraints, config)
+    val functionsNew = groundedRules.flatMap(_.createOptimizableFunction(config.stepSize, config.tolerance, config.breezeOptimizer))
+    val constraintsNew = groundedConstraints.flatMap(_.createOptimizableFunction(config.stepSize, config.tolerance, config.breezeOptimizer))
+    val (optimizerBaseFunctions, hardFunctions) = divideFunctionsAndConstraints(functionsNew ++ constraintsNew)
+    val totalZindices = optimizerBaseFunctions.flatMap(_.zIndices).toSet.toArray
+
+    val newConstraint = {
+      if (optimizerBaseFunctions.size > 0) {
+        // Keep the objective function with the objective function val as a hard constraint.
+        // TODO: for now works only with linear one predicate soft rules.
+        List(mergeLinearFunctionsToLinearConstaint(groundedRules.size + groundedConstraints.size + 2, optimizerBaseFunctions, objectiveFunctionVal))
+      } else { List.empty }
+    }
+    val extraFunctions = extraGroundedRules.flatMap(_.createOptimizableFunction(config.stepSize, config.tolerance, config.breezeOptimizer))
+    
+    val newSolution = Wolf.solveProblem(
+      hardFunctions ++ newConstraint ++ extraFunctions,
+      None,
+      config.getWolfConfig)
+
+    newSolution
+  }
 
   def runExploration(pslData: ParsedPslFile, config: InferencerConfig = InferencerConfig(),
     groundedPredicateNames: List[String] = List.empty): List[(GroundedPredicate, Double, Double, Double)] = {

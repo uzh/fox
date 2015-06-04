@@ -192,7 +192,7 @@ object CausalDiscoveryAspFactsParser extends com.signalcollect.psl.parser.ParseH
     io.Source.fromFile(file).getLines.toList.flatMap {
       line =>
         val partsOfLine = line.split("%")
-        // If there is a part of string before % and it's longer than 10
+        // If there is a part of string before % and it's longer than 16
         if (partsOfLine.size == 2 && partsOfLine(0).size > 16) {
           parseString(partsOfLine(0), fact)
         } else if (partsOfLine.size == 1){
@@ -213,11 +213,13 @@ object CausalDiscoveryAspFactsParser extends com.signalcollect.psl.parser.ParseH
   }
   
   lazy val causesFact: Parser[List[(Boolean, String, String, String, Double)]] = {
-    ("causes"|"-causes") ~ "(" ~ identifier ~ "," ~ identifier ~ ")" ~ "." ^^ {
+    ("causes"|"-causes"|"node") ~ "(" ~ identifier ~ (","| "..") ~ identifier ~ ")" ~ "." ^^ {
       case "causes" ~ "(" ~ x ~ "," ~ y ~  ")" ~ "." =>
         List((false, "causes", x, y, Double.MaxValue))
       case "-causes" ~ "(" ~ x ~ "," ~ y ~ ")" ~ "." =>
         List((true, "causes", x, y, Double.MaxValue))
+      case "node" ~ "(" ~ x ~ (","| "..") ~ y ~ ")" ~ "." =>
+        List.empty
     }
   }
 
