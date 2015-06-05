@@ -34,6 +34,7 @@ import com.signalcollect.admm.Wolf
 import com.signalcollect.psl.Grounding
 import com.signalcollect.psl.Inferencer
 import com.signalcollect.psl.InferencerConfig
+import com.signalcollect.psl.InferenceResult
 import com.signalcollect.psl.parser.PslParser
 import com.signalcollect.psl.parser.ParsedPslFile
 import com.signalcollect.psl.model.GroundedConstraint
@@ -81,6 +82,9 @@ object MinimaExplorer {
     val optimizerBaseFunctions = functionsAndConstraints.flatMap {
       f =>
         f match {
+          case p: PslOptimizerWrapper =>
+            assert(h.coeffs.size == 1, "[WARNING] Trying to minimize  a linear hingeloss distance function with more than one predicate, ignored $s")
+            Some(h)
           case l: LinearLossOptimizer =>
             println(s"[WARNING] Trying to minimize a linear loss distance function, ignored: $l")
             None
@@ -93,8 +97,10 @@ object MinimaExplorer {
           case q: SquaredLossOptimizer =>
             println(s"[WARNING] Trying to minimize a squared distance function, ignored: $q.")
             None
+          case l: LinearConstraintOptimizer => 
+            None
           case u =>
-            //println(s"[WARNING] Trying to minimize unknown distance function, ignored: $u.")
+            println(s"[WARNING] Trying to minimize unknown distance function, ignored: $u.")
             None
         }
     }
@@ -106,7 +112,7 @@ object MinimaExplorer {
           case _ => None
         }
     }
-    //println(s"Number of optimizer base functions: ${optimizerBaseFunctions.size}, number of constraints: ${hardFunctions.size}")
+    println(s"Number of optimizer base functions: ${optimizerBaseFunctions.size}, number of constraints: ${hardFunctions.size}")
     (optimizerBaseFunctions, hardFunctions)
   }
 
@@ -151,20 +157,17 @@ object MinimaExplorer {
     val pslData = PslParser.parse(example)
     runExploration(pslData, config, groundedPredicateNames)
   }
-  
-  def runExplorationUsingExtraGroundedRules(pslData: ParsedPslFile, config: InferencerConfig = InferencerConfig(),
-    groundedPredicateNames: List[String] = List.empty, extraGroundedRules: List[GroundedRule]) = {
+
+  def runExplorationUsingPreferences(pslData: ParsedPslFile, config: InferencerConfig = InferencerConfig(),
+    groundedPredicateNames: List[String] = List.empty, preferences: List[(String, String, String)]) = {
+    // Preference: x <= 0.5.
     // This is the same as the inferencer, we copy it so we don't have to recreate the functions.
     val (groundedRules, groundedConstraints, idToGpMap) = Grounding.ground(pslData, config)
-    println(s"Grounding completed: ${groundedRules.size} grounded rules, ${groundedConstraints.size} constraints and ${idToGpMap.keys.size} grounded predicates.")
-    //idToGpMap.map(gp => println(s"${gp._2} ${gp._2.truthValue}"))
-    //groundedRules.map(println(_))
-
     val (solution, objectiveFunctionVal) = runStandardInference(groundedRules, groundedConstraints, config)
     val functionsNew = groundedRules.flatMap(_.createOptimizableFunction(config.stepSize, config.tolerance, config.breezeOptimizer))
     val constraintsNew = groundedConstraints.flatMap(_.createOptimizableFunction(config.stepSize, config.tolerance, config.breezeOptimizer))
     val (optimizerBaseFunctions, hardFunctions) = divideFunctionsAndConstraints(functionsNew ++ constraintsNew)
-    val totalZindices = optimizerBaseFunctions.flatMap(_.zIndices).toSet.toArray
+    val stringToIdMap = idToGpMap.map(i => (s"""${i._2.definition.name}${i._2.groundings.mkString("(", ",", ")")}""", i._1)).toMap
 
     val newConstraint = {
       if (optimizerBaseFunctions.size > 0) {
@@ -173,14 +176,30 @@ object MinimaExplorer {
         List(mergeLinearFunctionsToLinearConstaint(groundedRules.size + groundedConstraints.size + 2, optimizerBaseFunctions, objectiveFunctionVal))
       } else { List.empty }
     }
-    val extraFunctions = extraGroundedRules.flatMap(_.createOptimizableFunction(config.stepSize, config.tolerance, config.breezeOptimizer))
-    
+
+    var id = groundedRules.size + groundedConstraints.size + 3
+    val preferenceFunctions = preferences.map {
+      p =>
+        val zIndex = stringToIdMap(p._1)
+        val leq = (p._2 == "<=")
+        new SquaredHingeLossOptimizer(
+          { id = id + 1; id },
+          100.0,
+          if (leq) p._3.toDouble else -p._3.toDouble,
+          Array(zIndex),
+          config.stepSize,
+          Map(zIndex -> 0.0),
+          if (leq) Array(1.0) else Array(-1.0))
+    }
+
+    //preferenceFunctions.map(println(_))
+
     val newSolution = Wolf.solveProblem(
-      hardFunctions ++ newConstraint ++ extraFunctions,
+      hardFunctions ++ newConstraint ++ preferenceFunctions,
       None,
       config.getWolfConfig)
 
-    newSolution
+    InferenceResult(newSolution, idToGpMap, Some(objectiveFunctionVal))
   }
 
   def runExploration(pslData: ParsedPslFile, config: InferencerConfig = InferencerConfig(),
@@ -288,10 +307,12 @@ object MinimaExplorer {
   }
 
   def runStandardInference(groundedRules: List[GroundedRule], groundedConstraints: List[GroundedConstraint], config: InferencerConfig) = {
+    //(groundedRules ++ groundedConstraints).map(println(_))
     val functions = groundedRules.flatMap(_.createOptimizableFunction(config.stepSize, config.tolerance, config.breezeOptimizer))
     val constraints = groundedConstraints.flatMap(_.createOptimizableFunction(config.stepSize, config.tolerance, config.breezeOptimizer))
     val (optimizerBaseFunctions, hardFunctions) = divideFunctionsAndConstraints(functions ++ constraints)
     val functionsAndConstraints = optimizerBaseFunctions ++ hardFunctions
+    //functionsAndConstraints.map(println(_))
     val solution = Wolf.solveProblem(
       functionsAndConstraints,
       None,

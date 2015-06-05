@@ -36,6 +36,7 @@ import com.signalcollect.psl.model.GroundedPredicate
 import com.signalcollect.psl.model.GroundedRule
 import com.signalcollect.psl.model.GroundedConstraint
 import java.io.File
+import java.io.FileWriter
 import akka.actor.ActorRef
 import com.signalcollect.psl.model.GroundedPredicate
 
@@ -157,7 +158,7 @@ case class InferenceResult(
         if (outputType == "shortInference") {
           s += s"\n$gp -> ${nicerTruthValue(truthValue)}"
         } else if (outputType == "onlyTrueFacts" && truthValue > 0.5) {
-          s += s"""${gp.definition.name}${gp.groundings.mkString("(", ",", ")")} """
+          s += s"""${gp.definition.name}${gp.groundings.mkString("(", ",", ")")}"""
         } else if (outputType == "inference") {
           s += "\n" + s"""${gp.definition.name}${gp.groundings.mkString("(", ",", ")")}= ${nicerTruthValue(truthValue)}"""
         } else {
@@ -177,6 +178,7 @@ case class InferencerConfig(
   relativeEpsilon: Double = 1e-3,
   computeObjectiveValueOfSolution: Boolean = false,
   objectiveLoggingEnabled: Boolean = false,
+  groundingFile: Option[String] = None,
   maxIterations: Int = 10000, // maximum number of iterations.
   timeLimit: Option[Long] = None,
   stepSize: Double = 1.0,
@@ -281,6 +283,15 @@ object Inferencer {
       }
       println(individualsString)
       Grounding.ground(pslData, config)
+    }
+
+    if (config.groundingFile.isDefined) {
+      val writer = new FileWriter(config.groundingFile.get)
+      val groundedStrings = groundedRules.map(_.toString) ++
+        groundedConstraints.map(_.toString)
+      writer.append(groundedStrings.mkString("\n"))
+      writer.close()
+
     }
     // groundedRules.map(println(_))
     // groundedConstraints.map(println(_))

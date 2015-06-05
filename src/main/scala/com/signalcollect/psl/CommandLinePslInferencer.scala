@@ -21,7 +21,8 @@ Usage: fox filename [--absEps num] [--relEps num] [--time_limit num] [--maxIter 
 [--output grounding|ilp|lp|cvx|mln|inference|shortInference|onlyTrueFacts] [--outfile outputfilename]
 [--inference foxPSL|mosekLP|mosekILP]
 [--breezeOptimizer true|false]
-[--setsFile filename --factsFile filename]
+[--setsFile filename --factsFile filename --preferences "preference1,preference2"]
+[--debugGrounding true]
 
 --absEps, --relEps: absolute and relative epsilons for ADMM algorithm (foxPSL solver)
 --maxIter: maximum number of iterations for ADMM algorithm (foxPSL solver)
@@ -37,10 +38,12 @@ onlyTrueFacts (only the inferred facts that have a truth value >0.5 and without 
 --outfile: if defined the output is saved in this file, otherwise it is shown in the stdout
 --inference: which solver to use for inference, foxPSL or mosek (version LP and ILP) - requires mosek to be installed, and currently works only for problems with hard rules and linear soft rules with one clause.
 --breezeOptimizer: if we use foxPSL, we can choose whether to use the Breeze toolkit to do the single minimizations.
---setsFile/--factsFile: used for reading the causal ASP problems, the fileanem containing the sets description and the filename containing the facts file.
+--setsFile/--factsFile: used for reading the causal ASP problems, the filename containing the sets description and the filename containing the facts file. 
+--preferences in a format "x leq 0.5" is used to choose among multiple possible solutions.
+--debugGrounding: if enabled, stores the result of grounding in a file called outfile + ".grounding". Default: disabled.
 
 Example for causal discovery rules:
-./fox.sh examples/causalDiscoveryRules.psl --setsFile causalDiscoveryTmp/pipeline.pre.asp --factsFile causalDiscoveryTmp/pipeline.ind --outputType onlyTrueFacts --queryList causes
+./fox.sh examples/causalDiscoveryRules.psl --setsFile causalDiscoveryTmp/pipeline.pre.asp --factsFile causalDiscoveryTmp/pipeline.ind
 """
 
   if (args.length <= 1) {
@@ -63,7 +66,7 @@ Example for causal discovery rules:
 
   val outputType = mapOfArgs.get("--output")
   val outputFile = mapOfArgs.get("--outfile")
-  val doInference = !outputType.isDefined || outputType.get == "inference" || outputType.get == "shortInference" || outputType.get == "onlyTrueFacts" 
+  val doInference = !outputType.isDefined || outputType.get == "inference" || outputType.get == "shortInference" || outputType.get == "onlyTrueFacts"
   val inference = mapOfArgs.getOrElse("--inference", "foxPSL")
   val doFoxPSLInference = doInference && inference == "foxPSL"
   val doMosekLPInference = doInference && inference == "mosekLP"
@@ -78,7 +81,8 @@ Example for causal discovery rules:
     tolerance = mapOfArgs.get("--tol").getOrElse("0").toDouble,
     absoluteEpsilon = mapOfArgs.get("--absEps").getOrElse("1e-8").toDouble,
     relativeEpsilon = mapOfArgs.get("--relEps").getOrElse("1e-5").toDouble,
-    breezeOptimizer = mapOfArgs.get("--breezeOptimizer").getOrElse("false").toBoolean)
+    breezeOptimizer = mapOfArgs.get("--breezeOptimizer").getOrElse("false").toBoolean,
+    groundingFile = if (mapOfArgs.get("--debugGrounding").getOrElse("false").toBoolean && outputFile.isDefined) { Some(outputFile.get) } else { None })
 
   val (pslData, parsingTime) = Timer.time {
     if (config.parallelizeParsing) {
@@ -106,8 +110,26 @@ Example for causal discovery rules:
     (inferenceResults.printSelectedResults(queryList, printFacts = true, outputType = outputType.getOrElse("inference")), None)
   } else if (doFoxPSLInference) {
     // Multiple minima inference.
-    val results = MinimaExplorer.runExploration(updatedPslData, config, queryList)
-    (MinimaExplorer.printSelectedResults(results, mapOfArgs.get("--threeValuedLogic").isDefined, short = (outputType.getOrElse("inference") == "shortInference")), None)
+    if (mapOfArgs.get("--preferences").isDefined) {
+      val preferences = mapOfArgs.get("--preferences").get.split(";").toList.flatMap {
+        p =>
+          if (p contains "<=") {
+            val split = p.split("<=")
+            Some((split(0), "<=", split(1)))
+          } else if (p contains ">=") {
+            val split = p.split(">=")
+            Some((split(0), ">=", split(1)))
+          } else {
+            None
+          }
+      }
+      //preferences.map(println(_))
+      val results = MinimaExplorer.runExplorationUsingPreferences(updatedPslData, config, queryList, preferences)
+      (results.printSelectedResults(queryList, printFacts = true, outputType = outputType.getOrElse("inference")), None)
+    } else {
+      val results = MinimaExplorer.runExploration(updatedPslData, config, queryList)
+      (MinimaExplorer.printSelectedResults(results, mapOfArgs.get("--threeValuedLogic").isDefined, short = (outputType.getOrElse("inference") == "shortInference")), None)
+    }
   } else if (doMosekILPInference) {
     val results = PSLToLPConverter.solve(updatedPslData, isBinary = true, outputFile.getOrElse("temp-mosek-translation"))
     (PSLToLPConverter.printSelectedResults(results, queryList, outputType = outputType.getOrElse("inference"), printBinary = true), None)
