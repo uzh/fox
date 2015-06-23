@@ -1,6 +1,10 @@
-<img src="./foxLogo.jpg" alt="Fox Logo" width ="80" height="70"> FoxPSL: Fast Optimized eXtended PSL [![Build Status](https://travis-ci.org/uzh/fox.svg?branch=master)](https://travis-ci.org/uzh/fox/branches) [![Codacy Badge](https://www.codacy.com/project/badge/31c2972e3ae440e4ba80d7cd55759bc0)](https://www.codacy.com/public/uzh/fox)
+<img src="./foxLogo.jpg" alt="Fox Logo" width ="80" height="70"> FoxPSL: Fast Optimized eXtended PSL [![Codacy Badge](https://www.codacy.com/project/badge/31c2972e3ae440e4ba80d7cd55759bc0)](https://www.codacy.com/public/uzh/fox)
 =====================================================
-
+<a href="http://www.sciencedirect.com/science/article/pii/S0888613X15000845">Journal article</a>
+<!---
+Fix the way Travis builds Signal/collect and fox.
+[![Build Status](https://travis-ci.org/uzh/fox.svg?branch=master)](https://travis-ci.org/uzh/fox/branches)
+-->
 How to Compile the Project
 --------------------------
 Ensure Java 7 (or higher) is available on the system, verify with `java -version` on the command line.
