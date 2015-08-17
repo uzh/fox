@@ -155,7 +155,7 @@ object Wolf {
                 relativeEpsilon = config.relativeEpsilon,
                 checkingInterval = config.globalConvergenceDetection.get,
                 aggregationInterval = if (config.asynchronous) 500 else 1 // every iteration for sync, every second for async.
-                ) with DebugLogging
+                ) with DebugLoggingConvergenceDetection
             } else {
               GlobalAdmmConvergenceDetection(
                 absoluteEpsilon = config.absoluteEpsilon,

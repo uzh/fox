@@ -1,8 +1,8 @@
 /*
- *  @author Philip Stutz
  *  @author Sara Magliacane
+ *  @author Philip Stutz
  *
- *  Copyright 2014 University of Zurich & VU University Amsterdam
+ *  Copyright 2013-2015 University of Zurich & VU University Amsterdam
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -40,11 +40,36 @@ case class GlobalAdmmConvergenceDetection(
   extends AbstractGlobalAdmmConvergenceDetection {
 }
 
-trait DebugLogging extends GlobalAdmmConvergenceDetection {
-  abstract override def isConverged(primal: PrimalData, dual: DualData, objective: Double, debugLogging: Boolean) = {
-    val converged = super.isConverged(primal, dual, objective, true)
+trait DebugLoggingConvergenceDetection extends GlobalAdmmConvergenceDetection {
+  var primalResidualForSteps: TreeMap[Int, Double] = TreeMap()
+  var primalEpsilonForSteps: TreeMap[Int, Double] = TreeMap()
+  var dualResidualForSteps: TreeMap[Int, Double] = TreeMap()
+  var dualEpsilonForSteps: TreeMap[Int, Double] = TreeMap()
+  var objectiveValueForSteps: TreeMap[Int, Double] = TreeMap()
+
+  abstract override def isConverged(primal: PrimalData, dual: DualData, objective: Double, debugLogging: Boolean, verbose: Boolean = false) = {
+    val converged = super.isConverged(primal, dual, objective, true, verbose)
+    objectiveValueForSteps += convergenceDetectionStep -> objective
     println(s"Objective value @ convergence detection step $convergenceDetectionStep = $objective")
     converged
+  }
+
+  abstract override def computePrimalConvergence(primal: PrimalData): (Double, Double) = {
+    val (primalResidual, primalEpsilon) = super.computePrimalConvergence(primal)
+    primalEpsilonForSteps += convergenceDetectionStep -> primalEpsilon
+    primalResidualForSteps += convergenceDetectionStep -> primalResidual
+    println(s"Primal epsilon @ convergence detection step $convergenceDetectionStep = $primalEpsilon")
+    println(s"Primal residual @ convergence detection step $convergenceDetectionStep = $primalResidual")
+    (primalResidual, primalEpsilon)
+  }
+
+  abstract override def computeDualConvergence(primal: PrimalData, dual: DualData): (Double, Double) = {
+    val (dualResidual, dualEpsilon) = super.computeDualConvergence(primal, dual)
+    dualEpsilonForSteps += convergenceDetectionStep -> dualEpsilon
+    dualResidualForSteps += convergenceDetectionStep -> dualResidual
+    println(s"Dual epsilon @ convergence detection step $convergenceDetectionStep = $dualEpsilon")
+    println(s"Dual residual @ convergence detection step $convergenceDetectionStep = $dualResidual")
+    (dualResidual, dualEpsilon)
   }
 }
 
@@ -54,13 +79,11 @@ abstract class AbstractGlobalAdmmConvergenceDetection extends GlobalTerminationD
   def relativeEpsilon: Double
   def checkingInterval: Long
   assert(checkingInterval % 2 == 0, "Checking interval has to be an even number.")
-  var objectiveValueForSteps: TreeMap[Int, Double] = TreeMap()
-  var primalResidualForSteps: TreeMap[Int, Double] = TreeMap()
-  var primalEpsilonForSteps: TreeMap[Int, Double] = TreeMap()
-  var dualResidualForSteps: TreeMap[Int, Double] = TreeMap()
-  var dualEpsilonForSteps: TreeMap[Int, Double] = TreeMap()
-  var collectStepsSoFar = 0 // Execution always signals, then collects, then checks for global convergence.
 
+  var primalResidualForPreviousStep: Option[Double] = None
+  var primalEpsilonForPreviousStep: Option[Double] = None
+
+  var collectStepsSoFar = 0 // Execution always signals, then collects, then checks for global convergence.
   def convergenceDetectionStep = (collectStepsSoFar / checkingInterval).toInt + 1
 
   var nextConvergenceOutputAtPercentage = 0
@@ -75,84 +98,9 @@ abstract class AbstractGlobalAdmmConvergenceDetection extends GlobalTerminationD
     }
   }
 
-  def isConverged(primal: PrimalData, dual: DualData, objective: Double, debugLogging: Boolean): Boolean = {
-    val thisStep = convergenceDetectionStep
-    objectiveValueForSteps += thisStep -> objective
-    val primalConvergence = computePrimalConvergence(primal, debugLogging)
-    val dualConvergence = computeDualConvergence(primal, dual, debugLogging)
-    val convergencePercentage = math.min(math.min(primalConvergence, dualConvergence), 1.0) * 100
-    if (nextConvergenceOutputAtPercentage == 0) {
-      print("[")
-    } else {
-      print("-")
-    }
-    while (convergencePercentage >= nextConvergenceOutputAtPercentage) {
-      print(s"$nextConvergenceOutputAtPercentage%")
-      if (nextConvergenceOutputAtPercentage != 100) {
-        print("-")
-      } else {
-        print(s"]")
-        println
-      }
-      nextConvergenceOutputAtPercentage += 10
-    }
-    if (debugLogging) { println(s"Primal convergence = $primalConvergence, dual convergence = $dualConvergence") }
-    //val objectiveConverged = objectiveValueForSteps.get(thisStep - 1).map(_ == objective).getOrElse(false)
-    val objectiveConverged = objective == 0
-    val shouldTerminate = (primalConvergence >= 1.0 && dualConvergence >= 1.0) || objectiveConverged
-    shouldTerminate
-  }
-
-  /**
-   * Returns dualEpsilon / dualResidualForPreviousStep if dualResidualForPreviousStep is defined,
-   * else 0.0
-   */
-  def computeDualConvergence(p: PrimalData, d: DualData, debugLogging: Boolean): Double = {
-    val dualEpsilon = {
-      absoluteEpsilon * math.sqrt(p.numberOfLocalVars) +
-        relativeEpsilon * math.sqrt(d.sumOfSquaredMultipliers)
-    }
-    val dualResidual = stepSize * math.sqrt(d.sumOfSquaredConsensusDeltas)
-    dualEpsilonForSteps += convergenceDetectionStep -> dualEpsilon
-    dualResidualForSteps += convergenceDetectionStep -> dualResidual
-    val dualConvergence = {
-      if (dualResidual == 0) {
-        Double.MaxValue
-      } else {
-        dualEpsilon / dualResidual
-      }
-    }
-    if (debugLogging) {
-      println(s"Dual epsilon @ convergence detection step $convergenceDetectionStep = $dualEpsilon")
-      println(s"Dual residual @ convergence detection step $convergenceDetectionStep = $dualResidual")
-      //      println(s"NumberOfLocalVars @ convergence detection step $step = ${p.numberOfLocalVars}")    
-      //      println(s"SumOfSquaredMultipliers @ convergence detection step $step = ${d.sumOfSquaredMultipliers}")
-      println(s"SumOfSquaredConsensusDeltas @ convergence detection step $convergenceDetectionStep = ${d.sumOfSquaredConsensusDeltas}")
-    }
-    dualConvergence
-  }
-
-  /**
-   * Returns primalEpsilonForPreviousStep / primalResidualForPreviousStep if primalResidualForPreviousStep is defined,
-   * else 0.0
-   */
-  def computePrimalConvergence(p: PrimalData, debugLogging: Boolean): Double = {
-    val primalEpsilon = {
-      absoluteEpsilon * math.sqrt(p.numberOfLocalVars) +
-        relativeEpsilon * math.max(math.sqrt(p.sumOfSquaredLocalVars), math.sqrt(p.sumOfSquaredConsensus))
-    }
-    val primalResidual = math.sqrt(p.sumOfSquaredErrors)
-    if (debugLogging) {
-      println(s"Primal epsilon @ convergence detection step $convergenceDetectionStep = $primalEpsilon")
-      println(s"Primal residual @ convergence detection step $convergenceDetectionStep = $primalResidual")
-      //      println(s"NumberOfLocalVars @ convergence detection step $step = ${p.numberOfLocalVars}")    
-      //      println(s"SumOfSquaredLocalVars @ convergence detection step $step = ${p.sumOfSquaredLocalVars}")
-      //      println(s"SumOfSquaredConsensus @ convergence detection step $step = ${p.sumOfSquaredConsensus}")
-    }
-    primalEpsilonForSteps += convergenceDetectionStep -> primalEpsilon
-    primalResidualForSteps += convergenceDetectionStep -> primalResidual
-    val primalResidualForPreviousStep = primalResidualForSteps.get(convergenceDetectionStep - 1)
-    val primalEpsilonForPreviousStep = primalEpsilonForSteps.get(convergenceDetectionStep - 1)
+  def isConverged(primal: PrimalData, dual: DualData, objective: Double, debugLogging: Boolean, verbose: Boolean = false): Boolean = {
+    val (primalResidual, primalEpsilon) = computePrimalConvergence(primal)
+    val (dualResidual, dualEpsilon) = computeDualConvergence(primal, dual)
     val primalConvergence = {
       if (primalResidualForPreviousStep.isDefined && primalEpsilonForPreviousStep.isDefined) {
         if (primalResidualForPreviousStep.get == 0) {
@@ -164,7 +112,62 @@ abstract class AbstractGlobalAdmmConvergenceDetection extends GlobalTerminationD
         0.0
       }
     }
-    primalConvergence
+
+    val dualConvergence = {
+      if (dualResidual == 0) {
+        Double.MaxValue
+      } else {
+        dualEpsilon / dualResidual
+      }
+    }
+
+    if (verbose) {
+      val convergencePercentage = math.min(math.min(primalConvergence, dualConvergence), 1.0) * 100
+      if (nextConvergenceOutputAtPercentage == 0) {
+        print("[")
+      } else {
+        print("-")
+      }
+      while (convergencePercentage >= nextConvergenceOutputAtPercentage) {
+        print(s"$nextConvergenceOutputAtPercentage%")
+        if (nextConvergenceOutputAtPercentage != 100) {
+          print("-")
+        } else {
+          print(s"]")
+          println
+        }
+        nextConvergenceOutputAtPercentage += 10
+      }
+    }
+    if (debugLogging) { println(s"Primal convergence = $primalConvergence, dual convergence = $dualConvergence") }
+    val shouldTerminate = (primalConvergence >= 1.0 && dualConvergence >= 1.0) || (objective == 0)
+    primalEpsilonForPreviousStep = Some(primalEpsilon)
+    primalResidualForPreviousStep = Some(primalResidual)
+    shouldTerminate
+  }
+
+  /**
+   * Returns dualResidual and dualEpsilon.
+   */
+  def computeDualConvergence(p: PrimalData, d: DualData): (Double, Double) = {
+    val dualEpsilon = {
+      absoluteEpsilon * math.sqrt(p.numberOfLocalVars) +
+        relativeEpsilon * math.sqrt(d.sumOfSquaredMultipliers)
+    }
+    val dualResidual = stepSize * math.sqrt(d.sumOfSquaredConsensusDeltas)
+    (dualResidual, dualEpsilon)
+  }
+
+  /**
+   * Returns primalResidual and primalEpsilon.
+   */
+  def computePrimalConvergence(p: PrimalData): (Double, Double) = {
+    val primalEpsilon = {
+      absoluteEpsilon * math.sqrt(p.numberOfLocalVars) +
+        relativeEpsilon * math.max(math.sqrt(p.sumOfSquaredLocalVars), math.sqrt(p.sumOfSquaredConsensus))
+    }
+    val primalResidual = math.sqrt(p.sumOfSquaredErrors)
+    (primalResidual, primalEpsilon)
   }
 }
 
@@ -227,9 +230,7 @@ case object DualAggregator extends ModularAggregationOperation[DualData] {
   def extract(v: Vertex[_, _, _, _]): DualData = {
     v match {
       case c: Consensus =>
-        val consensus = c.consensus
-        val oldConsensus = c.oldConsensus
-        val consensusDelta = consensus - oldConsensus
+        val consensusDelta = c.consensus - c.oldConsensus
         val sumOfSquaredConsensusDeltas = consensusDelta * consensusDelta
         DualData(sumOfSquaredConsensusDeltas, 0)
       case s: Subproblem =>

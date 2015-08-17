@@ -1,8 +1,8 @@
 /*
- *  @author Philip Stutz
  *  @author Sara Magliacane
+ *  @author Philip Stutz
  *
- *  Copyright 2014 University of Zurich & VU University Amsterdam
+ *  Copyright 2013-2015 University of Zurich & VU University Amsterdam
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -21,7 +21,7 @@
 package com.signalcollect.admm.utils
 
 import com.signalcollect.admm.AbstractGlobalAdmmConvergenceDetection
-import com.signalcollect.admm.DebugLogging
+import com.signalcollect.admm.DebugLoggingConvergenceDetection
 
 /**
  * Creates the Matlab script for displaying a graph of how the convergence evolves in the iterations.
@@ -32,14 +32,14 @@ import com.signalcollect.admm.DebugLogging
  */
 object ConvergencePlotter {
   
-    def createPlotScript(g: Option[AbstractGlobalAdmmConvergenceDetection]): String = {
+    def createPlotScript(g: Option[DebugLoggingConvergenceDetection]): String = {
       g match {
         case Some(x) => createPlotScript(x)
         case None => ""
       }
     }
   
-  def createPlotScript(g: AbstractGlobalAdmmConvergenceDetection): String = {
+  def createPlotScript(g: DebugLoggingConvergenceDetection): String = {
     // Print Matlab arrays for each of the value series we want to plot.
     var script = "primalEps = " + g.primalEpsilonForSteps.values.mkString("[", ", ", "]") + "\n"
     script += "primalRes = " + g.primalResidualForSteps.values.mkString("[", ", ", "]") + "\n"
@@ -47,7 +47,7 @@ object ConvergencePlotter {
     script += "dualRes = " + g.dualResidualForSteps.values.mkString("[", ", ", "]") + "\n"
     // If we are plotting a convergence with the debugging on, we have also the objective values for each step.
     g match {
-      case g: DebugLogging =>
+      case g: DebugLoggingConvergenceDetection =>
         script += "obj = " + g.objectiveValueForSteps.values.mkString("[", ", ", "]") + "\n"
     }
     // The dual epsilon that is used for the dual convergence is the one from the step before.
