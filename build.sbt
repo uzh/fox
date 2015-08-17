@@ -4,11 +4,11 @@ assemblySettings
 /** Project */
 name := "fox"
 
-version := "1.0-SNAPSHOT"
+version := "1.1-SNAPSHOT"
 
 organization := "com.signalcollect"
 
-scalaVersion := "2.11.4"
+scalaVersion := "2.11.7"
 
 /** 
  * See https://github.com/rwl/ParallelColt/issues/6 and 
@@ -48,5 +48,5 @@ libraryDependencies ++= Seq(
   "org.slf4j" % "slf4j-api" % "1.7.7" % "compile",
   "org.slf4j" % "slf4j-simple" % "1.7.7" % "compile",
   "junit" % "junit" % "4.8.2"  % "test",
-  "org.scalatest" %% "scalatest" % "2.2.1" % "test"
+  "org.scalatest" %% "scalatest" % "2.2.5" % "test"
 )

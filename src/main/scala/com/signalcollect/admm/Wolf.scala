@@ -27,6 +27,7 @@ import com.signalcollect.ExecutionConfiguration
 import com.signalcollect.ExecutionInformation
 import com.signalcollect.Graph
 import com.signalcollect.GraphBuilder
+import com.signalcollect.GraphEditor
 import com.signalcollect.Vertex
 import com.signalcollect.admm.graph.AsyncConsensusVertex
 import com.signalcollect.admm.graph.AsyncSubproblemVertex
@@ -46,6 +47,7 @@ import com.signalcollect.interfaces.EdgeAddedToNonExistentVertexHandler
 import com.signalcollect.interfaces.EdgeAddedToNonExistentVertexHandlerFactory
 import com.signalcollect.interfaces.ModularAggregationOperation
 import com.signalcollect.util.IntDoubleHashMap
+
 
 import akka.actor.ActorRef
 
@@ -91,7 +93,7 @@ case class NonExistentConsensusVertexHandler(
   lazyThreshold: Option[Double], // Only continue if a value changed by more than the threshold.
   boundsOnConsensusVars: Map[Int, (Double, Double)] = Map.empty) // Push trivial bounds inside the nodes.
   extends EdgeAddedToNonExistentVertexHandler[Int, Double] {
-  def handleImpossibleEdgeAddition(edge: Edge[Int], vertexId: Int): Option[Vertex[Int, _, Int, Double]] = {
+  def handleImpossibleEdgeAddition(edge: Edge[Int], vertexId: Int, graphEditor: GraphEditor[Int, Double]): Option[Vertex[Int, _, Int, Double]] = {
     val (lowerBound, upperBound) =
       boundsOnConsensusVars.getOrElse(vertexId, (0.0, 1.0))
     if (asynchronous) {
@@ -286,9 +288,7 @@ object Wolf {
     config: WolfConfig) = {
 
     // Debug statement.
-    if (id.abs % 10000 == 0) {
-      print("*")
-    }
+    //if (id.abs % 10000 == 0) print("*")
 
     // If possible use the ids contained in the optimizable functions (e.g. converted grounded rules id).
     // Otherwise use the standard id that is incremented at each loop.
