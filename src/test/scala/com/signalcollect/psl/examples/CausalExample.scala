@@ -28,7 +28,7 @@ import com.signalcollect.psl.InferencerConfig
 import com.signalcollect.psl.parser.PslParser
 import com.signalcollect.util.TestAnnouncements
 import com.signalcollect.admm.utils.MinimaExplorer
-import com.signalcollect.psl.model.PSLToLPConverter
+import com.signalcollect.psl.translate.PSLToLPConverter
 
 class CausalExample extends FlatSpec with Matchers with TestAnnouncements {
 

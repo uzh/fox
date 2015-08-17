@@ -1,6 +1,6 @@
 /*
  *  @author Sara Magliacane
- *
+ *  
  *  Copyright 2015 VU University Amsterdam
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,13 +17,18 @@
  *
  */
 
-package com.signalcollect.psl.model
+package com.signalcollect.psl.translate
 
 import java.io.File
 import java.io.FileWriter
 import java.io.FileReader
 import com.signalcollect.admm.optimizers.OptimizableFunction
 import com.signalcollect.psl.Optimizer
+import com.signalcollect.psl.model.GroundedConstraint
+import com.signalcollect.psl.model.GroundedPredicate
+import com.signalcollect.psl.model.GroundedRule
+import com.signalcollect.psl.model.Squared
+import com.signalcollect.psl.model.Linear
 import com.signalcollect.psl.parser.ParsedPslFile
 import com.signalcollect.psl.parser.PslParser
 import com.signalcollect.psl.Grounding

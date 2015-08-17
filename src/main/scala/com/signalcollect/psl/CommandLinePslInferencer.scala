@@ -6,10 +6,10 @@ import java.io.FileReader
 import com.signalcollect.psl.model.GroundedPredicate
 import com.signalcollect.admm.utils.MinimaExplorer
 import com.signalcollect.psl.parser.PslParser
-import com.signalcollect.psl.model.PSLToLPConverter
-import com.signalcollect.psl.model.LpResultParser
-import com.signalcollect.psl.model.PSLToCvxConverter
-import com.signalcollect.psl.model.PSLToMLNConverter
+import com.signalcollect.psl.translate.PSLToLPConverter
+import com.signalcollect.psl.translate.LpResultParser
+import com.signalcollect.psl.translate.PSLToCvxConverter
+import com.signalcollect.psl.translate.PSLToMLNConverter
 import com.signalcollect.admm.utils.Timer
 
 object CommandLinePslInferencer extends App {

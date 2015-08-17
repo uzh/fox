@@ -65,7 +65,7 @@ object PslParser extends ParseHelper[ParsedPslFile] with ImplicitConversions {
   def defaultParser = pslFile
   def fragmentParser = pslFileFragment
   
-  val maxPossibleCardinality = 10
+  val maxPossibleCardinality = 50
   
   def parse(files: List[File]): ParsedPslFile= {
     val parsedFiles = files.map(parseFileLineByLine(_))

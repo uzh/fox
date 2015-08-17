@@ -1,8 +1,8 @@
 /*
- *  @author Philip Stutz
  *  @author Sara Magliacane
+ *  @author Philip Stutz
  *
- *  Copyright 2014 University of Zurich & VU University Amsterdam
+ *  Copyright 2013-2015 University of Zurich & VU University Amsterdam
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -18,12 +18,22 @@
  *
  */
 
-package com.signalcollect.psl.model
+package com.signalcollect.psl.translate
 
 import org.scalatest.FlatSpec
 import org.scalatest.Matchers
 
 import com.signalcollect.util.TestAnnouncements
+import com.signalcollect.psl.model.Individual
+import com.signalcollect.psl.model.Variable
+import com.signalcollect.psl.model.PredicateInRule
+import com.signalcollect.psl.model.Linear
+import com.signalcollect.psl.model.Predicate
+import com.signalcollect.psl.model.Rule
+import com.signalcollect.psl.model.GroundedPredicate
+import com.signalcollect.psl.model.GroundedConstraint
+import com.signalcollect.psl.model.GroundedRule
+import com.signalcollect.psl.model.PslClass
 
 class PSLToCvxConverterSpec extends FlatSpec with Matchers with TestAnnouncements {
 

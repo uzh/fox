@@ -1,8 +1,9 @@
 /*
- *  @author Philip Stutz
  *  @author Sara Magliacane
+ *  @author Philip Stutz
  *
- *  Copyright 2014 University of Zurich & VU University Amsterdam
+ *
+ *  Copyright 2013-2015 University of Zurich & VU University Amsterdam
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -27,7 +28,7 @@ import com.signalcollect.psl.Inferencer
 import com.signalcollect.psl.InferencerConfig
 import com.signalcollect.psl.parser.PslParser
 import com.signalcollect.util.TestAnnouncements
-import com.signalcollect.psl.model.PSLToLPConverter
+import com.signalcollect.psl.translate.PSLToLPConverter
 
 /**
  * Small example that exploits the functional and symmetric constraints.
@@ -121,12 +122,16 @@ GroundedPredicate 118: indep[ ] (y, a, z) has truth value 0.8565016130054439""".
       relativeEpsilon = 1e-8)
     val inferenceResults = Inferencer.runInferenceFromString(existsInSet, config = config)
     //println(inferenceResults.printSelectedResultsAndFacts())
+    assert(inferenceResults.getGp("indep", "x", "w", "z").isDefined)
     val indepXWZ = inferenceResults.getGp("indep", "x", "w", "z").get
     inferenceResults.solution.results.get(indepXWZ.id) should be(0.85 +- 0.1)
+    assert(inferenceResults.getGp("indep", "x", "z", "w").isDefined)
     val indepXZW = inferenceResults.getGp("indep", "x", "z", "w").get
     inferenceResults.solution.results.get(indepXZW.id) should be(0.85 +- 0.1)
+    assert(inferenceResults.getGp("indep", "y", "a", "z").isDefined)
     val indepYAZ = inferenceResults.getGp("indep", "y", "a", "z").get
     inferenceResults.solution.results.get(indepYAZ.id) should be(0.48 +- 0.1)
+    assert(inferenceResults.getGp("indep", "y", "a", "w").isDefined)
     val indepYAW = inferenceResults.getGp("indep", "y", "a", "w").get
     inferenceResults.solution.results.get(indepYAW.id) should be(0.48 +- 0.1)
   }
@@ -163,8 +168,10 @@ rule [2]: indep(X,Y,W) && FOREACH [W1(1,) strictSubsetOf W] dep(X,Y,W1) => cause
       relativeEpsilon = 1e-8)
     val inferenceResults = Inferencer.runInferenceFromString(foreachInBody, config = config)
     println(inferenceResults.printSelectedResults())
+    assert(inferenceResults.getGp("causes", "x", "y").isDefined)
     val causesXY = inferenceResults.getGp("causes", "x", "y").get
     inferenceResults.solution.results.get(causesXY.id) should be(0.83 +- 0.1)
+    assert(inferenceResults.getGp("causes", "a", "b").isDefined)
     val causesAB = inferenceResults.getGp("causes", "a", "b").get
     inferenceResults.solution.results.get(causesAB.id) should be(0.0 +- 0.1)
   }

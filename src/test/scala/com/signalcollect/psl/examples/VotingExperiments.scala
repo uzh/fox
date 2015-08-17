@@ -30,7 +30,7 @@ import com.signalcollect.psl.model.GroundedRule
 import com.signalcollect.psl.model.GroundedPredicate
 import com.signalcollect.psl.model.GroundedRule
 import com.signalcollect.psl.model.PredicateInRule
-import com.signalcollect.psl.model.PSLToCvxConverter
+import com.signalcollect.psl.translate.PSLToCvxConverter
 import com.signalcollect.psl.parser.PslParser
 import com.signalcollect.psl.parser.ParsedPslFile
 import scala.annotation.tailrec

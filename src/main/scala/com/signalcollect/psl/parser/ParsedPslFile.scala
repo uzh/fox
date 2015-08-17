@@ -121,20 +121,21 @@ case class ParsedPslFile(
     // Create rules for predicates that have prior values defined.
     val priorRules = predicates.filter(_.prior.isDefined).flatMap {
       predicate =>
+        val predicatePrior = predicate.prior.get
         var i = 0;
         val variables = List.fill(predicate.arity) { i = i + 1; Variable("A" + i) }
         val pInR = PredicateInRule(name = predicate.name, variableOrIndividual = variables, negated = false, predicate = Some(predicate))
         val pInRNegated = PredicateInRule(name = predicate.name, variableOrIndividual = variables, negated = true, predicate = Some(predicate))
         val weightTrue = 0.01
         val rule = Rule(0, List.empty, List(pInR), Squared, weightTrue)
-        val ruleNegated = if (predicate.prior.get != 0.0) {
+        val ruleNegated = if (predicatePrior != 0.0) {
           Rule(0, List.empty, List(pInRNegated), Squared, weightTrue / predicate.prior.get - weightTrue)
         } else {
           Rule(0, List.empty, List(pInRNegated), Squared, weightTrue)
         }
-        if (predicate.prior.get == 0.0) {
+        if (predicatePrior == 0.0) {
           List(ruleNegated)
-        } else if (predicate.prior.get == 1.0) {
+        } else if (predicatePrior == 1.0) {
           List(rule)
         } else {
           List(rule, ruleNegated)

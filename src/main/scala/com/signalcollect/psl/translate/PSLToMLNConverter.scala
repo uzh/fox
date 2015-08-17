@@ -1,8 +1,8 @@
 /*
- *  @author Philip Stutz
  *  @author Sara Magliacane
+ *  @author Philip Stutz
  *
- *  Copyright 2014 University of Zurich & VU University Amsterdam
+ *  Copyright 2013-2015 University of Zurich & VU University Amsterdam
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -18,13 +18,16 @@
  *
  */
 
-package com.signalcollect.psl.model
+package com.signalcollect.psl.translate
 
 import java.io.File
 import java.io.FileWriter
 import java.io.FileReader
 import com.signalcollect.admm.optimizers.OptimizableFunction
 import com.signalcollect.psl.Optimizer
+import com.signalcollect.psl.model.GroundedPredicate
+import com.signalcollect.psl.model.GroundedConstraint
+import com.signalcollect.psl.model.GroundedRule
 import com.signalcollect.psl.parser.ParsedPslFile
 import com.signalcollect.psl.parser.PslParser
 import com.signalcollect.psl.Grounding
@@ -95,89 +98,64 @@ object PSLToMLNConverter {
     var ignoreRule = false
     val bodyContribution = rule.body.zipWithIndex.flatMap {
       case (b, i) =>
-        if (rule.definition.body(i).negated) {
-          if (b.truthValue.isDefined) {
-            val truthValue = if (b.truthValue.get != 1.0 && b.truthValue.get != 0.0) {
-              println("[Warning]: cannot have soft truth values in MLN translation, rounded to closest of 0,1. ")
-              if (b.truthValue.get > 0.5) 1.0 else 0.0
-            } else { b.truthValue.get }
+        if (b.truthValue.isDefined) {
+          val bodyTruthValue = b.truthValue.get
+          val truthValue = if (bodyTruthValue != 1.0 && bodyTruthValue != 0.0) {
+            println("[Warning]: cannot have soft truth values in MLN translation, rounded to closest of 0,1. ")
+            if (bodyTruthValue > 0.5) 1.0 else 0.0
+          } else { bodyTruthValue }
 
+          if (rule.definition.body(i).negated) {
             if (truthValue == 1) {
               // If a negated body element is 1, then the rule is trivially satisfied.
               ignoreRule = true
               None
-            } else {
-              // If a negated body element is 0, we can ignore it.
-              None
             }
+            // If a negated body element is 0, we can ignore it.
+            None
           } else {
-            Some(b.groundings.map(g => s"""\"$g\"""").mkString(s"${b.definition.name} (", ",", ")"))
-          }
-
-        } else {
-          if (b.truthValue.isDefined) {
-
-            val truthValue = if (b.truthValue.get != 1.0 && b.truthValue.get != 0.0) {
-              println("[Warning]: cannot have soft truth values in MLN translation, rounded to closest of 0,1. ")
-              if (b.truthValue.get > 0.5) 1.0 else 0.0
-            } else { b.truthValue.get }
-
             if (truthValue == 0) {
               // If a nonnegated body element is 0, then the rule is trivially satisfied.
               ignoreRule = true
-              None
-            } else {
-              // If a nonnegated body element is 1, we can ignore it
-              None
             }
-
-          } else {
-            Some(b.groundings.map(g => s"""\"$g\"""").mkString(s"!${b.definition.name} (", ",", ")"))
+            // If a nonnegated body element is 1, we can ignore it
+            None
           }
+        } else {
+          Some(b.groundings.map(g => s"""\"$g\"""").mkString(s"${
+            if (rule.definition.body(i).negated) { "!" } else { "" }
+          }${b.definition.name} (", ",", ")"))
         }
     }
 
     val headContribution = rule.head.zipWithIndex.flatMap {
       case (b, i) =>
-        if (rule.definition.head(i).negated) {
-          if (b.truthValue.isDefined) {
-            val truthValue = if (b.truthValue.get != 1.0 && b.truthValue.get != 0.0) {
-              println("[Warning]: cannot have soft truth values in MLN translation, rounded to closest of 0,1. ")
-              if (b.truthValue.get > 0.5) 1.0 else 0.0
-            } else { b.truthValue.get }
-
+        if (b.truthValue.isDefined) {
+          val bodyTruthValue = b.truthValue.get
+          val truthValue = if (bodyTruthValue != 1.0 && bodyTruthValue != 0.0) {
+            println("[Warning]: cannot have soft truth values in MLN translation, rounded to closest of 0,1. ")
+            if (bodyTruthValue > 0.5) 1.0 else 0.0
+          } else { bodyTruthValue }
+          if (rule.definition.head(i).negated) {
             if (truthValue == 0) {
               // If a negated head element is 0, then the rule is trivially satisfied.
               ignoreRule = true
-              None
-            } else {
-              // If a negated head element is 1, we can ignore it.
-              None
             }
+            // If a negated head element is 1, we can ignore it.
+            None
           } else {
-            Some(b.groundings.map(g => s"""\"$g\"""").mkString(s"!${b.definition.name} (", ",", ")"))
-          }
-
-        } else {
-          if (b.truthValue.isDefined) {
-
-            val truthValue = if (b.truthValue.get != 1.0 && b.truthValue.get != 0.0) {
-              println("[Warning]: cannot have soft truth values in MLN translation, rounded to closest of 0,1. ")
-              if (b.truthValue.get > 0.5) 1.0 else 0.0
-            } else { b.truthValue.get }
-
             if (truthValue == 1) {
               // If a nonnegated head element is 1, then the rule is trivially satisfied.
               ignoreRule = true
-              None
-            } else {
-              // If a nonnegated head element is 0, we can ignore it
-              None
             }
+            // If a nonnegated head element is 0, we can ignore it
+            None
 
-          } else {
-            Some(b.groundings.map(g => s"""\"$g\"""").mkString(s"${b.definition.name} (", ",", ")"))
           }
+        } else {
+          Some(b.groundings.map(g => s"""\"$g\"""").mkString(s"${
+            if (rule.definition.head(i).negated) { "!" } else { "" }
+          }${b.definition.name} (", ",", ")"))
         }
     }
 
