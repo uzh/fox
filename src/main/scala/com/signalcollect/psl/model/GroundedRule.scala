@@ -30,7 +30,7 @@ import com.signalcollect.psl.Optimizer
 import com.signalcollect.util.Verifier
 
 case class GroundedRule(
-  id: Int, // TODO put a proper number
+  id: Int,
   definition: Rule,
   body: List[GroundedPredicate],
   head: List[GroundedPredicate]) extends GroundedRuleOrConstraint {

@@ -30,9 +30,8 @@ import com.signalcollect.util.TestAnnouncements
 class AnimalClassification extends FlatSpec with Matchers with TestAnnouncements {
 
   val animalClassExample2Classes = """
-    class Animal: kitty
+    class Animal: kitty, nemo
     class AnimalClass: dog, cat, fish
-    class Animal: nemo
     class Fish
     predicate : barks(Animal)
     predicate: meows(Animal)

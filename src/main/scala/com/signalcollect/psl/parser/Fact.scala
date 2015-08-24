@@ -1,8 +1,8 @@
 /*
- *  @author Philip Stutz
  *  @author Sara Magliacane
+ *  @author Philip Stutz
  *
- *  Copyright 2014 University of Zurich & VU University Amsterdam
+ *  Copyright 2013-2015 University of Zurich & VU University Amsterdam
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -24,6 +24,24 @@ import com.signalcollect.psl.model.Individual
 import com.signalcollect.psl.model.Predicate
 import com.signalcollect.psl.model.PslClass
 import com.signalcollect.psl.model.VariableOrIndividualUtils
+
+
+case class SimpleFact(
+  name: String,
+  variableGroundings: List[Individual],
+  truthValue: Option[Double],
+  predicate: Option[Predicate] = None) {
+
+  override def toString = {
+    val truth = if (truthValue.isDefined) {
+      s" [truthValue = ${truthValue.get}]"
+    } else {
+      ""
+    }
+    s"grounding [$truth]: $name${variableGroundings.mkString("(", ", ", ")")}"
+  }
+}
+
 
 case class Fact(
   name: String,

@@ -1,8 +1,8 @@
 /*
- *  @author Philip Stutz
  *  @author Sara Magliacane
+ *  @author Philip Stutz
  *
- *  Copyright 2014 University of Zurich & VU University Amsterdam
+ *  Copyright 2013-2015 University of Zurich & VU University Amsterdam
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -139,8 +139,7 @@ object Wolf {
       }
       try {
         val ((stats, convergence), inferenceTime) = Timer.time {
-          println(s"ADMM graph creation completed in $graphLoadingTime ms.")
-          println("Starting inference ...")
+          println(s"ADMM graph creation completed in $graphLoadingTime ms.\nStarting inference.")
           val baseExecutionConfig = ExecutionConfiguration[Int, Double]().
             withExecutionMode(if (config.asynchronous) ExecutionMode.PureAsynchronous else ExecutionMode.Synchronous).
             withStepsLimit(config.maxIterations)

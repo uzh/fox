@@ -38,9 +38,8 @@ case class PslClass(
   id: String,
   set: Boolean = false,
   minCardinalityOption: Option[Int] = None,
-  maxCardinalityOption: Option[Int] = None) {
-
-  val maxPossibleCardinality = 10
+  maxCardinalityOption: Option[Int] = None, 
+  maxPossibleCardinality: Int = 10) {
 
   val minCardinality = minCardinalityOption.getOrElse(0)
   val maxCardinality = maxCardinalityOption.getOrElse(maxPossibleCardinality)

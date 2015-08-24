@@ -1,8 +1,8 @@
 /*
- *  @author Philip Stutz
  *  @author Sara Magliacane
+ *  @author Philip Stutz
  *
- *  Copyright 2014 University of Zurich & VU University Amsterdam
+ *  Copyright 2013-2015 University of Zurich & VU University Amsterdam
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -19,6 +19,10 @@
  */
 
 package com.signalcollect.psl.parser
+
+import scala.collection.mutable.ListBuffer
+import scala.collection.mutable.HashMap
+import scala.collection.mutable.HashSet
 
 import scala.util.parsing.combinator.ImplicitConversions
 import scala.util.parsing.combinator.RegexParsers
@@ -59,31 +63,31 @@ import com.signalcollect.psl.model.VariableOrIndividual
  */
 object PslParser extends ParseHelper[ParsedPslFile] with ImplicitConversions {
 
-  lexical.delimiters ++= List("(", ")", "&", "|", "=>", "=", "!", ",", ":", "[", "]")
-  protected override val whiteSpace = """(\s|//.*|#.*|(?m)/\*(\*(?!/)|[^*])*\*/)+""".r
-
   def defaultParser = pslFile
   def fragmentParser = pslFileFragment
+  
+  lexical.delimiters ++= List("(", ")", "&", "|", "=>", "=", "!", ",", ":", "[", "]")
+  protected override val whiteSpace = """(\s|//.*|#.*|(?m)/\*(\*(?!/)|[^*])*\*/)+""".r
   
   val maxPossibleCardinality = 50
   
   def parse(files: List[File]): ParsedPslFile= {
-    val parsedFiles = files.map(parseFileLineByLine(_))
-    parsedFiles.foldLeft(ParsedFile()) (_ merge _).toParsedPslFile()
+    val ParsedPslFragments = files.map(parseFileLineByLine(_))
+    ParsedPslFragments.foldLeft(ParsedPslFragment()) (_ merge _).toParsedPslFile()
   }
   
   def parseNonParallel(files: List[File]): ParsedPslFile= {
-    val parsedFiles = files.map(parseFile(_, fragmentParser))
-    parsedFiles.foldLeft(ParsedFile()) (_ merge _).toParsedPslFile()
+    val ParsedPslFragments = files.map(parseFile(_, fragmentParser))
+    ParsedPslFragments.foldLeft(ParsedPslFragment()) (_ merge _).toParsedPslFile()
   }
   
-  def parseFileLineByLine(file: File): ParsedFile = {
+  def parseFileLineByLine(file: File): ParsedPslFragment = {
     val chunkSize = 12800 * 1024
     val iterator = io.Source.fromFile(file).getLines.grouped(chunkSize)
     val parsedLines = iterator.flatMap { lines =>
       lines.par.map { line => parseString(line, fragmentParser) }
     }
-    parsedLines.foldLeft(ParsedFile()) (_ merge _)
+    parsedLines.foldLeft(ParsedPslFragment()) (_ merge _)
   }
   
   var ruleId = 0
@@ -183,7 +187,7 @@ object PslParser extends ParseHelper[ParsedPslFile] with ImplicitConversions {
       case  minCardinality ~ maxCardinality ~ optionalBracket ~ "[" ~ singleClassType ~ "]" =>
         assert(maxCardinality.getOrElse(maxPossibleCardinality) <= maxPossibleCardinality, s"Maximum cardinality is bound by $maxPossibleCardinality")
         assert(minCardinality.getOrElse(0) <= maxCardinality.getOrElse(maxPossibleCardinality), "Minimum cardinality should be less than maximum cardinality")
-        PslClass(singleClassType, true, minCardinality, maxCardinality)
+        PslClass(singleClassType, true, minCardinality, maxCardinality, maxPossibleCardinality)
     }
   }
   
@@ -410,43 +414,32 @@ object PslParser extends ParseHelper[ParsedPslFile] with ImplicitConversions {
          indInSet.toList.sorted.toSet 
     } 
   }
-    
-  lazy val pslFile: Parser[ParsedPslFile] = {
+  
+ lazy val pslFileFragment: Parser[ParsedPslFragment] = {
     rep(pslLine) ^^ {
       case lines =>
-       val predicates = lines.flatMap{ case f: Predicate => Some(f) case _ => None} 
-       val rules = lines.flatMap{ case f: Rule => Some(f) case _ => None}   
-       val facts = lines.flatMap{ case f: Fact => Some(f) case _ => None}
-       val inds = lines.flatMap{ case f: Set[Individual] => Some(f) case _ => None}
-       val classes = lines.flatMap{ case f: (PslClass, Set[Individual]) => Some(f) case _ => None}
-       val classMap = classes.groupBy(_._1).mapValues(c => c.map(i => i._2).foldLeft(Set.empty[Individual])(_ ++ _))
+       val predicates = new ListBuffer[Predicate]
+       val rules = new ListBuffer[Rule]
+       val facts = new ListBuffer[Fact]
+       val classes = new HashMap[PslClass, Set[Individual]]
+       val inds = new HashSet[Individual]
        
-       if (inds.length == 0 ){
-         ParsedPslFile(classMap, predicates, rules, facts)
-       }
-       else {
-         val unionOfIndividuals = inds.foldLeft(inds(0))(_.union(_))
-          ParsedPslFile(classMap, predicates, rules, facts, unionOfIndividuals)  
-       } 
+       lines.map{ 
+         case p: Predicate => predicates += p 
+         case r: Rule => rules += r
+         case f: Fact => facts += f
+         case ind: Set[Individual]  => inds ++= ind
+         case c: (PslClass, Set[Individual]) => classes += c 
+         case _ => None} 
+       
+       ParsedPslFragment(classes.toMap, predicates.toList, rules.toList, facts.toList, inds.toSet)  
     }
   }
-  
-    lazy val pslFileFragment: Parser[ParsedFile] = {
-    rep(pslLine) ^^ {
-      case lines =>
-       val predicates = lines.flatMap{ case f: Predicate => Some(f) case _ => None} 
-       val rules = lines.flatMap{ case f: Rule => Some(f) case _ => None}   
-       val facts = lines.flatMap{ case f: Fact => Some(f) case _ => None}
-       val inds = lines.flatMap{ case f: Set[Individual] => Some(f) case _ => None}
-       val classes = lines.flatMap{ case f: (PslClass, Set[Individual]) => Some(f) case _ => None}
-       val classMap = classes.groupBy(_._1).mapValues(c => c.map(i => i._2).foldLeft(Set.empty[Individual])(_ ++ _))
-       if (inds.length == 0 ){
-         ParsedFile(classMap, predicates, rules, facts)
-       }
-       else {
-         val unionOfIndividuals = inds.foldLeft(inds(0))(_.union(_))
-          ParsedFile(classMap, predicates, rules, facts, unionOfIndividuals)  
-       } 
+ 
+  lazy val pslFile: Parser[ParsedPslFile] = {
+    pslFileFragment ^^ {
+      case parsedPslFragment => 
+        parsedPslFragment.toParsedPslFile()
     }
   }
 

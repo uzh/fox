@@ -27,7 +27,7 @@ import com.signalcollect.psl.model.Variable
 import com.signalcollect.psl.model.Squared
 import com.signalcollect.psl.model.PslClass
 
-case class ParsedFile(
+case class ParsedPslFragment(
   explicitlyMentionedIndividualsInClasses: Map[PslClass, Set[Individual]] = Map.empty,
   predicates: List[Predicate] = List.empty,
   rules: List[Rule] = List.empty,
@@ -38,8 +38,8 @@ case class ParsedFile(
     ParsedPslFile(explicitlyMentionedIndividualsInClasses, predicates, rules, facts, constants)
   }
 
-  def merge(that: ParsedFile): ParsedFile = {
-    ParsedFile(explicitlyMentionedIndividualsInClasses ++ that.explicitlyMentionedIndividualsInClasses, predicates ++ that.predicates, rules ++ that.rules,
+  def merge(that: ParsedPslFragment): ParsedPslFragment = {
+    ParsedPslFragment(explicitlyMentionedIndividualsInClasses ++ that.explicitlyMentionedIndividualsInClasses, predicates ++ that.predicates, rules ++ that.rules,
       facts ++ that.facts, constants ++ that.constants)
   }
 
