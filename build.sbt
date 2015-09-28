@@ -37,6 +37,7 @@ parallelExecution in Test := false
 resolvers += "PSL third party dependencies" at "https://scm.umiacs.umd.edu/maven/lccd/content/repositories/psl-thirdparty/"
 
 libraryDependencies ++= Seq(
+  "com.signalcollect" %% "signal-collect" % "5.0.2" % "compile",
   "org.scala-lang" % "scala-library" % scalaVersion.value  % "compile",
   "org.scala-lang" % "scala-reflect" % scalaVersion.value % "compile",
   "commons-lang" %  "commons-lang" % "2.6" % "compile",
