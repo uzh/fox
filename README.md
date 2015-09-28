@@ -17,11 +17,6 @@ git clone git://github.com/uzh/fox.git fox
 cd fox
 ````
 
-Run this from inside the fox *project folder* to ensure the Signal/Collect dependency is present and in the right place:
-```
-git clone git://github.com/uzh/signal-collect.git ../signal-collect
-````
-
 To generate the JAR file, run:
 ```
 sbt assembly
